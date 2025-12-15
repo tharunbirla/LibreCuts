@@ -21,3 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "LibreCuts"
 include ':app'
+include ':ffmpeg-kit'
