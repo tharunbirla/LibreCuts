@@ -50,6 +50,10 @@ android {
     }
 }
 
+configurations {
+    all*.exclude group: 'com.arthenica', module: 'ffmpeg-kit-full'
+}
+
 dependencies {
 
     implementation 'com.google.android.exoplayer:exoplayer-core:2.18.1'
