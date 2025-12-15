@@ -69,7 +69,7 @@
         android:id="@+id/seekerContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#CC000000"
+        android:background="#1E1E1E"
         android:orientation="vertical"
         android:gravity="center"
         android:layout_above="@+id/editingControls">
@@ -82,24 +82,13 @@
             android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="@android:color/white"
+            android:layout_marginBottom="8dp"
             android:layout_gravity="center_horizontal"/>
 
-        <FrameLayout
+        <com.tharunbirla.librecuts.ui.timeline.TimelineView
+            android:id="@+id/timelineView"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:layout_marginStart="20dp"
-            android:layout_marginEnd="20dp">
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/frameRecyclerView"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"/>
-
-            <com.tharunbirla.librecuts.customviews.CustomVideoSeeker
-                android:id="@+id/customVideoSeeker"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"/>
-        </FrameLayout>
+            android:layout_height="120dp"/>
     </LinearLayout>
 
     <LinearLayout
