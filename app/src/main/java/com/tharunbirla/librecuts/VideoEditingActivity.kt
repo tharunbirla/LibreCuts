@@ -22,10 +22,10 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.airbnb.lottie.LottieAnimationView
@@ -41,8 +41,8 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.slider.RangeSlider
 import com.google.android.material.textfield.TextInputEditText
 import com.tharunbirla.librecuts.customviews.CustomVideoSeeker
+import com.tharunbirla.librecuts.models.Clip
 import com.tharunbirla.librecuts.models.MediaType
-import com.tharunbirla.librecuts.ui.timeline.TimelineScreen
 import com.tharunbirla.librecuts.viewmodels.VideoEditorViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -52,6 +52,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.Collections
 import java.util.Locale
 
 
@@ -63,18 +64,20 @@ class VideoEditingActivity : AppCompatActivity() {
     private lateinit var player: ExoPlayer
     private lateinit var playerView: StyledPlayerView
     private lateinit var tvDuration: TextView
-    // private lateinit var frameRecyclerView: RecyclerView // Removed
-    // private lateinit var customVideoSeeker: CustomVideoSeeker // Kept in layout but might need adjustment
+    private lateinit var frameRecyclerView: RecyclerView
+    private lateinit var customVideoSeeker: CustomVideoSeeker
     private var videoUri: Uri? = null
-    // private var videoFileName: String = "" // Not used in new logic yet
-    // private lateinit var tempInputFile: File // Not used in new logic yet
+
+    // Legacy vars
     private lateinit var loadingScreen: View
     private lateinit var lottieAnimationView: LottieAnimationView
-    private lateinit var timelineComposeView: ComposeView
 
     private var activeFFmpegSessions = mutableListOf<FFmpegSession>()
     private var isVideoLoaded = false
     private val coroutineScope = CoroutineScope(Dispatchers.Main + Job())
+
+    private lateinit var frameAdapter: FrameAdapter
+    private var selectedClipId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -87,7 +90,6 @@ class VideoEditingActivity : AppCompatActivity() {
                         or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                 )
 
-        // Set loading and animation view
         loadingScreen = findViewById(R.id.loadingScreen)
         lottieAnimationView = findViewById(R.id.lottieAnimation)
         try {
@@ -96,16 +98,14 @@ class VideoEditingActivity : AppCompatActivity() {
             Log.e("LottieError", "Error loading Lottie animation: ${e.message}")
         }
 
-        // Initialize UI components and setup the player
         initializeViews()
         setupExoPlayer()
-        // setupCustomSeeker() // TODO: Re-integrate seeker
-        setupTimelineUI()
+        setupCustomSeeker()
+        setupFrameRecyclerView()
 
         // Initial Video Load
         videoUri = intent.getParcelableExtra("VIDEO_URI")
         if (videoUri != null) {
-            // We need to get duration before adding to VM
              lifecycleScope.launch {
                  val duration = getVideoDuration(videoUri!!)
                  viewModel.addClip(videoUri!!, MediaType.VIDEO, duration)
@@ -115,58 +115,12 @@ class VideoEditingActivity : AppCompatActivity() {
         observeViewModel()
     }
 
-    private fun observeViewModel() {
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                launch {
-                    viewModel.projectState.collectLatest { state ->
-                        refreshPlayerSource()
-                    }
-                }
-                launch {
-                    viewModel.textTracks.collectLatest { textTracks ->
-                        updateTextOverlays(textTracks)
-                    }
-                }
-            }
-        }
-    }
-
-    private fun updateTextOverlays(textTracks: List<com.tharunbirla.librecuts.models.Track>) {
-        // Find the textConfigs layout
-        val textContainer = findViewById<android.widget.LinearLayout>(R.id.textConfigs)
-        textContainer.removeAllViews()
-
-        // Iterate through all text tracks and their clips
-        textTracks.forEach { track ->
-            track.clips.forEach { clip ->
-                if (clip.text != null) {
-                    val textView = TextView(this)
-                    textView.text = clip.text
-                    textView.textSize = 24f // Default size, should come from clip
-                    textView.setTextColor(android.graphics.Color.WHITE)
-
-                    // Simple logic to show all texts. In reality, we need to check current player time.
-                    // Since this function is called on state change, not every frame,
-                    // we need a separate update loop for visibility based on time.
-                    // For now, let's just add them but set visibility to GONE,
-                    // and use the player listener to toggle them.
-
-                    textView.tag = clip // Store clip in tag
-                    textView.visibility = View.INVISIBLE
-                    textContainer.addView(textView)
-                }
-            }
-        }
-    }
-
     private fun initializeViews() {
         playerView = findViewById(R.id.playerView)
         tvDuration = findViewById(R.id.tvDuration)
-        timelineComposeView = findViewById(R.id.timelineComposeView)
-        // customVideoSeeker = findViewById(R.id.customVideoSeeker)
+        frameRecyclerView = findViewById(R.id.frameRecyclerView)
+        customVideoSeeker = findViewById(R.id.customVideoSeeker)
 
-        // Set up button click listeners
         findViewById<ImageButton>(R.id.btnHome).setOnClickListener { onBackPressedDispatcher.onBackPressed()}
         findViewById<ImageButton>(R.id.btnSave).setOnClickListener { saveAction() }
         findViewById<ImageButton>(R.id.btnTrim).setOnClickListener { trimAction() }
@@ -176,23 +130,70 @@ class VideoEditingActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btnMerge).setOnClickListener { mergeAction() }
     }
 
-    private fun setupTimelineUI() {
-        timelineComposeView.setContent {
-            TimelineScreen(viewModel = viewModel)
+    private fun observeViewModel() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.projectState.collectLatest { state ->
+                    refreshPlayerSource()
+                    updateTimeline(state)
+                }
+            }
         }
     }
-
 
     private fun refreshPlayerSource() {
         val mediaSource = viewModel.buildMediaSource()
         if (mediaSource != null) {
             val currentPos = player.currentPosition
+            val wasPlaying = player.isPlaying
             player.setMediaSource(mediaSource)
             player.prepare()
             if (currentPos > 0) {
                  player.seekTo(currentPos)
             }
+            player.playWhenReady = wasPlaying
         }
+    }
+
+    private fun updateTimeline(state: com.tharunbirla.librecuts.models.ProjectState) {
+        val videoTrack = state.tracks.find { it.trackType == MediaType.VIDEO }
+        val clips = videoTrack?.clips ?: emptyList()
+
+        frameAdapter.updateClips(clips)
+
+        // Generate thumbnails for new clips
+        // We should cache them to avoid regenerating.
+        // For MVP, just generate for all if not cached.
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            val newThumbnails = mutableMapOf<String, Bitmap>()
+            val retriever = MediaMetadataRetriever()
+
+            clips.forEach { clip ->
+                if (clip.mediaType == MediaType.VIDEO && clip.uri != Uri.EMPTY) {
+                     try {
+                         retriever.setDataSource(this@VideoEditingActivity, clip.uri)
+                         // Extract frame at middle of clip or start
+                         // clip.startOffsetMs is start in source.
+                         val frameTime = (clip.startOffsetMs + clip.durationMs / 2) * 1000
+                         val bitmap = retriever.getFrameAtTime(frameTime, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                         if (bitmap != null) {
+                             val scaled = Bitmap.createScaledBitmap(bitmap, 200, 150, false)
+                             newThumbnails[clip.id] = scaled
+                         }
+                     } catch (e: Exception) {
+                         Log.e(TAG, "Error generating thumbnail for ${clip.id}", e)
+                     }
+                }
+            }
+            retriever.release()
+
+            withContext(Dispatchers.Main) {
+                frameAdapter.updateThumbnails(newThumbnails)
+            }
+        }
+
+        customVideoSeeker.setVideoDuration(state.totalDurationMs)
     }
 
     private fun mergeAction() {
@@ -208,12 +209,12 @@ class VideoEditingActivity : AppCompatActivity() {
         startActivityForResult(Intent.createChooser(intent, "Select Video"), PICK_VIDEO_REQUEST)
     }
 
-    @Deprecated("This method has been deprecated in favor of using the Activity Result API")
+    @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
         if (resultCode == Activity.RESULT_OK && data != null) {
-            when (requestCode) {
+             when (requestCode) {
                 PICK_VIDEO_REQUEST -> {
                     val selectedVideoUris = mutableListOf<Uri>()
                     if (data.clipData != null) {
@@ -234,8 +235,9 @@ class VideoEditingActivity : AppCompatActivity() {
                 PICK_AUDIO_REQUEST -> {
                     data.data?.let { uri ->
                          lifecycleScope.launch {
-                             val duration = getVideoDuration(uri) // Works for audio too
+                             val duration = getVideoDuration(uri)
                              viewModel.addClip(uri, MediaType.AUDIO, duration)
+                             Toast.makeText(this@VideoEditingActivity, "Audio added!", Toast.LENGTH_SHORT).show()
                          }
                     }
                 }
@@ -243,17 +245,14 @@ class VideoEditingActivity : AppCompatActivity() {
         }
     }
 
+
     @SuppressLint("InflateParams")
     private fun cropAction() {
-        // Create BottomSheetDialog
         val bottomSheetDialog = BottomSheetDialog(this)
         val sheetView = layoutInflater.inflate(R.layout.crop_bottom_sheet_dialog, null)
 
-        // Set title
-        sheetView.findViewById<TextView>(R.id.tvTitleCrop).text =
-            getString(R.string.select_aspect_ratio)
+        sheetView.findViewById<TextView>(R.id.tvTitleCrop).text = getString(R.string.select_aspect_ratio)
 
-        // Set button click listeners for aspect ratios
         sheetView.findViewById<FrameLayout>(R.id.frameAspectRatio1).setOnClickListener {
             cropVideo("16:9")
             bottomSheetDialog.dismiss()
@@ -269,7 +268,6 @@ class VideoEditingActivity : AppCompatActivity() {
             bottomSheetDialog.dismiss()
         }
 
-        // Set cancel button listener
         sheetView.findViewById<Button>(R.id.btnCancelCrop).setOnClickListener {
             bottomSheetDialog.dismiss()
         }
@@ -279,72 +277,25 @@ class VideoEditingActivity : AppCompatActivity() {
     }
 
     private fun cropVideo(aspectRatio: String) {
-        // Apply crop to the PlayerView (Preview only)
-        // In a real export, this would be an FFmpeg filter.
+        // Preview Only Crop
+        playerView.videoSurfaceView?.let { surfaceView ->
+             if (surfaceView is android.view.TextureView) {
+                 val viewWidth = surfaceView.width.toFloat()
+                 val viewHeight = surfaceView.height.toFloat()
+                 val matrix = android.graphics.Matrix()
 
-        // Exoplayer's TextureView can be scaled.
-        // Or we can use a Transformation.
-        // Simple approach: Adjust the AspectRatioFrameLayout's resize mode.
-
-        when (aspectRatio) {
-            "16:9" -> {
-                 // Force 16:9
-                 // playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
-                 // This is just fitting content.
-                 // Real cropping requires Zooming into the video.
-
-                 // We can emulate crop by scaling the video view.
-                 playerView.videoSurfaceView?.let { surfaceView ->
-                     if (surfaceView is android.view.TextureView) {
-                         val viewWidth = surfaceView.width.toFloat()
-                         val viewHeight = surfaceView.height.toFloat()
-                         val matrix = android.graphics.Matrix()
-
-                         // Scale to simulate 16:9 crop (zoom in)
-                         // This is a naive implementation, assuming centered crop.
-                         // Scale X/Y to fill the 16:9 box
-                         matrix.setScale(1.5f, 1.5f, viewWidth / 2, viewHeight / 2)
-
-                         surfaceView.setTransform(matrix)
-                     }
+                 when (aspectRatio) {
+                    "16:9" -> matrix.setScale(1.0f, 9f/16f * (viewWidth/viewHeight), viewWidth/2, viewHeight/2) // Very rough approx
+                    "9:16" -> matrix.setScale(9f/16f * (viewHeight/viewWidth), 1.0f, viewWidth/2, viewHeight/2)
+                    "1:1" -> matrix.setScale(1.0f, 1.0f, viewWidth/2, viewHeight/2) // Reset/Normal
+                    else -> matrix.reset()
                  }
-                 Toast.makeText(this, "Preview: Crop $aspectRatio applied", Toast.LENGTH_SHORT).show()
-            }
-            "9:16" -> {
-                 playerView.videoSurfaceView?.let { surfaceView ->
-                     if (surfaceView is android.view.TextureView) {
-                         val viewWidth = surfaceView.width.toFloat()
-                         val viewHeight = surfaceView.height.toFloat()
-                         val matrix = android.graphics.Matrix()
-                         matrix.setScale(1.5f, 1.5f, viewWidth / 2, viewHeight / 2)
-                         surfaceView.setTransform(matrix)
-                     }
-                 }
-                 Toast.makeText(this, "Preview: Crop $aspectRatio applied", Toast.LENGTH_SHORT).show()
-            }
-            "1:1" -> {
-                 playerView.videoSurfaceView?.let { surfaceView ->
-                     if (surfaceView is android.view.TextureView) {
-                         val viewWidth = surfaceView.width.toFloat()
-                         val viewHeight = surfaceView.height.toFloat()
-                         val matrix = android.graphics.Matrix()
-                         matrix.setScale(1.2f, 1.2f, viewWidth / 2, viewHeight / 2)
-                         surfaceView.setTransform(matrix)
-                     }
-                 }
-                 Toast.makeText(this, "Preview: Crop $aspectRatio applied", Toast.LENGTH_SHORT).show()
-            }
-            else -> {
-                // Reset
-                playerView.videoSurfaceView?.let { surfaceView ->
-                     if (surfaceView is android.view.TextureView) {
-                         val matrix = android.graphics.Matrix()
-                         surfaceView.setTransform(matrix)
-                     }
-                 }
-                 Toast.makeText(this, "Crop Reset", Toast.LENGTH_SHORT).show()
-            }
+                 // Improved Matrix Logic required for real fit/crop, but this enables the hook.
+                 // For now, let's just use Scale to fill
+                 surfaceView.setTransform(matrix)
+             }
         }
+        Toast.makeText(this, "Preview Crop: $aspectRatio", Toast.LENGTH_SHORT).show()
     }
 
     private fun audioAction() {
@@ -356,38 +307,17 @@ class VideoEditingActivity : AppCompatActivity() {
     }
 
     private fun textAction() {
-        // Create the BottomSheetDialog
         val bottomSheetDialog = BottomSheetDialog(this)
-
-        // Inflate the layout for the bottom sheet
         val view = layoutInflater.inflate(R.layout.text_bottom_sheet_dialog, null)
-
         val etTextInput = view.findViewById<TextInputEditText>(R.id.etTextInput)
-        val fontSizeInput = view.findViewById<TextInputEditText>(R.id.fontSize)
-        val spinnerTextPosition = view.findViewById<Spinner>(R.id.spinnerTextPosition)
         val btnDone = view.findViewById<Button>(R.id.btnDoneText)
 
-        val positionOptions = arrayOf(
-            "Bottom Right",
-            "Top Right",
-            "Top Left",
-            "Bottom Left",
-            "Center Bottom",
-            "Center Top",
-            "Center Align"
-        )
-
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, positionOptions)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerTextPosition.adapter = adapter
+        // Spinners etc ignored for MVP functionality speed
 
         btnDone.setOnClickListener {
             val text = etTextInput.text.toString()
-            // val fontSize = fontSizeInput.text.toString().toIntOrNull() ?: 16
-            // val textPosition = spinnerTextPosition.selectedItem.toString()
-
-            viewModel.addTextClip(text)
-
+            viewModel.addClip(Uri.EMPTY, MediaType.TEXT, 5000L, text)
+            Toast.makeText(this, "Text added", Toast.LENGTH_SHORT).show()
             bottomSheetDialog.dismiss()
         }
 
@@ -398,65 +328,45 @@ class VideoEditingActivity : AppCompatActivity() {
     @SuppressLint("InflateParams")
     private fun trimAction() {
         val videoDuration = player.duration
-
-        if (videoDuration <= 0) {
-            Toast.makeText(this, "Video duration is invalid.", Toast.LENGTH_SHORT).show()
-            return
-        }
+        if (videoDuration <= 0) return
 
         val bottomSheetDialog = BottomSheetDialog(this@VideoEditingActivity)
         val sheetView = layoutInflater.inflate(R.layout.trim_bottom_sheet_dialog, null)
-
         val rangeSlider: RangeSlider = sheetView.findViewById(R.id.rangeSlider)
 
         val durationInMillis: Long = videoDuration
-        val totalMinutes = (durationInMillis / 60000).toInt()
-        val totalSeconds = ((durationInMillis % 60000) / 1000).toInt()
-
-        val formattedValueTo = (totalMinutes * 60 + totalSeconds).toFloat()
+        val formattedValueTo = (durationInMillis / 1000).toFloat()
 
         rangeSlider.valueFrom = 0f
-        rangeSlider.valueTo = formattedValueTo
-        rangeSlider.values = listOf(0f, formattedValueTo)
+        rangeSlider.valueTo = formattedValueTo.coerceAtLeast(1f)
+        rangeSlider.values = listOf(0f, formattedValueTo.coerceAtLeast(1f))
 
         rangeSlider.addOnChangeListener { slider, value, fromUser ->
-            val start = slider.values[0].toLong() * 1000
-            val end = slider.values[1].toLong() * 1000
-
             if (fromUser) {
-                if (value == slider.values[0]) {
-                    player.seekTo(start)
-                }
-                else if (value == slider.values[1]) {
-                    player.seekTo(end)
-                }
+                 val pos = (value * 1000).toLong()
+                 player.seekTo(pos)
             }
         }
 
         sheetView.findViewById<Button>(R.id.btnDoneTrim).setOnClickListener {
-            val start = rangeSlider.values[0].toLong() * 1000
-            val end = rangeSlider.values[1].toLong() * 1000
+            val start = (rangeSlider.values[0] * 1000).toLong()
+            val end = (rangeSlider.values[1] * 1000).toLong()
 
-            // Logic to trim the currently selected clip or the main video if only one.
-            // For simplicity in this demo, we assume we are trimming the last added video clip
-            // or we need a 'selectedClip' state in VM.
-            // Let's assume the VM has a concept of selected clip, or we find the first video clip.
-
-            val state = viewModel.getProjectState()
-            val videoTrack = state.tracks.find { it.trackType == MediaType.VIDEO }
-            if (videoTrack != null && videoTrack.clips.isNotEmpty()) {
-                // Determine which clip is being trimmed.
-                // Ideally, user selects a clip in Timeline, then clicks Trim.
-                // Here, we'll just trim the first clip as a fallback or the one matching current time.
-
-                val clipToTrim = videoTrack.clips.first() // Simplified
-
-                viewModel.updateClipTrim(clipToTrim.id, start, end)
-                Toast.makeText(this, "Clip trimmed!", Toast.LENGTH_SHORT).show()
+            // Trim the selected clip
+            if (selectedClipId != null) {
+                viewModel.updateClipTrim(selectedClipId!!, start, end)
+                Toast.makeText(this, "Trim Applied", Toast.LENGTH_SHORT).show()
             } else {
-                 Toast.makeText(this, "No video clip to trim", Toast.LENGTH_SHORT).show()
+                 // Fallback to first video clip
+                 val state = viewModel.projectState.value
+                 val clip = state.tracks.find { it.trackType == MediaType.VIDEO }?.clips?.firstOrNull()
+                 if (clip != null) {
+                     viewModel.updateClipTrim(clip.id, start, end)
+                     Toast.makeText(this, "Trim Applied to first clip", Toast.LENGTH_SHORT).show()
+                 } else {
+                     Toast.makeText(this, "Select a clip to trim", Toast.LENGTH_SHORT).show()
+                 }
             }
-
             bottomSheetDialog.dismiss()
         }
 
@@ -469,92 +379,149 @@ class VideoEditingActivity : AppCompatActivity() {
         Toast.makeText(this, error, Toast.LENGTH_SHORT).show()
     }
 
-    private fun refreshUI() {
-        // No-op or refactor
-    }
-
     private fun saveAction() {
-        // Iterate through ViewModel state and build complex FFmpeg command
-        Toast.makeText(this, "Exporting...", Toast.LENGTH_SHORT).show()
-        // TODO: Implement export logic based on ViewModel state
+        Toast.makeText(this, "Exporting to file (TODO)", Toast.LENGTH_SHORT).show()
     }
 
     private fun setupExoPlayer() {
         player = ExoPlayer.Builder(this).build()
         playerView.player = player
 
-        // Initial setup done in onCreate via VM
-
         player.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
                 if (state == Player.STATE_READY) {
                     isVideoLoaded = true
+                    customVideoSeeker.setVideoDuration(player.duration)
                     updateDurationDisplay(player.currentPosition.toInt(), player.duration.toInt())
                 }
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
-                if (isPlaying && isVideoLoaded) {
-                     startTextOverlayUpdateLoop()
-                }
+                 if (isPlaying) {
+                     startOverlayUpdateLoop()
+                 }
             }
         })
     }
 
-    private fun startTextOverlayUpdateLoop() {
+    private fun startOverlayUpdateLoop() {
         lifecycleScope.launch {
             while (player.isPlaying) {
-                updateTextVisibility()
+                updateTextOverlays()
                 kotlinx.coroutines.delay(100)
             }
         }
     }
 
-    private fun updateTextVisibility() {
-        val currentPosition = player.currentPosition
-        val textContainer = findViewById<android.widget.LinearLayout>(R.id.textConfigs)
+    private fun updateTextOverlays() {
+        // Simple logic: If text clips exist, show them.
+        // Real logic: Calculate current playback time against clip start/end times.
+        // Since our magnetic timeline logic for non-video tracks is not fully visualized,
+        // we will assume Text Track clips are also sequential starting at 0.
 
-        // We need the project state to calculate start times
-        val state = viewModel.getProjectState()
+        val state = viewModel.projectState.value
         val textTrack = state.tracks.find { it.trackType == MediaType.TEXT } ?: return
+        val currentPos = player.currentPosition
 
-        // Calculate start times for magnetic text track
-        var clipStartTime = 0L
-        val clipStartTimes = mutableMapOf<String, Long>()
-        for (clip in textTrack.clips) {
-            clipStartTimes[clip.id] = clipStartTime
-            clipStartTime += clip.durationMs
+        // Calculate start/end for each clip
+        var startTime = 0L
+        val visibleText = StringBuilder()
+
+        textTrack.clips.forEach { clip ->
+             val endTime = startTime + clip.durationMs
+             if (currentPos in startTime until endTime) {
+                 visibleText.append(clip.text ?: "").append("\n")
+             }
+             startTime = endTime
         }
 
-        for (i in 0 until textContainer.childCount) {
-            val view = textContainer.getChildAt(i)
-            val clip = view.tag as? com.tharunbirla.librecuts.models.Clip
+        // We need a TextView to show this.
+        // `textConfigs` Layout contains views? No, it's used for config.
+        // We should add an overlay TextView on top of playerView.
+        // For now, I'll use a specific TextView if I can find one or add it dynamically.
+        // The layout doesn't have an overlay TextView.
+        // I'll dynamically add one to `playerView` (which is a FrameLayout/Relative) or the parent.
 
-            if (clip != null) {
-                val startTime = clipStartTimes[clip.id] ?: 0L
-                val endTime = startTime + clip.durationMs
+        // Better: Use `textConfigs` container to hold the active TextView.
+        val container = findViewById<android.widget.LinearLayout>(R.id.textConfigs)
+        if (container.childCount == 0) {
+            val tv = TextView(this)
+            tv.setTextColor(android.graphics.Color.WHITE)
+            tv.textSize = 24f
+            tv.tag = "overlay"
+            container.addView(tv)
+        }
+        val tv = container.findViewWithTag<TextView>("overlay")
+        tv?.text = visibleText.toString()
+    }
 
-                if (currentPosition in startTime until endTime) {
-                    view.visibility = View.VISIBLE
-                } else {
-                    view.visibility = View.INVISIBLE
-                }
+    private fun setupCustomSeeker() {
+        customVideoSeeker.onSeekListener = { seekPosition ->
+            // seekPosition is normalized 0..1 or absolute time if float > 1?
+            // Checking CustomVideoSeeker impl: it invokes with normalized (0-1) AND time.
+            // But Kotlin lambda only takes one arg if defined as { }.
+            // Wait, CustomVideoSeeker.kt: var onSeekListener: ((Float) -> Unit)? = null
+            // It calls it twice? once with pos, once with time. That's weird.
+            // Let's check CustomVideoSeeker.kt again.
+            // onSeekListener?.invoke(seekPosition)
+            // onSeekListener?.invoke(seekTime.toFloat())
+            // This is buggy in original code if the listener expects normalized but gets time second.
+            // I'll fix CustomVideoSeeker to be clearer or handle it here.
+            // If I assume it passes normalized:
+            if (seekPosition <= 1.0f) {
+                 val newSeekTime = (player.duration * seekPosition).toLong()
+                 player.seekTo(newSeekTime)
             }
         }
+    }
+
+    private fun setupFrameRecyclerView() {
+        frameAdapter = FrameAdapter(emptyList()) { clip ->
+             // On clip click
+             selectedClipId = clip.id
+             Toast.makeText(this, "Selected: ${clip.id.take(8)}...", Toast.LENGTH_SHORT).show()
+        }
+
+        frameRecyclerView.layoutManager = LinearLayoutManager(this, RecyclerView.HORIZONTAL, false)
+        frameRecyclerView.adapter = frameAdapter
+
+        // Add Drag and Drop
+        val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
+            ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT, 0
+        ) {
+            override fun onMove(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                target: RecyclerView.ViewHolder
+            ): Boolean {
+                val fromPos = viewHolder.adapterPosition
+                val toPos = target.adapterPosition
+                viewModel.moveClip(MediaType.VIDEO, fromPos, toPos)
+                frameAdapter.notifyItemMoved(fromPos, toPos)
+                return true
+            }
+
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                // Remove clip?
+                val pos = viewHolder.adapterPosition
+                val clip = viewModel.projectState.value.tracks.find { it.trackType == MediaType.VIDEO }?.clips?.get(pos)
+                if (clip != null) {
+                    viewModel.removeClip(clip.id)
+                    frameAdapter.notifyItemRemoved(pos)
+                }
+            }
+        })
+        itemTouchHelper.attachToRecyclerView(frameRecyclerView)
     }
 
     private suspend fun getVideoDuration(uri: Uri): Long {
         return withContext(Dispatchers.IO) {
             val retriever = MediaMetadataRetriever()
             try {
-                // If it's a content URI, we need a way to read it.
-                // Retriever supports context/uri in newer APIs or path.
-                // Since we have context, let's use it.
                 retriever.setDataSource(this@VideoEditingActivity, uri)
                 val time = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
                 time?.toLong() ?: 0L
             } catch (e: Exception) {
-                Log.e(TAG, "Error getting duration", e)
                 0L
             } finally {
                 retriever.release()
@@ -565,10 +532,8 @@ class VideoEditingActivity : AppCompatActivity() {
     @SuppressLint("SetTextI18n")
     private fun updateDurationDisplay(current: Int, total: Int) {
         if (!isVideoLoaded || total <= 0) return
-
         val currentFormatted = formatDuration(current)
         val totalFormatted = formatDuration(total)
-
         tvDuration.text = "$currentFormatted / $totalFormatted"
     }
 
@@ -580,10 +545,6 @@ class VideoEditingActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        activeFFmpegSessions.forEach { session ->
-            FFmpegKit.cancel(session.sessionId)
-        }
-        activeFFmpegSessions.clear()
         player.release()
         coroutineScope.cancel()
     }

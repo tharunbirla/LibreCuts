@@ -17,21 +17,12 @@ import com.tharunbirla.librecuts.models.Track
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 
 class VideoEditorViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _projectState = MutableStateFlow(ProjectState())
     val projectState: StateFlow<ProjectState> = _projectState.asStateFlow()
-
-    // Flow to expose active text overlays based on current playback time
-    // Note: In a real app, we'd pass the player's current position to this flow,
-    // but here we might need the View to pull it or push time updates to VM.
-    // For simplicity, we'll let the View observe the full list and decide visibility.
-    val textTracks = _projectState.map { state ->
-        state.tracks.filter { it.trackType == MediaType.TEXT }
-    }
 
     private val dataSourceFactory = DefaultDataSource.Factory(application)
 
@@ -48,12 +39,13 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun addClip(uri: Uri, type: MediaType, durationMs: Long) {
+    fun addClip(uri: Uri, type: MediaType, durationMs: Long, text: String? = null) {
         _projectState.update { state ->
             val newClip = Clip(
                 uri = uri,
                 mediaType = type,
-                durationMs = durationMs
+                durationMs = durationMs,
+                text = text
             )
 
             val updatedTracks = state.tracks.map { track ->
@@ -69,28 +61,18 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
         recalculateDuration()
     }
 
-    fun addTextClip(text: String, durationMs: Long = 5000) {
+    fun removeClip(clipId: String) {
         _projectState.update { state ->
-            val newClip = Clip(
-                uri = Uri.EMPTY, // No file for text
-                mediaType = MediaType.TEXT,
-                durationMs = durationMs,
-                text = text
-            )
-
             val updatedTracks = state.tracks.map { track ->
-                if (track.trackType == MediaType.TEXT) {
-                    track.copy(clips = track.clips + newClip)
-                } else {
-                    track
-                }
+                track.copy(clips = track.clips.filter { it.id != clipId })
             }
             state.copy(tracks = updatedTracks)
         }
+        recalculateDuration()
     }
 
     fun moveClip(trackType: MediaType, fromIndex: Int, toIndex: Int) {
-        _projectState.update { state ->
+         _projectState.update { state ->
             val updatedTracks = state.tracks.map { track ->
                 if (track.trackType == trackType) {
                     val clips = track.clips.toMutableList()
@@ -107,16 +89,6 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
             }
             state.copy(tracks = updatedTracks)
         }
-    }
-
-    fun removeClip(clipId: String) {
-        _projectState.update { state ->
-            val updatedTracks = state.tracks.map { track ->
-                track.copy(clips = track.clips.filter { it.id != clipId })
-            }
-            state.copy(tracks = updatedTracks)
-        }
-        recalculateDuration()
     }
 
     fun updateClipTrim(clipId: String, startOffset: Long, endOffset: Long) {
@@ -137,8 +109,9 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     private fun recalculateDuration() {
-        val mainTrack = _projectState.value.tracks.find { it.trackType == MediaType.VIDEO }
-        val duration = mainTrack?.clips?.sumOf { it.durationMs } ?: 0L
+        // Duration is determined by the longest track, usually Video
+        val videoTrack = _projectState.value.tracks.find { it.trackType == MediaType.VIDEO }
+        val duration = videoTrack?.clips?.sumOf { it.durationMs } ?: 0L
         _projectState.update { it.copy(totalDurationMs = duration) }
     }
 
@@ -158,11 +131,7 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
             }
         }
 
-        // 2. Build Audio Source (Concatenated or Merged?)
-        // The requirement is "Audio tracks above/below main video track".
-        // This usually implies a separate timeline.
-        // For simplicity, we will assume audio clips are sequential on their own track, starting at t=0
-        // To support precise timing (gaps), we'd need SilenceMediaSource, but let's stick to basic "magnetic" (no gaps) for now.
+        // 2. Build Audio Source
         if (audioTrack != null && audioTrack.clips.isNotEmpty()) {
             val audioSources = audioTrack.clips.mapNotNull { clip -> createMediaSource(clip) }
             if (audioSources.isNotEmpty()) {
@@ -172,7 +141,6 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
 
         if (sourcesToMerge.isEmpty()) return null
 
-        // If we have both video and audio tracks, merge them to play simultaneously
         return if (sourcesToMerge.size == 1) {
             sourcesToMerge[0]
         } else {
@@ -181,7 +149,7 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     private fun createMediaSource(clip: Clip): MediaSource? {
-        if (clip.uri == Uri.EMPTY) return null // Skip text clips or invalid URIs in this player
+        if (clip.uri == Uri.EMPTY) return null
 
         val mediaItem = MediaItem.fromUri(clip.uri)
         val source = ProgressiveMediaSource.Factory(dataSourceFactory)
@@ -190,7 +158,6 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
         return if (clip.startOffsetMs > 0 || clip.durationMs > 0) {
              val startUs = clip.startOffsetMs * 1000
              val endUs = (clip.startOffsetMs + clip.durationMs) * 1000
-             // Verify endUs is valid (greater than startUs)
              if (endUs > startUs) {
                  ClippingMediaSource(source, startUs, endUs)
              } else {
@@ -200,6 +167,4 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
             source
         }
     }
-
-    fun getProjectState() = _projectState.value
 }

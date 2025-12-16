@@ -18,7 +18,7 @@ class CustomVideoSeeker @JvmOverloads constructor(
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG) // Paint object for drawing
     private var seekPosition = 0f // Normalized seek position (0 to 1)
     private var videoDuration = 0L // Total video duration in milliseconds
-    var onSeekListener: ((Float) -> Unit)? = null // Listener for seek events
+    var onSeekListener: ((Float) -> Unit)? = null // Listener for seek events (returns normalized position 0..1)
 
     init {
         paint.color = Color.WHITE // Set the color of the line to white
@@ -39,9 +39,7 @@ class CustomVideoSeeker @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
                 // Update the normalized seek position based on touch event
                 seekPosition = (event.x / width).coerceIn(0f, 1f)
-                val seekTime = (videoDuration * seekPosition).toLong() // Calculate seek time in milliseconds
-                onSeekListener?.invoke(seekPosition) // Notify listener of the normalized position
-                onSeekListener?.invoke(seekTime.toFloat()) // Notify listener of the seek time
+                onSeekListener?.invoke(seekPosition) // Notify listener of the normalized position only
                 invalidate() // Redraw the view to update the seek line
                 return true
             }

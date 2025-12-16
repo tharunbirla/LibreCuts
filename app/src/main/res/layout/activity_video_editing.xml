@@ -54,7 +54,8 @@
         android:layout_height="0dp"
         android:layout_above="@+id/textConfigs"
         android:layout_below="@+id/toolbar"
-        app:use_controller="false" />
+        app:use_controller="false"
+        app:surface_type="texture_view" />
 
     <LinearLayout
         android:id="@+id/textConfigs"
@@ -72,7 +73,7 @@
         android:background="#CC000000"
         android:orientation="vertical"
         android:gravity="center"
-        android:layout_above="@+id/timelineComposeView">
+        android:layout_above="@+id/editingControls">
 
         <TextView
             android:id="@+id/tvDuration"
@@ -84,13 +85,23 @@
             android:textColor="@android:color/white"
             android:layout_gravity="center_horizontal"/>
 
-    </LinearLayout>
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_marginStart="20dp"
+            android:layout_marginEnd="20dp">
 
-    <androidx.compose.ui.platform.ComposeView
-        android:id="@+id/timelineComposeView"
-        android:layout_width="match_parent"
-        android:layout_height="250dp"
-        android:layout_above="@+id/editingControls" />
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/frameRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"/>
+
+            <com.tharunbirla.librecuts.customviews.CustomVideoSeeker
+                android:id="@+id/customVideoSeeker"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"/>
+        </FrameLayout>
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/editingControls"
