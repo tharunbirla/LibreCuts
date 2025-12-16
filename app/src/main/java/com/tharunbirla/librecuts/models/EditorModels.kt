@@ -9,15 +9,27 @@ enum class MediaType {
     TEXT
 }
 
+data class CropData(
+    val x: Float, // Top-left x (normalized 0..1 or absolute if verified)
+    val y: Float, // Top-left y
+    val width: Float,
+    val height: Float,
+    val aspectRatio: String // "16:9", "1:1", "Free"
+)
+
 data class Clip(
     val id: String = UUID.randomUUID().toString(),
     val uri: Uri,
     val mediaType: MediaType,
     val durationMs: Long,
-    val startOffsetMs: Long = 0,
+    val startOffsetMs: Long = 0, // Where in the source file this clip starts
     val text: String? = null,
-    // Store thumbnail path or bitmap cache key if needed
-    val thumbnailPath: String? = null
+    val thumbnailPath: String? = null,
+
+    // New properties for editing
+    val volume: Float = 1.0f,
+    val speed: Float = 1.0f,
+    val crop: CropData? = null
 )
 
 data class Track(

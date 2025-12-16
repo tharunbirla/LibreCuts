@@ -11,6 +11,7 @@ import com.google.android.exoplayer2.source.MergingMediaSource
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.upstream.DefaultDataSource
 import com.tharunbirla.librecuts.models.Clip
+import com.tharunbirla.librecuts.models.CropData
 import com.tharunbirla.librecuts.models.MediaType
 import com.tharunbirla.librecuts.models.ProjectState
 import com.tharunbirla.librecuts.models.Track
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import java.util.UUID
 
 class VideoEditorViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -108,8 +110,80 @@ class VideoEditorViewModel(application: Application) : AndroidViewModel(applicat
         recalculateDuration()
     }
 
+    fun updateClipCrop(clipId: String, crop: CropData) {
+        _projectState.update { state ->
+            val updatedTracks = state.tracks.map { track ->
+                track.copy(clips = track.clips.map { clip ->
+                    if (clip.id == clipId) {
+                        clip.copy(crop = crop)
+                    } else {
+                        clip
+                    }
+                })
+            }
+            state.copy(tracks = updatedTracks)
+        }
+    }
+
+    fun splitClip(clipId: String, splitTimeMs: Long) {
+        // splitTimeMs is global timeline time.
+        // We need to find which clip matches this time.
+        // Actually, the caller should pass the clipId that corresponds to the current time,
+        // OR we iterate to find it.
+        // Since caller passes clipId, we just need to convert timeline time to clip local time.
+
+        _projectState.update { state ->
+            val tracks = state.tracks.toMutableList()
+            // Find track containing the clip
+            val trackIndex = tracks.indexOfFirst { it.clips.any { clip -> clip.id == clipId } }
+            if (trackIndex == -1) return@update state
+
+            val track = tracks[trackIndex]
+            val clips = track.clips.toMutableList()
+            val clipIndex = clips.indexOfFirst { it.id == clipId }
+            val clip = clips[clipIndex]
+
+            // Calculate split point in clip's local time (source file time)
+            // To do this, we need the start time of the clip in the timeline.
+            // This is "magnetic", so sum of previous clips duration.
+            var clipStartTime = 0L
+            for (i in 0 until clipIndex) {
+                clipStartTime += clips[i].durationMs
+            }
+
+            val splitOffsetInClip = splitTimeMs - clipStartTime
+
+            if (splitOffsetInClip <= 0 || splitOffsetInClip >= clip.durationMs) {
+                // Invalid split point
+                return@update state
+            }
+
+            val splitPointSource = clip.startOffsetMs + splitOffsetInClip
+
+            // Create two new clips
+            // Part 1: Start at clip.startOffsetMs, duration = splitOffsetInClip
+            val part1 = clip.copy(
+                id = UUID.randomUUID().toString(),
+                durationMs = splitOffsetInClip
+            )
+
+            // Part 2: Start at splitPointSource, duration = clip.duration - splitOffsetInClip
+            val part2 = clip.copy(
+                id = UUID.randomUUID().toString(),
+                startOffsetMs = splitPointSource,
+                durationMs = clip.durationMs - splitOffsetInClip
+            )
+
+            clips.removeAt(clipIndex)
+            clips.add(clipIndex, part1)
+            clips.add(clipIndex + 1, part2)
+
+            tracks[trackIndex] = track.copy(clips = clips)
+            state.copy(tracks = tracks)
+        }
+    }
+
     private fun recalculateDuration() {
-        // Duration is determined by the longest track, usually Video
         val videoTrack = _projectState.value.tracks.find { it.trackType == MediaType.VIDEO }
         val duration = videoTrack?.clips?.sumOf { it.durationMs } ?: 0L
         _projectState.update { it.copy(totalDurationMs = duration) }

@@ -87,14 +87,36 @@
 
         <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="50dp"
+            android:layout_height="wrap_content"
             android:layout_marginStart="20dp"
             android:layout_marginEnd="20dp">
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/frameRecyclerView"
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"/>
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/frameRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"/>
+
+                <LinearLayout
+                    android:id="@+id/audioTrackContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="20dp"
+                    android:orientation="horizontal"
+                    android:background="#3300FF00"
+                    android:visibility="gone"/>
+
+                <LinearLayout
+                    android:id="@+id/textTrackContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="20dp"
+                    android:orientation="horizontal"
+                    android:background="#330000FF"
+                    android:visibility="gone"/>
+            </LinearLayout>
 
             <com.tharunbirla.librecuts.customviews.CustomVideoSeeker
                 android:id="@+id/customVideoSeeker"
@@ -113,7 +135,7 @@
         android:padding="16dp">
 
         <ImageButton
-            android:id="@+id/btnTrim"
+            android:id="@+id/btnSplit"
             android:minWidth="48dp"
             android:minHeight="48dp"
             android:layout_width="0dp"
@@ -121,6 +143,18 @@
             android:layout_weight="1"
             android:padding="10dp"
             android:src="@drawable/ic_split_24"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Split"/>
+
+        <ImageButton
+            android:id="@+id/btnTrim"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:padding="10dp"
+            android:src="@drawable/ic_trim_left_24"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/add_overly"/>
 
