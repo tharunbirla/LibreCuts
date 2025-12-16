@@ -20,8 +20,12 @@ import android.widget.ImageButton
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.ui.platform.ComposeView
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.airbnb.lottie.LottieAnimationView
@@ -37,10 +41,14 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.slider.RangeSlider
 import com.google.android.material.textfield.TextInputEditText
 import com.tharunbirla.librecuts.customviews.CustomVideoSeeker
+import com.tharunbirla.librecuts.models.MediaType
+import com.tharunbirla.librecuts.ui.timeline.TimelineScreen
+import com.tharunbirla.librecuts.viewmodels.VideoEditorViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -50,16 +58,19 @@ import java.util.Locale
 @Suppress("DEPRECATION")
 class VideoEditingActivity : AppCompatActivity() {
 
+    private val viewModel: VideoEditorViewModel by viewModels()
+
     private lateinit var player: ExoPlayer
     private lateinit var playerView: StyledPlayerView
     private lateinit var tvDuration: TextView
-    private lateinit var frameRecyclerView: RecyclerView
-    private lateinit var customVideoSeeker: CustomVideoSeeker
+    // private lateinit var frameRecyclerView: RecyclerView // Removed
+    // private lateinit var customVideoSeeker: CustomVideoSeeker // Kept in layout but might need adjustment
     private var videoUri: Uri? = null
-    private var videoFileName: String = ""
-    private lateinit var tempInputFile: File
+    // private var videoFileName: String = "" // Not used in new logic yet
+    // private lateinit var tempInputFile: File // Not used in new logic yet
     private lateinit var loadingScreen: View
     private lateinit var lottieAnimationView: LottieAnimationView
+    private lateinit var timelineComposeView: ComposeView
 
     private var activeFFmpegSessions = mutableListOf<FFmpegSession>()
     private var isVideoLoaded = false
@@ -83,21 +94,77 @@ class VideoEditingActivity : AppCompatActivity() {
             lottieAnimationView.playAnimation()
         } catch (e: Exception) {
             Log.e("LottieError", "Error loading Lottie animation: ${e.message}")
-            // Handle the error gracefully
         }
 
         // Initialize UI components and setup the player
         initializeViews()
         setupExoPlayer()
-        setupCustomSeeker()
-        setupFrameRecyclerView()
+        // setupCustomSeeker() // TODO: Re-integrate seeker
+        setupTimelineUI()
+
+        // Initial Video Load
+        videoUri = intent.getParcelableExtra("VIDEO_URI")
+        if (videoUri != null) {
+            // We need to get duration before adding to VM
+             lifecycleScope.launch {
+                 val duration = getVideoDuration(videoUri!!)
+                 viewModel.addClip(videoUri!!, MediaType.VIDEO, duration)
+             }
+        }
+
+        observeViewModel()
+    }
+
+    private fun observeViewModel() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    viewModel.projectState.collectLatest { state ->
+                        refreshPlayerSource()
+                    }
+                }
+                launch {
+                    viewModel.textTracks.collectLatest { textTracks ->
+                        updateTextOverlays(textTracks)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun updateTextOverlays(textTracks: List<com.tharunbirla.librecuts.models.Track>) {
+        // Find the textConfigs layout
+        val textContainer = findViewById<android.widget.LinearLayout>(R.id.textConfigs)
+        textContainer.removeAllViews()
+
+        // Iterate through all text tracks and their clips
+        textTracks.forEach { track ->
+            track.clips.forEach { clip ->
+                if (clip.text != null) {
+                    val textView = TextView(this)
+                    textView.text = clip.text
+                    textView.textSize = 24f // Default size, should come from clip
+                    textView.setTextColor(android.graphics.Color.WHITE)
+
+                    // Simple logic to show all texts. In reality, we need to check current player time.
+                    // Since this function is called on state change, not every frame,
+                    // we need a separate update loop for visibility based on time.
+                    // For now, let's just add them but set visibility to GONE,
+                    // and use the player listener to toggle them.
+
+                    textView.tag = clip // Store clip in tag
+                    textView.visibility = View.INVISIBLE
+                    textContainer.addView(textView)
+                }
+            }
+        }
     }
 
     private fun initializeViews() {
         playerView = findViewById(R.id.playerView)
         tvDuration = findViewById(R.id.tvDuration)
-        frameRecyclerView = findViewById(R.id.frameRecyclerView)
-        customVideoSeeker = findViewById(R.id.customVideoSeeker)
+        timelineComposeView = findViewById(R.id.timelineComposeView)
+        // customVideoSeeker = findViewById(R.id.customVideoSeeker)
 
         // Set up button click listeners
         findViewById<ImageButton>(R.id.btnHome).setOnClickListener { onBackPressedDispatcher.onBackPressed()}
@@ -107,6 +174,25 @@ class VideoEditingActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btnAudio).setOnClickListener { audioAction() }
         findViewById<ImageButton>(R.id.btnCrop).setOnClickListener { cropAction() }
         findViewById<ImageButton>(R.id.btnMerge).setOnClickListener { mergeAction() }
+    }
+
+    private fun setupTimelineUI() {
+        timelineComposeView.setContent {
+            TimelineScreen(viewModel = viewModel)
+        }
+    }
+
+
+    private fun refreshPlayerSource() {
+        val mediaSource = viewModel.buildMediaSource()
+        if (mediaSource != null) {
+            val currentPos = player.currentPosition
+            player.setMediaSource(mediaSource)
+            player.prepare()
+            if (currentPos > 0) {
+                 player.seekTo(currentPos)
+            }
+        }
     }
 
     private fun mergeAction() {
@@ -122,98 +208,40 @@ class VideoEditingActivity : AppCompatActivity() {
         startActivityForResult(Intent.createChooser(intent, "Select Video"), PICK_VIDEO_REQUEST)
     }
 
-    @Deprecated("This method has been deprecated in favor of using the Activity Result API\n      which brings increased type safety via an {@link ActivityResultContract} and the prebuilt\n      contracts for common intents available in\n      {@link androidx.activity.result.contract.ActivityResultContracts}, provides hooks for\n      testing, and allow receiving results in separate, testable classes independent from your\n      activity. Use\n      {@link #registerForActivityResult(ActivityResultContract, ActivityResultCallback)}\n      with the appropriate {@link ActivityResultContract} and handling the result in the\n      {@link ActivityResultCallback#onActivityResult(Object) callback}.")
+    @Deprecated("This method has been deprecated in favor of using the Activity Result API")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
 
-        if (requestCode == PICK_VIDEO_REQUEST && resultCode == Activity.RESULT_OK) {
-            data?.let {
-                val currentVideoUri = videoUri // The current video URI
-                val selectedVideoUris = mutableListOf<Uri>()
-
-                if (it.clipData != null) {
-                    val itemCount = it.clipData!!.itemCount
-                    for (i in 0 until itemCount) {
-                        selectedVideoUris.add(it.clipData!!.getItemAt(i).uri)
+        if (resultCode == Activity.RESULT_OK && data != null) {
+            when (requestCode) {
+                PICK_VIDEO_REQUEST -> {
+                    val selectedVideoUris = mutableListOf<Uri>()
+                    if (data.clipData != null) {
+                        val itemCount = data.clipData!!.itemCount
+                        for (i in 0 until itemCount) {
+                            selectedVideoUris.add(data.clipData!!.getItemAt(i).uri)
+                        }
+                    } else {
+                        data.data?.let { selectedUri -> selectedVideoUris.add(selectedUri) }
                     }
-                } else {
-                    it.data?.let { selectedUri -> selectedVideoUris.add(selectedUri) }
+                    lifecycleScope.launch {
+                        selectedVideoUris.forEach { uri ->
+                            val duration = getVideoDuration(uri)
+                            viewModel.addClip(uri, MediaType.VIDEO, duration)
+                        }
+                    }
                 }
-
-                if (currentVideoUri != null) {
-                    mergeVideos(currentVideoUri, selectedVideoUris)
-                } // Pass the URIs to mergeVideos
+                PICK_AUDIO_REQUEST -> {
+                    data.data?.let { uri ->
+                         lifecycleScope.launch {
+                             val duration = getVideoDuration(uri) // Works for audio too
+                             viewModel.addClip(uri, MediaType.AUDIO, duration)
+                         }
+                    }
+                }
             }
         }
     }
-
-    private fun mergeVideos(currentVideoUri: Uri, selectedVideoUris: List<Uri>) {
-        lifecycleScope.launch {
-            try {
-                // Fetch metadata for the current video
-                val currentMedia = getVideoMetadata(this@VideoEditingActivity, currentVideoUri)
-                val currentInputPath = currentMedia.uri.toString()
-
-                val outputDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                if (!outputDir.exists()) {
-                    outputDir.mkdirs()
-                }
-
-                val outputPath = File(outputDir, "merged_video_${System.currentTimeMillis()}.mp4").absolutePath
-                Log.d("MergeAction", "Output file path: $outputPath")
-
-                // Create a temporary file to store the list of input files
-                val listFile = File(cacheDir, "videolist.txt")
-                val builder = StringBuilder().append("file '$currentInputPath'\n")
-                for (uri in selectedVideoUris) {
-                    val selectedMedia = getVideoMetadata(this@VideoEditingActivity, uri)
-                    val selectedInputPath = selectedMedia.uri.toString()
-                    builder.append("file '$selectedInputPath'\n")
-                }
-                listFile.writeText(builder.toString())
-
-                // Build the FFmpeg command for merging videos
-                val command = "-f concat -safe 0 -i ${listFile.absolutePath} -c:v copy -c:a copy $outputPath"
-                Log.d("MergeCommand", "FFmpeg command: $command")
-
-                lifecycleScope.launch {
-                    try {
-                        // Execute the command in a background thread
-                        val session = withContext(Dispatchers.IO) {
-                            FFmpegKit.execute(command)
-                        }
-
-                        val state = session.state
-                        val returnCode = session.returnCode
-
-                        Log.d("FFmpegSession", "FFmpeg process exited with state $state and rc $returnCode.")
-
-                        if (ReturnCode.isSuccess(returnCode)) {
-                            Toast.makeText(this@VideoEditingActivity, "Videos merged successfully!", Toast.LENGTH_SHORT).show()
-
-                            // Update video URI to the merged video
-                            videoUri = Uri.parse(outputPath)
-                            refreshPlayer() // Refresh player with new video
-                            refreshUI()     // Refresh UI
-                        } else {
-                            Log.e("FFmpegError", "Error merging videos: ${session.failStackTrace}")
-                            Toast.makeText(this@VideoEditingActivity, "Error merging videos.", Toast.LENGTH_SHORT).show()
-                        }
-                    } catch (e: Exception) {
-                        Log.e("FFmpegError", "Exception during FFmpeg execution: ${e.message}")
-                        Toast.makeText(this@VideoEditingActivity, "Error merging videos: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
-                }
-
-
-
-            } catch (e: Exception) {
-                Log.e("MetadataError", "Error fetching video metadata: ${e.message}")
-                Toast.makeText(this@VideoEditingActivity, "Error fetching video metadata: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
 
     @SuppressLint("InflateParams")
     private fun cropAction() {
@@ -251,67 +279,94 @@ class VideoEditingActivity : AppCompatActivity() {
     }
 
     private fun cropVideo(aspectRatio: String) {
-        // Retrieve the video URI from the intent
-        val videoUri = intent.getParcelableExtra<Uri>("VIDEO_URI")
-        if (videoUri == null) {
-            Toast.makeText(this, "Error retrieving video URI", Toast.LENGTH_SHORT).show()
-            return
-        }
+        // Apply crop to the PlayerView (Preview only)
+        // In a real export, this would be an FFmpeg filter.
 
-        // Fetch video metadata asynchronously to get the file path
-        lifecycleScope.launch {
-            try {
-                val media = getVideoMetadata(this@VideoEditingActivity, videoUri)
-                val inputPath = media.uri.toString() // Get the actual file path
-                val outputDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        // Exoplayer's TextureView can be scaled.
+        // Or we can use a Transformation.
+        // Simple approach: Adjust the AspectRatioFrameLayout's resize mode.
 
-                if (!outputDir.exists()) {
-                    outputDir.mkdirs() // Create output directory if it doesn't exist
-                }
+        when (aspectRatio) {
+            "16:9" -> {
+                 // Force 16:9
+                 // playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
+                 // This is just fitting content.
+                 // Real cropping requires Zooming into the video.
 
-                val outputPath = File(outputDir, "cropped_${System.currentTimeMillis()}.mp4").absolutePath
-                Log.d("CropAction", "Output file path: $outputPath")
+                 // We can emulate crop by scaling the video view.
+                 playerView.videoSurfaceView?.let { surfaceView ->
+                     if (surfaceView is android.view.TextureView) {
+                         val viewWidth = surfaceView.width.toFloat()
+                         val viewHeight = surfaceView.height.toFloat()
+                         val matrix = android.graphics.Matrix()
 
-                // Define crop parameters based on aspect ratio
-                    val cropCommand = when (aspectRatio) {
-                        "16:9" -> "-vf \"crop=iw:iw*9/16\""
-                        "9:16" -> "-vf \"crop=ih*9/16:ih\""
-                        "1:1" -> "-vf \"crop=iw:iw\""
-                        else -> return@launch
-                    }
+                         // Scale to simulate 16:9 crop (zoom in)
+                         // This is a naive implementation, assuming centered crop.
+                         // Scale X/Y to fill the 16:9 box
+                         matrix.setScale(1.5f, 1.5f, viewWidth / 2, viewHeight / 2)
 
-                // Build the FFmpeg command correctly
-                val command = "-i \"$inputPath\" $cropCommand -c:a copy \"$outputPath\""
-                Log.d("FFmpegCommand", "FFmpeg command: $command")
-
-                executeFFmpegCommand(command, outputPath)
-
-            } catch (e: Exception) {
-                Log.e("MetadataError", "Error fetching video metadata: ${e.message}")
-                Toast.makeText(this@VideoEditingActivity, "Error fetching video metadata: ${e.message}", Toast.LENGTH_SHORT).show()
+                         surfaceView.setTransform(matrix)
+                     }
+                 }
+                 Toast.makeText(this, "Preview: Crop $aspectRatio applied", Toast.LENGTH_SHORT).show()
+            }
+            "9:16" -> {
+                 playerView.videoSurfaceView?.let { surfaceView ->
+                     if (surfaceView is android.view.TextureView) {
+                         val viewWidth = surfaceView.width.toFloat()
+                         val viewHeight = surfaceView.height.toFloat()
+                         val matrix = android.graphics.Matrix()
+                         matrix.setScale(1.5f, 1.5f, viewWidth / 2, viewHeight / 2)
+                         surfaceView.setTransform(matrix)
+                     }
+                 }
+                 Toast.makeText(this, "Preview: Crop $aspectRatio applied", Toast.LENGTH_SHORT).show()
+            }
+            "1:1" -> {
+                 playerView.videoSurfaceView?.let { surfaceView ->
+                     if (surfaceView is android.view.TextureView) {
+                         val viewWidth = surfaceView.width.toFloat()
+                         val viewHeight = surfaceView.height.toFloat()
+                         val matrix = android.graphics.Matrix()
+                         matrix.setScale(1.2f, 1.2f, viewWidth / 2, viewHeight / 2)
+                         surfaceView.setTransform(matrix)
+                     }
+                 }
+                 Toast.makeText(this, "Preview: Crop $aspectRatio applied", Toast.LENGTH_SHORT).show()
+            }
+            else -> {
+                // Reset
+                playerView.videoSurfaceView?.let { surfaceView ->
+                     if (surfaceView is android.view.TextureView) {
+                         val matrix = android.graphics.Matrix()
+                         surfaceView.setTransform(matrix)
+                     }
+                 }
+                 Toast.makeText(this, "Crop Reset", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
     private fun audioAction() {
-        TODO("Not yet implemented")
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "audio/*"
+            addCategory(Intent.CATEGORY_OPENABLE)
+        }
+        startActivityForResult(Intent.createChooser(intent, "Select Audio"), PICK_AUDIO_REQUEST)
     }
 
     private fun textAction() {
-        FFmpegKitConfig.setFontDirectory(this@VideoEditingActivity, "/system/fonts", null)
         // Create the BottomSheetDialog
         val bottomSheetDialog = BottomSheetDialog(this)
 
         // Inflate the layout for the bottom sheet
         val view = layoutInflater.inflate(R.layout.text_bottom_sheet_dialog, null)
 
-        // Initialize the EditText, Spinners, and Buttons from the inflated view
         val etTextInput = view.findViewById<TextInputEditText>(R.id.etTextInput)
         val fontSizeInput = view.findViewById<TextInputEditText>(R.id.fontSize)
         val spinnerTextPosition = view.findViewById<Spinner>(R.id.spinnerTextPosition)
         val btnDone = view.findViewById<Button>(R.id.btnDoneText)
 
-        // Define position values for the spinner
         val positionOptions = arrayOf(
             "Bottom Right",
             "Top Right",
@@ -322,102 +377,52 @@ class VideoEditingActivity : AppCompatActivity() {
             "Center Align"
         )
 
-        // Create an adapter to set the spinner data
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, positionOptions)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerTextPosition.adapter = adapter
 
         btnDone.setOnClickListener {
-            // Retrieve the text input, font size, and position selection
             val text = etTextInput.text.toString()
-            val fontSize = fontSizeInput.text.toString().toIntOrNull() ?: 16 // Default font size is 16 if invalid input
-            val textPosition = spinnerTextPosition.selectedItem.toString()
+            // val fontSize = fontSizeInput.text.toString().toIntOrNull() ?: 16
+            // val textPosition = spinnerTextPosition.selectedItem.toString()
 
-            // Map the position string to FFmpeg position parameters (x and y coordinates)
-            val positionString = when (textPosition) {
-                "Bottom Right" -> "x=w-tw:y=h-th"
-                "Top Right" -> "x=w-tw:y=0"
-                "Top Left" -> "x=0:y=0"
-                "Bottom Left" -> "x=0:y=h-th"
-                "Center Bottom" -> "x=(w-text_w)/2:y=h-th"
-                "Center Top" -> "x=(w-text_w)/2:y=0"
-                "Center Align" -> "x=(w-text_w)/2:y=(h-text_h)/2"
-                else -> "x=(w-text_w)/2:y=(h-text_h)/2"
-            }
+            viewModel.addTextClip(text)
 
-            // Show a toast with the entered data (for debugging purposes)
-            Toast.makeText(this, "Text: $text, Font Size: $fontSize, Position: $positionString", Toast.LENGTH_SHORT).show()
-
-            // Call function to add the text to the video
-            addTextToVideo(text, fontSize, positionString)
-
-            // Close the bottom sheet
             bottomSheetDialog.dismiss()
         }
 
-        // Set the view for the bottom sheet dialog
         bottomSheetDialog.setContentView(view)
-
-        // Show the bottom sheet dialog
         bottomSheetDialog.show()
-    }
-
-    private fun addTextToVideo(text: String, fontSize: Int, position: String) {
-        lifecycleScope.launch {
-            val videoUri = videoUri // Assuming this is your video URI
-            val media = videoUri?.let { getVideoMetadata(this@VideoEditingActivity, it) }
-            val realFilePath = media?.uri.toString()
-
-            val outputDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            if (!outputDir.exists()) {
-                outputDir.mkdirs() // Create output directory if it doesn't exist
-            }
-            val outputPath = File(outputDir, "video_with_text_${System.currentTimeMillis()}.mp4").absolutePath
-            Log.d("TextAction", "Output file path: $outputPath")
-
-            // FFmpeg command to overlay text on the video
-            val command = "-i \"$realFilePath\" -vf \"drawtext=text='$text':fontcolor=white:fontsize=$fontSize:$position\" -c:a copy \"$outputPath\""
-            Log.d("FFmpegCommand", "FFmpeg command: $command")
-            executeFFmpegCommand(command, outputPath)
-        }
     }
 
     @SuppressLint("InflateParams")
     private fun trimAction() {
         val videoDuration = player.duration
 
-        // Validate the video duration
         if (videoDuration <= 0) {
             Toast.makeText(this, "Video duration is invalid.", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // Create BottomSheetDialog
         val bottomSheetDialog = BottomSheetDialog(this@VideoEditingActivity)
         val sheetView = layoutInflater.inflate(R.layout.trim_bottom_sheet_dialog, null)
 
         val rangeSlider: RangeSlider = sheetView.findViewById(R.id.rangeSlider)
 
-        // Convert duration to minutes and seconds
         val durationInMillis: Long = videoDuration
         val totalMinutes = (durationInMillis / 60000).toInt()
         val totalSeconds = ((durationInMillis % 60000) / 1000).toInt()
 
-        // Format as float for the RangeSlider (00.00)
-        val formattedValueTo = (totalMinutes * 60 + totalSeconds).toFloat() // Total seconds as float
+        val formattedValueTo = (totalMinutes * 60 + totalSeconds).toFloat()
 
         rangeSlider.valueFrom = 0f
         rangeSlider.valueTo = formattedValueTo
-        rangeSlider.values = listOf(0f, formattedValueTo) // Set initial range
-
-        // Log the values for debugging
-        Log.d("RangeSlider", "Value from: ${rangeSlider.valueFrom}, Value to: ${rangeSlider.valueTo}")
+        rangeSlider.values = listOf(0f, formattedValueTo)
 
         rangeSlider.addOnChangeListener { slider, value, fromUser ->
-            val start = slider.values[0].toLong() * 1000 // Convert to milliseconds
-            val end = slider.values[1].toLong() * 1000 // Convert to milliseconds
+            val start = slider.values[0].toLong() * 1000
+            val end = slider.values[1].toLong() * 1000
 
-            // Update the player’s playback position based on the start value
             if (fromUser) {
                 if (value == slider.values[0]) {
                     player.seekTo(start)
@@ -428,59 +433,35 @@ class VideoEditingActivity : AppCompatActivity() {
             }
         }
 
-        // Set up button listeners
         sheetView.findViewById<Button>(R.id.btnDoneTrim).setOnClickListener {
-            trimVideo(rangeSlider.values[0].toLong(), rangeSlider.values[1].toLong())
+            val start = rangeSlider.values[0].toLong() * 1000
+            val end = rangeSlider.values[1].toLong() * 1000
+
+            // Logic to trim the currently selected clip or the main video if only one.
+            // For simplicity in this demo, we assume we are trimming the last added video clip
+            // or we need a 'selectedClip' state in VM.
+            // Let's assume the VM has a concept of selected clip, or we find the first video clip.
+
+            val state = viewModel.getProjectState()
+            val videoTrack = state.tracks.find { it.trackType == MediaType.VIDEO }
+            if (videoTrack != null && videoTrack.clips.isNotEmpty()) {
+                // Determine which clip is being trimmed.
+                // Ideally, user selects a clip in Timeline, then clicks Trim.
+                // Here, we'll just trim the first clip as a fallback or the one matching current time.
+
+                val clipToTrim = videoTrack.clips.first() // Simplified
+
+                viewModel.updateClipTrim(clipToTrim.id, start, end)
+                Toast.makeText(this, "Clip trimmed!", Toast.LENGTH_SHORT).show()
+            } else {
+                 Toast.makeText(this, "No video clip to trim", Toast.LENGTH_SHORT).show()
+            }
+
+            bottomSheetDialog.dismiss()
         }
 
         bottomSheetDialog.setContentView(sheetView)
         bottomSheetDialog.show()
-    }
-
-    private fun trimVideo(trimBeginingTime: Long, trimEndTime: Long) {
-        lifecycleScope.launch {
-            val media = videoUri?.let { getVideoMetadata(this@VideoEditingActivity, it) }
-            val realFilePath = media?.uri.toString()
-
-            val outputDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            if (!outputDir.exists()) {
-                outputDir.mkdirs() // Create output directory if it doesn't exist
-            }
-            val outputPath = File(outputDir, "trimmed_video_${System.currentTimeMillis()}.mp4").absolutePath
-            Log.d("TrimAction", "Output file path: $outputPath")
-            val command = "-ss $trimBeginingTime -i \"$realFilePath\" -to $trimEndTime -c copy \"$outputPath\""
-            Log.d("FFmpegCommand", "FFmpeg command: $command")
-            executeFFmpegCommand(command, outputPath)
-        }
-    }
-
-    private fun executeFFmpegCommand(command: String, outputPath: String) {
-        coroutineScope.launch {
-            try {
-                // Cancel any ongoing FFmpeg operations
-                FFmpegKit.cancel()
-
-                val session = withContext(Dispatchers.IO) {
-                    FFmpegKit.execute(command)
-                }
-
-                activeFFmpegSessions.add(session)
-
-                if (ReturnCode.isSuccess(session.returnCode)) {
-                    videoUri = Uri.parse(outputPath)
-                    refreshPlayer()
-                    refreshUI()
-                } else {
-                    showError("Error processing video: ${session.returnCode}")
-                }
-
-                // Remove completed session
-                activeFFmpegSessions.remove(session)
-
-            } catch (e: Exception) {
-                showError("Error executing command: ${e.message}")
-            }
-        }
     }
 
     private fun showError(error: String) {
@@ -489,175 +470,94 @@ class VideoEditingActivity : AppCompatActivity() {
     }
 
     private fun refreshUI() {
-        // Update UI elements based on the player's current state
-        player.addListener(object : Player.Listener {
-            override fun onPlaybackStateChanged(state: Int) {
-                if (state == Player.STATE_READY) {
-                    customVideoSeeker.setVideoDuration(player.duration)
-                    updateDurationDisplay(player.currentPosition.toInt(), player.duration.toInt())
-                    extractVideoFrames() // Refresh frame list for the trimmed video
-                }
-            }
-        })
-
-        // Call to extract frames for display
-        extractVideoFrames()
+        // No-op or refactor
     }
-
-    private fun refreshPlayer() {
-        player.release() // Release the current player instance
-
-        player = ExoPlayer.Builder(this).build().apply {
-            playerView.player = this // Bind player to the player view
-            setMediaItem(MediaItem.fromUri(videoUri!!)) // Set the new media item
-            prepare() // Prepare the player
-            playWhenReady = false // Start playback automatically
-            seekTo(0) // Seek to the start of the video
-        }
-
-        // Update the custom seeker to reflect the new video's duration
-        customVideoSeeker.setVideoDuration(player.duration)
-        updateDurationDisplay(0, player.duration.toInt()) // Reset duration display
-    }
-
 
     private fun saveAction() {
-        // Placeholder for future implementation of save functionality
+        // Iterate through ViewModel state and build complex FFmpeg command
+        Toast.makeText(this, "Exporting...", Toast.LENGTH_SHORT).show()
+        // TODO: Implement export logic based on ViewModel state
     }
 
     private fun setupExoPlayer() {
-        videoUri = intent.getParcelableExtra("VIDEO_URI")
-        if (videoUri != null) {
-            player = ExoPlayer.Builder(this).build()
-            playerView.player = player
+        player = ExoPlayer.Builder(this).build()
+        playerView.player = player
 
-            val mediaItem = MediaItem.fromUri(videoUri!!)
-            player.setMediaItem(mediaItem)
-            loadingScreen.visibility = View.VISIBLE
+        // Initial setup done in onCreate via VM
 
-            player.prepare()
-
-            // Add listener for player events
-            player.addListener(object : Player.Listener {
-                override fun onPlaybackStateChanged(state: Int) {
-                    if (state == Player.STATE_READY) {
-                        isVideoLoaded = true
-                        customVideoSeeker.setVideoDuration(player.duration)
-                        updateDurationDisplay(player.currentPosition.toInt(), player.duration.toInt())
-                    }
+        player.addListener(object : Player.Listener {
+            override fun onPlaybackStateChanged(state: Int) {
+                if (state == Player.STATE_READY) {
+                    isVideoLoaded = true
+                    updateDurationDisplay(player.currentPosition.toInt(), player.duration.toInt())
                 }
+            }
 
-                override fun onIsPlayingChanged(isPlaying: Boolean) {
-                    if (isPlaying && isVideoLoaded) {
-                        updateDurationDisplay(player.currentPosition.toInt(), player.duration.toInt())
-                    }
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (isPlaying && isVideoLoaded) {
+                     startTextOverlayUpdateLoop()
                 }
-            })
+            }
+        })
+    }
 
-            // Initialize video metadata and frames
-            initializeVideoData()
-        } else {
-            showError("Error loading video")
+    private fun startTextOverlayUpdateLoop() {
+        lifecycleScope.launch {
+            while (player.isPlaying) {
+                updateTextVisibility()
+                kotlinx.coroutines.delay(100)
+            }
         }
     }
 
-    private fun initializeVideoData() {
-        coroutineScope.launch {
-            try {
-                val videoFilePath = getFilePathFromUri(videoUri!!)
-                if (videoFilePath != null) {
-                    tempInputFile = File(videoFilePath)
-                    videoFileName = tempInputFile.name
+    private fun updateTextVisibility() {
+        val currentPosition = player.currentPosition
+        val textContainer = findViewById<android.widget.LinearLayout>(R.id.textConfigs)
 
-                    extractVideoFrames()
+        // We need the project state to calculate start times
+        val state = viewModel.getProjectState()
+        val textTrack = state.tracks.find { it.trackType == MediaType.TEXT } ?: return
+
+        // Calculate start times for magnetic text track
+        var clipStartTime = 0L
+        val clipStartTimes = mutableMapOf<String, Long>()
+        for (clip in textTrack.clips) {
+            clipStartTimes[clip.id] = clipStartTime
+            clipStartTime += clip.durationMs
+        }
+
+        for (i in 0 until textContainer.childCount) {
+            val view = textContainer.getChildAt(i)
+            val clip = view.tag as? com.tharunbirla.librecuts.models.Clip
+
+            if (clip != null) {
+                val startTime = clipStartTimes[clip.id] ?: 0L
+                val endTime = startTime + clip.durationMs
+
+                if (currentPosition in startTime until endTime) {
+                    view.visibility = View.VISIBLE
+                } else {
+                    view.visibility = View.INVISIBLE
                 }
-            } catch (e: Exception) {
-                showError("Error initializing video: ${e.message}")
             }
         }
     }
 
-
-    private fun getFilePathFromUri(uri: Uri): String? {
-        var filePath: String? = null
-
-        when (uri.scheme) {
-            "content" -> {
-                val cursor = contentResolver.query(uri, null, null, null, null)
-                cursor?.use {
-                    if (it.moveToFirst()) {
-                        val dataIndex = it.getColumnIndex(MediaStore.Video.Media.DATA)
-                        if (dataIndex != -1) {
-                            filePath = it.getString(dataIndex) // Fetch file path
-                        } else {
-                            Log.e("PathError", "Column '_data' not found in cursor")
-                        }
-                    } else {
-                        Log.e("PathError", "Cursor is empty for URI: $uri")
-                    }
-                } ?: Log.e("PathError", "Cursor is null for URI: $uri")
-            }
-            "file" -> {
-                filePath = uri.path // Directly get path from URI
-            }
-            else -> {
-                Log.e("PathError", "Unsupported URI scheme: ${uri.scheme}")
-            }
-        }
-
-        Log.d("PathInfo", "File path: $filePath")
-        return filePath
-    }
-
-
-    private fun setupCustomSeeker() {
-        // Configure the custom video seeker for seeking playback
-        customVideoSeeker.onSeekListener = { seekPosition ->
-            val newSeekTime = (player.duration * seekPosition).toLong()
-
-            // Ensure new seek time is within valid bounds
-            if (newSeekTime >= 0 && newSeekTime <= player.duration) {
-                player.seekTo(newSeekTime) // Seek to new position
-                updateDurationDisplay(newSeekTime.toInt(), player.duration.toInt()) // Update duration display
-            } else {
-                Log.d("SeekError", "Seek position out of bounds.")
-            }
-        }
-    }
-
-    private fun setupFrameRecyclerView() {
-        frameRecyclerView.layoutManager = LinearLayoutManager(this, RecyclerView.HORIZONTAL, false)
-        frameRecyclerView.adapter = FrameAdapter(emptyList()) // Initialize frame adapter with video name
-    }
-
-    private fun extractVideoFrames() {
-        lifecycleScope.launch(Dispatchers.IO) {
+    private suspend fun getVideoDuration(uri: Uri): Long {
+        return withContext(Dispatchers.IO) {
             val retriever = MediaMetadataRetriever()
-            retriever.setDataSource(tempInputFile.absolutePath)
-
-            val duration = withContext(Dispatchers.Main) { player.duration }
-            val frameInterval = duration / 10 // Extract fewer frames
-
-            val frameBitmaps = mutableListOf<Bitmap>()
-            val frameCount = 10 // Adjust to change how many frames you extract
-
             try {
-                for (i in 0 until frameCount) {
-                    val frameTime = (i * frameInterval) // Time in microseconds
-                    val bitmap = retriever.getFrameAtTime(frameTime * 1000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
-                    bitmap?.let {
-                        val processedBitmap = Bitmap.createScaledBitmap(it, 200, 150, false)
-                        frameBitmaps.add(processedBitmap)
-                    }
-                }
+                // If it's a content URI, we need a way to read it.
+                // Retriever supports context/uri in newer APIs or path.
+                // Since we have context, let's use it.
+                retriever.setDataSource(this@VideoEditingActivity, uri)
+                val time = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                time?.toLong() ?: 0L
+            } catch (e: Exception) {
+                Log.e(TAG, "Error getting duration", e)
+                0L
             } finally {
                 retriever.release()
-            }
-
-            withContext(Dispatchers.Main) {
-                frameRecyclerView.adapter = FrameAdapter(frameBitmaps)
-                // Update Loading screen after completion
-                loadingScreen.visibility = View.GONE
             }
         }
     }
@@ -680,85 +580,17 @@ class VideoEditingActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Cancel all active FFmpeg sessions
         activeFFmpegSessions.forEach { session ->
             FFmpegKit.cancel(session.sessionId)
         }
         activeFFmpegSessions.clear()
-
-        // Release resources
         player.release()
         coroutineScope.cancel()
     }
 
-    private suspend fun getVideoMetadata(context: Context, uri: Uri): Media {
-        return withContext(Dispatchers.IO) {
-            val contentUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
-            } else {
-                MediaStore.Video.Media.EXTERNAL_CONTENT_URI
-            }
-
-            // Define projection for querying video metadata
-            val projection = arrayOf(
-                MediaStore.Video.Media._ID,
-                MediaStore.Video.Media.DISPLAY_NAME,
-                MediaStore.Video.Media.SIZE,
-                MediaStore.Video.Media.MIME_TYPE,
-                MediaStore.Video.Media.DATA // Fetch the real file path
-            )
-
-            val selection = "${MediaStore.Video.Media._ID} = ?"
-            val selectionArgs = arrayOf(uri.lastPathSegment)
-
-            context.contentResolver.query(
-                contentUri,
-                projection,
-                selection,
-                selectionArgs,
-                null
-            )?.use { cursor ->
-                val displayNameColumnIndex = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DISPLAY_NAME)
-                val sizeColumnIndex = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.SIZE)
-                val mimeTypeColumnIndex = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.MIME_TYPE)
-                val dataColumnIndex = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DATA)
-
-                if (cursor.moveToFirst()) {
-                    // Retrieve metadata from cursor
-                    val fileName = cursor.getString(displayNameColumnIndex)
-                    val size = cursor.getLong(sizeColumnIndex)
-                    val mimeType = cursor.getString(mimeTypeColumnIndex)
-                    val realFilePath = cursor.getString(dataColumnIndex)
-
-                    // Log metadata for debugging
-                    Log.d(TAG, "File Name: $fileName")
-                    Log.d(TAG, "File Size: $size bytes")
-                    Log.d(TAG, "MIME Type: $mimeType")
-                    Log.d("MetadataInfo", "File Name: $fileName, Size: $size bytes, MIME Type: $mimeType, Real File Path: $realFilePath")
-
-
-                    // Return Media object containing the metadata
-                    return@use Media(Uri.parse(realFilePath), fileName, size, mimeType)
-                } else {
-                    Log.e("MetadataError", "cursor.moveToFirst() returned false")
-                    throw Error("cursor.moveToFirst() method returned false")
-                }
-            } ?: run {
-                Log.e("MetadataError", "Unexpected null from contentResolver query")
-                throw Error("Unexpected null returned by contentResolver query")
-            }
-        }
-    }
-
-    data class Media(
-        val uri: Uri,
-        val name: String,
-        val size: Long,
-        val mimeType: String
-    )
-
     companion object {
-        private const val TAG = "VideoMetadata"
+        private const val TAG = "VideoEditingActivity"
         private const val PICK_VIDEO_REQUEST = 1
+        private const val PICK_AUDIO_REQUEST = 2
     }
 }
