@@ -48,22 +48,26 @@
 
     </androidx.appcompat.widget.Toolbar>
 
-    <com.google.android.exoplayer2.ui.StyledPlayerView
-        android:id="@+id/playerView"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_above="@+id/textConfigs"
-        android:layout_below="@+id/toolbar"
-        app:use_controller="false" />
+        android:layout_above="@+id/seekerContainer"
+        android:layout_below="@+id/toolbar">
 
-    <LinearLayout
-        android:id="@+id/textConfigs"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="horizontal"
-        android:padding="16dp"
-        android:layout_above="@+id/seekerContainer"/>
+        <com.google.android.exoplayer2.ui.StyledPlayerView
+            android:id="@+id/playerView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:surface_type="texture_view"
+            app:use_controller="false" />
+
+        <!-- Container for text overlays -->
+        <FrameLayout
+            android:id="@+id/textOverlayContainer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    </FrameLayout>
 
     <LinearLayout
         android:id="@+id/seekerContainer"
