@@ -102,7 +102,11 @@ enum class TextPosition(val ffmpegParam: String) : Serializable {
     BOTTOM_LEFT("x=0:y=h-th"),
     CENTER_BOTTOM("x=(w-text_w)/2:y=h-th"),
     CENTER_TOP("x=(w-text_w)/2:y=0"),
-    CENTER("x=(w-text_w)/2:y=(h-text_h)/2");
+    CENTER("x=(w-text_w)/2:y=(h-text_h)/2"),
+    TOP_CENTER("x=(w-text_w)/2:y=0"),
+    CENTER_LEFT("x=0:y=(h-text_h)/2"),
+    CENTER_RIGHT("x=w-tw:y=(h-text_h)/2"),
+    BOTTOM_CENTER("x=(w-text_w)/2:y=h-th");
     
     companion object {
         fun fromLabel(label: String): TextPosition = when (label) {
@@ -113,17 +117,23 @@ enum class TextPosition(val ffmpegParam: String) : Serializable {
             "Center Bottom" -> CENTER_BOTTOM
             "Center Top" -> CENTER_TOP
             "Center Align" -> CENTER
+            "Top Center" -> TOP_CENTER
+            "Center Left" -> CENTER_LEFT
+            "Center Right" -> CENTER_RIGHT
+            "Bottom Center" -> BOTTOM_CENTER
             else -> CENTER
         }
         
         fun labels() = listOf(
-            "Bottom Right",
-            "Top Right",
             "Top Left",
+            "Top Center",
+            "Top Right",
+            "Center Left",
+            "Center Align",
+            "Center Right",
             "Bottom Left",
-            "Center Bottom",
-            "Center Top",
-            "Center Align"
+            "Bottom Center",
+            "Bottom Right"
         )
     }
 }

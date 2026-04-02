@@ -35,6 +35,33 @@
             android:gravity="end">
 
             <ImageButton
+                android:id="@+id/btnUndo"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_home_24"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Undo"
+                android:layout_marginEnd="8dp"
+                android:scaleX="-1"
+                android:alpha="0.5"
+                android:enabled="false"/>
+
+            <ImageButton
+                android:id="@+id/btnRedo"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_home_24"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Redo"
+                android:layout_marginEnd="16dp"
+                android:alpha="0.5"
+                android:enabled="false"/>
+
+            <ImageButton
                 android:id="@+id/btnSave"
                 android:minWidth="48dp"
                 android:minHeight="48dp"
@@ -48,13 +75,24 @@
 
     </androidx.appcompat.widget.Toolbar>
 
-    <com.google.android.exoplayer2.ui.StyledPlayerView
-        android:id="@+id/playerView"
+    <FrameLayout
+        android:id="@+id/playerContainer"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_above="@+id/textConfigs"
-        android:layout_below="@+id/toolbar"
-        app:use_controller="false" />
+        android:layout_below="@+id/toolbar">
+
+        <com.google.android.exoplayer2.ui.StyledPlayerView
+            android:id="@+id/playerView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:use_controller="false" />
+
+        <com.tharunbirla.librecuts.customviews.TextOverlayView
+            android:id="@+id/textOverlayView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+    </FrameLayout>
 
     <LinearLayout
         android:id="@+id/textConfigs"

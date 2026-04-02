@@ -52,14 +52,15 @@ android {
 
 dependencies {
 
-    implementation 'com.google.android.exoplayer:exoplayer-core:2.18.1'
-    implementation 'com.google.android.exoplayer:exoplayer-ui:2.18.1'
+    implementation 'com.google.android.exoplayer:exoplayer-core:2.19.1'
+    implementation 'com.google.android.exoplayer:exoplayer-ui:2.19.1'
     implementation("com.arthenica:smart-exception-java:0.2.1")
     implementation(files("libs/ffmpeg-kit.aar"))
     implementation 'com.google.android.material:material:1.9.0'
     implementation 'com.airbnb.android:lottie:3.4.0'
     implementation libs.androidx.core.ktx
     implementation libs.androidx.lifecycle.runtime.ktx
+    implementation libs.androidx.lifecycle.viewmodel.ktx
     implementation libs.androidx.activity.compose
     implementation platform(libs.androidx.compose.bom)
     implementation libs.androidx.ui

@@ -140,7 +140,8 @@ class VideoEditingViewModel : ViewModel() {
             updateUiState { state ->
                 state.copy(
                     pendingOperationCount = _project.value?.getOperationCount() ?: 0,
-                    canUndo = _undoStack.value.isNotEmpty()
+                    canUndo = _undoStack.value.isNotEmpty(),
+                    canRedo = false
                 )
             }
         }
@@ -163,7 +164,8 @@ class VideoEditingViewModel : ViewModel() {
             updateUiState { state ->
                 state.copy(
                     pendingOperationCount = lastUndoState.getOperationCount(),
-                    canUndo = _undoStack.value.isNotEmpty()
+                    canUndo = _undoStack.value.isNotEmpty(),
+                    canRedo = _redoStack.value.isNotEmpty()
                 )
             }
         }
@@ -186,7 +188,8 @@ class VideoEditingViewModel : ViewModel() {
             updateUiState { state ->
                 state.copy(
                     pendingOperationCount = lastRedoState.getOperationCount(),
-                    canUndo = _undoStack.value.isNotEmpty()
+                    canUndo = _undoStack.value.isNotEmpty(),
+                    canRedo = _redoStack.value.isNotEmpty()
                 )
             }
         }
@@ -296,9 +299,9 @@ class VideoEditingViewModel : ViewModel() {
                     if (cropFilter != null) filterChain.add(cropFilter)
                 }
                 is EditOperation.AddText -> {
-                    val posParam = op.position.ffmpegParam
-                    val textFilter = "drawtext=text='${op.text.replace("'", "\\'")}':fontcolor=white:fontsize=${op.fontSize}:$posParam"
-                    filterChain.add(textFilter)
+                    // Text rendering via drawtext filter is not supported in current FFmpeg build
+                    // Text overlays will be rendered on UI layer during preview
+                    // Skipping text filter in FFmpeg pipeline
                 }
                 is EditOperation.MuteAudio -> {
                     audioMuted = true

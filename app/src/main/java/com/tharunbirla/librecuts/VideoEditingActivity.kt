@@ -66,6 +66,7 @@ class VideoEditingActivity : AppCompatActivity() {
     private lateinit var lottieAnimationView: LottieAnimationView
     private lateinit var btnUndo: ImageButton
     private lateinit var btnRedo: ImageButton
+    private var textOverlayView: com.tharunbirla.librecuts.customviews.TextOverlayView? = null
 
     // ViewModel and Services
     private lateinit var viewModel: VideoEditingViewModel
@@ -110,6 +111,13 @@ class VideoEditingActivity : AppCompatActivity() {
         customVideoSeeker = findViewById(R.id.customVideoSeeker)
         loadingScreen = findViewById(R.id.loadingScreen)
         lottieAnimationView = findViewById(R.id.lottieAnimation)
+        
+        // Initialize text overlay view if it exists
+        textOverlayView = try {
+            findViewById(R.id.textOverlayView)
+        } catch (e: Exception) {
+            null
+        }
 
         // Set up button click listeners
         findViewById<ImageButton>(R.id.btnHome).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
@@ -166,14 +174,26 @@ class VideoEditingActivity : AppCompatActivity() {
                     showError(error)
                     viewModel.clearError()
                 }
+                
+                // Show pending operations count
+                if (uiState.pendingOperationCount > 0) {
+                    Log.d(TAG, "Pending operations: ${uiState.pendingOperationCount}")
+                }
             }
         }
 
-        // Observe project changes for logging
+        // Observe project changes to update text overlays
         lifecycleScope.launch {
             viewModel.project.collect { project ->
                 if (project != null) {
                     Log.d(TAG, "Project updated with ${project.getOperationCount()} operations")
+                    
+                    // Update text overlays
+                    textOverlayView?.let { overlay ->
+                        val textOps = project.operations
+                            .filterIsInstance<EditOperation.AddText>()
+                        overlay.setTextOperations(textOps)
+                    }
                 }
             }
         }
@@ -229,22 +249,25 @@ class VideoEditingActivity : AppCompatActivity() {
     /**
      * Update the preview with ExoPlayer's native clipping.
      * This provides instant feedback without re-encoding.
+     * For ExoPlayer 2.18.1, we use setClipStartPositionMs/setClipEndPositionMs
      */
     private fun updatePreviewWithClipping(startMs: Long, endMs: Long) {
         if (videoUri != null) {
-            val mediaItem = MediaItem.Builder()
-                .setUri(videoUri!!)
-                .setClippingProperties(
-                    MediaItem.ClippingProperties.Builder()
-                        .setStartPositionMs(startMs)
-                        .setEndPositionMs(endMs)
-                        .build()
-                )
-                .build()
+            try {
+                val mediaItem = MediaItem.Builder()
+                    .setUri(videoUri!!)
+                    .setClipStartPositionMs(startMs)
+                    .setClipEndPositionMs(endMs)
+                    .build()
 
-            player.setMediaItem(mediaItem)
-            player.prepare()
-            Log.d(TAG, "ExoPlayer clipping applied: $startMs - $endMs ms")
+                player.setMediaItem(mediaItem)
+                player.prepare()
+                Log.d(TAG, "ExoPlayer clipping applied: $startMs - $endMs ms")
+            } catch (e: Exception) {
+                // Fallback: if clipping not supported, just seek to start position
+                Log.w(TAG, "Clipping not supported, falling back to seek: ${e.message}")
+                player.seekTo(startMs)
+            }
         }
     }
 
@@ -362,10 +385,17 @@ class VideoEditingActivity : AppCompatActivity() {
     }
 
     /**
-     * AUDIO ACTION: Placeholder for audio operations (mute/add background audio).
+     * AUDIO ACTION: Show audio operation options.
      */
     private fun audioAction() {
-        Toast.makeText(this, "Audio operations coming soon", Toast.LENGTH_SHORT).show()
+        val bottomSheetDialog = BottomSheetDialog(this)
+        val view = layoutInflater.inflate(android.R.layout.simple_list_item_1, null)
+        
+        val tvOptions = view.findViewById<TextView>(android.R.id.text1)
+        tvOptions.text = "Audio options:\n\n1. Mute original audio\n2. Add background audio\n\nNote: Audio features require proper setup. Coming soon!"
+        
+        bottomSheetDialog.setContentView(view)
+        bottomSheetDialog.show()
     }
 
     /**
