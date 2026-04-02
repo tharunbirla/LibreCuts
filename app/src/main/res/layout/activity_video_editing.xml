@@ -40,11 +40,10 @@
                 android:minHeight="48dp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/ic_home_24"
+                android:src="@drawable/ic_undo_24"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Undo"
                 android:layout_marginEnd="8dp"
-                android:scaleX="-1"
                 android:alpha="0.5"
                 android:enabled="false"/>
 
@@ -54,7 +53,7 @@
                 android:minHeight="48dp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/ic_home_24"
+                android:src="@drawable/ic_redo_24"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Redo"
                 android:layout_marginEnd="16dp"
@@ -214,4 +213,10 @@
         layout="@layout/loading_screen"
         android:id="@+id/loadingScreen"
         android:visibility="gone"/>
+
+    <include
+        layout="@layout/export_screen"
+        android:id="@+id/exportScreen"
+        android:visibility="gone"/>
+
 </RelativeLayout>

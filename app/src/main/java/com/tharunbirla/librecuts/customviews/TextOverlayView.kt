@@ -82,6 +82,14 @@ class TextOverlayView @JvmOverloads constructor(
                     x = width - textWidth - 16f
                     y = height - 16f
                 }
+                TextPosition.CENTER_BOTTOM -> {
+                    x = (width - textWidth) / 2
+                    y = height - 16f
+                }
+                TextPosition.CENTER_TOP -> {
+                    x = (width - textWidth) / 2
+                    y = 32f
+                }
             }
 
             canvas.drawText(textOp.text, x, y, paint)

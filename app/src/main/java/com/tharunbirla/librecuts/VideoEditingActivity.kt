@@ -32,6 +32,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.slider.RangeSlider
 import com.google.android.material.textfield.TextInputEditText
 import com.tharunbirla.librecuts.customviews.CustomVideoSeeker
+import com.tharunbirla.librecuts.models.EditOperation
 import com.tharunbirla.librecuts.models.TextPosition
 import com.tharunbirla.librecuts.services.FFmpegRenderEngine
 import com.tharunbirla.librecuts.viewmodels.VideoEditingViewModel
@@ -43,7 +44,7 @@ import java.util.Locale
 
 /**
  * VideoEditingActivity is the main screen for video editing in LibreCuts.
- * 
+ *
  * ARCHITECTURE CHANGES:
  * - This activity now uses a state-driven architecture with ViewModel
  * - All edits (trim, crop, text, etc.) are stored as EditOperation objects
@@ -63,6 +64,7 @@ class VideoEditingActivity : AppCompatActivity() {
     private lateinit var frameRecyclerView: RecyclerView
     private lateinit var customVideoSeeker: CustomVideoSeeker
     private lateinit var loadingScreen: View
+    private lateinit var exportScreen: View
     private lateinit var lottieAnimationView: LottieAnimationView
     private lateinit var btnUndo: ImageButton
     private lateinit var btnRedo: ImageButton
@@ -77,7 +79,7 @@ class VideoEditingActivity : AppCompatActivity() {
     private var videoFileName: String = ""
     private lateinit var tempInputFile: File
     private var isVideoLoaded = false
-    
+
     // Cache for frame extraction
     private val extractedFrames = mutableListOf<Bitmap>()
 
@@ -110,12 +112,14 @@ class VideoEditingActivity : AppCompatActivity() {
         frameRecyclerView = findViewById(R.id.frameRecyclerView)
         customVideoSeeker = findViewById(R.id.customVideoSeeker)
         loadingScreen = findViewById(R.id.loadingScreen)
+        exportScreen = findViewById(R.id.exportScreen)
         lottieAnimationView = findViewById(R.id.lottieAnimation)
-        
-        // Initialize text overlay view if it exists
+
+        // Initialize text overlay view for real-time text preview
         textOverlayView = try {
             findViewById(R.id.textOverlayView)
         } catch (e: Exception) {
+            Log.w(TAG, "TextOverlayView not found in layout: ${e.message}")
             null
         }
 
@@ -151,15 +155,20 @@ class VideoEditingActivity : AppCompatActivity() {
     private fun observeViewModelState() {
         lifecycleScope.launch {
             viewModel.uiState.collect { uiState ->
-                // Update loading screen visibility
-                if (uiState.isExporting) {
-                    loadingScreen.visibility = View.VISIBLE
-                    lottieAnimationView.playAnimation()
-                } else if (!isVideoLoaded) {
-                    loadingScreen.visibility = View.VISIBLE
-                } else {
-                    loadingScreen.visibility = View.GONE
+                // Update loading screen visibility (only during initial video load, not during export)
+                if (!uiState.isExporting) {
+                    if (uiState.isExporting) {
+                        loadingScreen.visibility = View.VISIBLE
+                        lottieAnimationView.playAnimation()
+                    } else if (!isVideoLoaded) {
+                        loadingScreen.visibility = View.VISIBLE
+                    } else {
+                        loadingScreen.visibility = View.GONE
+                    }
                 }
+
+                // Update export screen visibility
+                exportScreen.visibility = if (uiState.isExporting) View.VISIBLE else View.GONE
 
                 // Update undo/redo button states
                 if (::btnUndo.isInitialized && ::btnRedo.isInitialized) {
@@ -174,7 +183,7 @@ class VideoEditingActivity : AppCompatActivity() {
                     showError(error)
                     viewModel.clearError()
                 }
-                
+
                 // Show pending operations count
                 if (uiState.pendingOperationCount > 0) {
                     Log.d(TAG, "Pending operations: ${uiState.pendingOperationCount}")
@@ -182,21 +191,45 @@ class VideoEditingActivity : AppCompatActivity() {
             }
         }
 
-        // Observe project changes to update text overlays
+        // Observe project changes to update text overlays and crop preview
         lifecycleScope.launch {
             viewModel.project.collect { project ->
                 if (project != null) {
                     Log.d(TAG, "Project updated with ${project.getOperationCount()} operations")
-                    
+
                     // Update text overlays
                     textOverlayView?.let { overlay ->
                         val textOps = project.operations
                             .filterIsInstance<EditOperation.AddText>()
                         overlay.setTextOperations(textOps)
                     }
+
+                    // Apply crop aspect ratio to player preview
+                    val cropOps = project.operations.filterIsInstance<EditOperation.Crop>()
+                    if (cropOps.isNotEmpty()) {
+                        val lastCropOp = cropOps.last()
+                        applyCropPreview(lastCropOp.aspectRatio)
+                    } else {
+                        resetCropPreview()
+                    }
                 }
             }
         }
+    }
+
+    /**
+     * Show crop preview as a toast indicator (actual crop will be applied on export).
+     * The export video already shows the correct crop, so we just notify the user.
+     */
+    private fun applyCropPreview(aspectRatio: String) {
+        Toast.makeText(this, "Crop $aspectRatio will be applied on export", Toast.LENGTH_SHORT).show()
+    }
+
+    /**
+     * Reset crop preview (no-op since we're not modifying layout).
+     */
+    private fun resetCropPreview() {
+        // No-op - crop preview is just a notification
     }
 
     /**
@@ -231,13 +264,13 @@ class VideoEditingActivity : AppCompatActivity() {
         sheetView.findViewById<Button>(R.id.btnDoneTrim).setOnClickListener {
             val startMs = rangeSlider.values[0].toLong() * 1000
             val endMs = rangeSlider.values[1].toLong() * 1000
-            
+
             // Add operation to ViewModel (no rendering yet)
             viewModel.addTrimOperation(startMs, endMs)
-            
+
             // Show virtual preview using ExoPlayer clipping
             updatePreviewWithClipping(startMs, endMs)
-            
+
             bottomSheetDialog.dismiss()
             Toast.makeText(this, "Trim operation added (preview active)", Toast.LENGTH_SHORT).show()
         }
@@ -390,10 +423,10 @@ class VideoEditingActivity : AppCompatActivity() {
     private fun audioAction() {
         val bottomSheetDialog = BottomSheetDialog(this)
         val view = layoutInflater.inflate(android.R.layout.simple_list_item_1, null)
-        
+
         val tvOptions = view.findViewById<TextView>(android.R.id.text1)
         tvOptions.text = "Audio options:\n\n1. Mute original audio\n2. Add background audio\n\nNote: Audio features require proper setup. Coming soon!"
-        
+
         bottomSheetDialog.setContentView(view)
         bottomSheetDialog.show()
     }
@@ -420,19 +453,47 @@ class VideoEditingActivity : AppCompatActivity() {
                 viewModel.startExport()
 
                 val sourceFilePath = tempInputFile.absolutePath
-                val outputDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                if (!outputDir.exists()) {
-                    outputDir.mkdirs()
-                }
 
-                val outputFile = File(outputDir, "exported_video_${System.currentTimeMillis()}.mp4")
-                val outputPath = outputFile.absolutePath
+                // Create temporary output file first
+                val cacheDir = cacheDir
+                val tempOutputFile = File(cacheDir, "temp_video_${System.currentTimeMillis()}.mp4")
+                val tempOutputPath = tempOutputFile.absolutePath
 
                 // Build consolidated FFmpeg command
-                val ffmpegCommand = viewModel.buildConsolidatedFFmpegCommand(sourceFilePath, outputPath)
+                var ffmpegCommand = viewModel.buildConsolidatedFFmpegCommand(sourceFilePath, tempOutputPath)
                 if (ffmpegCommand == null) {
                     viewModel.exportError("Failed to build FFmpeg command")
                     return@launch
+                }
+
+                // Handle merge operations with concat file
+                val project = viewModel.project.value
+                var concatFile: File? = null
+                if (project != null && ffmpegCommand.contains("(CONCAT_LIST:")) {
+                    // Extract concat list from command and create file
+                    val concatListStart = ffmpegCommand.indexOf("(CONCAT_LIST:") + "(CONCAT_LIST:".length
+                    val concatListEnd = ffmpegCommand.lastIndexOf(")")
+                    if (concatListStart > 13 && concatListEnd > concatListStart) {
+                        var concatList = ffmpegCommand.substring(concatListStart, concatListEnd)
+
+                        // Copy all video files (both source and merged) to temp files if they are content URIs
+                        // FFmpeg's concat demuxer cannot directly access content URIs
+                        val processedConcatList = processConcatList(concatList)
+
+                        // Create concat file in cache directory with absolute path
+                        concatFile = File(cacheDir, "concat_${System.currentTimeMillis()}.txt")
+                        concatFile.writeText(processedConcatList)
+                        Log.d(TAG, "Concat file created: ${concatFile.absolutePath}")
+                        Log.d(TAG, "Concat list content:\n$processedConcatList")
+
+                        // Replace placeholder with actual concat file path
+                        ffmpegCommand = ffmpegCommand.replace("{CONCAT_FILE_PATH}", concatFile.absolutePath)
+
+                        // Remove the placeholder marker from command
+                        ffmpegCommand = ffmpegCommand.substring(0, ffmpegCommand.indexOf("(CONCAT_LIST:")).trim()
+
+                        Log.d(TAG, "Final FFmpeg merge command: $ffmpegCommand")
+                    }
                 }
 
                 Log.d(TAG, "Final FFmpeg command: $ffmpegCommand")
@@ -442,13 +503,27 @@ class VideoEditingActivity : AppCompatActivity() {
 
                 when (result) {
                     is FFmpegRenderEngine.RenderResult.Success -> {
-                        viewModel.finishExport()
-                        Toast.makeText(
-                            this@VideoEditingActivity,
-                            "Video exported successfully: ${result.outputPath}",
-                            Toast.LENGTH_LONG
-                        ).show()
-                        Log.d(TAG, "Export successful: ${result.outputPath}")
+                        // Now save to MediaStore (Gallery)
+                        val videoUri = saveVideoToGallery(tempOutputFile)
+                        if (videoUri != null) {
+                            viewModel.finishExport()
+                            Toast.makeText(
+                                this@VideoEditingActivity,
+                                "Video exported to Gallery successfully!",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            Log.d(TAG, "Export successful: $videoUri")
+                            // Clean up temp files
+                            tempOutputFile.delete()
+                            concatFile?.delete()
+                        } else {
+                            viewModel.exportError("Failed to save video to Gallery")
+                            Toast.makeText(
+                                this@VideoEditingActivity,
+                                "Failed to save video to Gallery",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
                     }
                     is FFmpegRenderEngine.RenderResult.Failure -> {
                         viewModel.exportError(result.error)
@@ -481,7 +556,7 @@ class VideoEditingActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 viewModel.startExport()
-                
+
                 val outputDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
                 if (!outputDir.exists()) {
                     outputDir.mkdirs()
@@ -534,7 +609,7 @@ class VideoEditingActivity : AppCompatActivity() {
             })
 
             initializeVideoData()
-            
+
             // Initialize ViewModel with the video
             val displayName = videoUri!!.lastPathSegment ?: "video"
             viewModel.initializeProject(videoUri!!, displayName)
@@ -658,6 +733,91 @@ class VideoEditingActivity : AppCompatActivity() {
     private fun showError(error: String) {
         Log.e(TAG, error)
         Toast.makeText(this, error, Toast.LENGTH_SHORT).show()
+    }
+
+    /**
+     * Save video file to Gallery using MediaStore API.
+     */
+    private fun saveVideoToGallery(videoFile: File): Uri? {
+        return try {
+            val contentValues = android.content.ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, "LibreCuts_${System.currentTimeMillis()}.mp4")
+                put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_MOVIES)
+            }
+
+            val resolver = contentResolver
+            val uri = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, contentValues)
+
+            uri?.let {
+                resolver.openOutputStream(it)?.use { output ->
+                    videoFile.inputStream().use { input ->
+                        input.copyTo(output)
+                    }
+                }
+                it
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving to gallery: ${e.message}", e)
+            null
+        }
+    }
+
+    /**
+     * Process concat list to handle content URIs.
+     * FFmpeg's concat demuxer cannot directly access content URIs, so we need to copy them to temp files.
+     */
+    private fun processConcatList(concatList: String): String {
+        val lines = concatList.trim().split("\n")
+        val processedLines = mutableListOf<String>()
+
+        for (line in lines) {
+            if (line.startsWith("file")) {
+                // Extract the file path from the concat list line
+                val pathStart = line.indexOf("'") + 1
+                val pathEnd = line.lastIndexOf("'")
+                if (pathStart > 0 && pathEnd > pathStart) {
+                    val filePath = line.substring(pathStart, pathEnd)
+
+                    // Check if it's a content URI
+                    val processedPath = if (filePath.startsWith("content://")) {
+                        // Copy content URI to a temp file that FFmpeg can access
+                        val tempFile = copyContentUriToTempFile(Uri.parse(filePath))
+                        tempFile?.absolutePath ?: filePath
+                    } else {
+                        filePath
+                    }
+
+                    processedLines.add("file '$processedPath'")
+                }
+            } else if (line.isNotEmpty()) {
+                processedLines.add(line)
+            }
+        }
+
+        return processedLines.joinToString("\n").trim() + "\n"
+    }
+
+    /**
+     * Copy a content URI video to a temp file so FFmpeg can access it.
+     * Returns the temp file or null if copy fails.
+     */
+    private fun copyContentUriToTempFile(contentUri: Uri): File? {
+        return try {
+            val tempFile = File(cacheDir, "merge_video_${System.currentTimeMillis()}.mp4")
+
+            contentResolver.openInputStream(contentUri)?.use { input ->
+                tempFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            Log.d(TAG, "Copied content URI to temp file: ${tempFile.absolutePath}")
+            tempFile
+        } catch (e: Exception) {
+            Log.e(TAG, "Error copying content URI to temp file: ${e.message}", e)
+            null
+        }
     }
 
     override fun onDestroy() {

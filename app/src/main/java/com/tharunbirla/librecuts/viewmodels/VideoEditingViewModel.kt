@@ -1,6 +1,8 @@
 package com.tharunbirla.librecuts.viewmodels
 
+import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tharunbirla.librecuts.models.EditOperation
@@ -14,40 +16,43 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
 
 /**
  * ViewModel for the VideoEditingActivity.
  * Manages the complete state of a video editing session using Kotlin StateFlow.
- * 
+ *
  * Key responsibilities:
  * 1. Store and manage the VideoProject state (all pending operations)
  * 2. Provide methods to add/remove/undo operations
  * 3. Manage UI state (loading, exporting, errors)
  * 4. Build consolidated FFmpeg commands for final export
  * 5. Handle project persistence (save/load recipes)
- * 
+ *
  * All operations are immutable and thread-safe via StateFlow.
  */
 class VideoEditingViewModel : ViewModel() {
-    
+
     // Private mutable state
     private val _project = MutableStateFlow<VideoProject?>(null)
     private val _uiState = MutableStateFlow(VideoEditingUiState())
     private val _undoStack = MutableStateFlow<List<VideoProject>>(emptyList())
     private val _redoStack = MutableStateFlow<List<VideoProject>>(emptyList())
-    
+
     // Public read-only state
     val project: StateFlow<VideoProject?> = _project.asStateFlow()
     val uiState: StateFlow<VideoEditingUiState> = _uiState.asStateFlow()
     val undoStack: StateFlow<List<VideoProject>> = _undoStack.asStateFlow()
     val redoStack: StateFlow<List<VideoProject>> = _redoStack.asStateFlow()
-    
+
     // Convenience flows
-    val operations: StateFlow<List<EditOperation>> 
+    val operations: StateFlow<List<EditOperation>>
         get() = _project.asStateFlow().let { projectFlow ->
             MutableStateFlow(project.value?.operations ?: emptyList()).asStateFlow()
         }
-    
+
     /**
      * Initialize the ViewModel with a source video.
      */
@@ -61,7 +66,7 @@ class VideoEditingViewModel : ViewModel() {
         _redoStack.value = emptyList()
         updateUiState { it.copy(canUndo = false) }
     }
-    
+
     /**
      * Add a Trim operation to the project.
      */
@@ -69,7 +74,7 @@ class VideoEditingViewModel : ViewModel() {
         val operation = EditOperation.Trim(startMs, endMs)
         addOperation(operation)
     }
-    
+
     /**
      * Add a Crop operation to the project.
      */
@@ -77,7 +82,7 @@ class VideoEditingViewModel : ViewModel() {
         val operation = EditOperation.Crop(aspectRatio)
         addOperation(operation)
     }
-    
+
     /**
      * Add a Text overlay operation to the project.
      */
@@ -86,7 +91,7 @@ class VideoEditingViewModel : ViewModel() {
         val operation = EditOperation.AddText(text, fontSize, textPosition)
         addOperation(operation)
     }
-    
+
     /**
      * Add a Merge operation to the project.
      */
@@ -94,7 +99,7 @@ class VideoEditingViewModel : ViewModel() {
         val operation = EditOperation.Merge(videoUris)
         addOperation(operation)
     }
-    
+
     /**
      * Add a Mute Audio operation to the project.
      */
@@ -106,7 +111,7 @@ class VideoEditingViewModel : ViewModel() {
         val operation = EditOperation.MuteAudio()
         addOperation(operation)
     }
-    
+
     /**
      * Add a Background Audio operation to the project.
      */
@@ -120,7 +125,7 @@ class VideoEditingViewModel : ViewModel() {
         val operation = EditOperation.AddBackgroundAudio(audioUri, removeOriginalAudio)
         addOperation(operation)
     }
-    
+
     /**
      * Generic method to add any operation to the project.
      * Updates undo/redo stacks and UI state.
@@ -146,7 +151,7 @@ class VideoEditingViewModel : ViewModel() {
             }
         }
     }
-    
+
     /**
      * Undo the last operation.
      */
@@ -154,13 +159,13 @@ class VideoEditingViewModel : ViewModel() {
         viewModelScope.launch {
             val currentProject = _project.value ?: return@launch
             val lastUndoState = _undoStack.value.lastOrNull() ?: return@launch
-            
+
             // Save current to redo stack
             _redoStack.value = _redoStack.value + listOf(currentProject)
             // Remove from undo stack and restore
             _undoStack.value = _undoStack.value.dropLast(1)
             _project.value = lastUndoState
-            
+
             updateUiState { state ->
                 state.copy(
                     pendingOperationCount = lastUndoState.getOperationCount(),
@@ -170,7 +175,7 @@ class VideoEditingViewModel : ViewModel() {
             }
         }
     }
-    
+
     /**
      * Redo the last undone operation.
      */
@@ -178,13 +183,13 @@ class VideoEditingViewModel : ViewModel() {
         viewModelScope.launch {
             val currentProject = _project.value ?: return@launch
             val lastRedoState = _redoStack.value.lastOrNull() ?: return@launch
-            
+
             // Save current to undo stack
             _undoStack.value = _undoStack.value + listOf(currentProject)
             // Remove from redo stack and restore
             _redoStack.value = _redoStack.value.dropLast(1)
             _project.value = lastRedoState
-            
+
             updateUiState { state ->
                 state.copy(
                     pendingOperationCount = lastRedoState.getOperationCount(),
@@ -194,7 +199,7 @@ class VideoEditingViewModel : ViewModel() {
             }
         }
     }
-    
+
     /**
      * Clear all operations and reset to original video.
      */
@@ -215,7 +220,7 @@ class VideoEditingViewModel : ViewModel() {
             }
         }
     }
-    
+
     /**
      * Remove a specific operation by ID.
      */
@@ -247,11 +252,11 @@ class VideoEditingViewModel : ViewModel() {
             }
         }
     }
-    
+
     /**
      * Set the current preview to show the video state after applying N operations.
      * This is used for previewing intermediate states without re-rendering.
-     * 
+     *
      * @param operationIndex: -1 for original, 0 for after first op, etc.
      */
     fun setPreviewOperationIndex(operationIndex: Int) {
@@ -259,7 +264,7 @@ class VideoEditingViewModel : ViewModel() {
             state.copy(currentPreviewOperationIndex = operationIndex)
         }
     }
-    
+
     /**
      * Build the consolidated FFmpeg command string for final export.
      * Combines all operations into a single, optimized FFmpeg pipeline.
@@ -273,15 +278,33 @@ class VideoEditingViewModel : ViewModel() {
             // No operations; just copy the source
             return "-i \"$sourceFilePath\" -c copy \"$outputFilePath\""
         }
-        
+
         val operations = currentProject.operations
+
+        // Check if there's a merge operation - if so, skip other operations and handle merge only
+        val mergeOp = operations.filterIsInstance<EditOperation.Merge>().firstOrNull()
+        if (mergeOp != null) {
+            // Build merge command using concat demuxer
+            // This handles merging multiple videos
+            val concatList = StringBuilder()
+            concatList.append("file '$sourceFilePath'\n")
+            for (videoUri in mergeOp.videoUris) {
+                val videoPath = videoUri.path ?: videoUri.toString()
+                concatList.append("file '$videoPath'\n")
+            }
+
+            // Return a command with a placeholder for concat file path
+            // The Activity will replace {CONCAT_FILE_PATH} with actual cache directory path
+            return "-f concat -safe 0 -i \"{CONCAT_FILE_PATH}\" -c:v libx264 -preset faster -crf 28 -c:a aac \"$outputFilePath\" (CONCAT_LIST:${concatList.toString()})"
+        }
+
         val filterChain = mutableListOf<String>()
         var trimStart: Long? = null
         var trimEnd: Long? = null
         var audioMuted = false
         var audioInputFile: String? = null
         var removeOriginalAudio = false
-        
+
         // First pass: collect all filter operations
         for (op in operations) {
             when (op) {
@@ -299,9 +322,21 @@ class VideoEditingViewModel : ViewModel() {
                     if (cropFilter != null) filterChain.add(cropFilter)
                 }
                 is EditOperation.AddText -> {
-                    // Text rendering via drawtext filter is not supported in current FFmpeg build
-                    // Text overlays will be rendered on UI layer during preview
-                    // Skipping text filter in FFmpeg pipeline
+                    // TEXT OVERLAY LIMITATION:
+                    // The drawtext filter requires FFmpeg to be compiled with libfreetype support.
+                    // The current FFmpeg binary (ffmpeg-kit.aar) was built without this.
+                    //
+                    // Current behavior:
+                    // - Text shows in real-time Canvas preview in the editor ✅
+                    // - Text is NOT encoded into the final exported video ❌
+                    //
+                    // WORKAROUND - Rebuild FFmpeg Kit with libfreetype:
+                    // 1. Get FFmpeg Kit source: https://github.com/tanersener/ffmpeg-kit
+                    // 2. Rebuild with: ./android/ffmpeg-kit-android.sh -x265 --enable-libfreetype
+                    // 3. Replace the ffmpeg-kit.aar with your custom build
+                    //
+                    // For now, text is preview-only via Canvas overlay.
+                    Log.d("VideoEditingViewModel", "Text operation (preview-only): ${op.text} at ${op.position}")
                 }
                 is EditOperation.MuteAudio -> {
                     audioMuted = true
@@ -311,15 +346,14 @@ class VideoEditingViewModel : ViewModel() {
                     removeOriginalAudio = op.removeOriginalAudio
                 }
                 is EditOperation.Merge -> {
-                    // Merge is handled separately in video concatenation logic
-                    // For now, we skip it in the filter chain
+                    // Already handled above
                 }
             }
         }
-        
+
         // Build the command
         val commandBuilder = StringBuilder()
-        
+
         // Trim section: use -ss and -to flags
         if (trimStart != null && trimEnd != null) {
             val startSecs = trimStart / 1000.0
@@ -328,20 +362,20 @@ class VideoEditingViewModel : ViewModel() {
         } else {
             commandBuilder.append("-i \"$sourceFilePath\"")
         }
-        
+
         // Audio section
         if (audioInputFile != null && !removeOriginalAudio) {
             commandBuilder.append(" -i \"$audioInputFile\"")
         }
-        
+
         // Video filter chain
         if (filterChain.isNotEmpty()) {
             commandBuilder.append(" -vf \"${filterChain.joinToString(",")}\"")
         }
-        
+
         // Codecs and audio handling
-        commandBuilder.append(" -c:v libx264 -preset medium")
-        
+        commandBuilder.append(" -c:v libx264 -preset faster -crf 28")
+
         when {
             audioMuted -> commandBuilder.append(" -an") // No audio
             audioInputFile != null && !removeOriginalAudio -> {
@@ -357,32 +391,63 @@ class VideoEditingViewModel : ViewModel() {
                 commandBuilder.append(" -c:a aac")
             }
         }
-        
+
         commandBuilder.append(" \"$outputFilePath\"")
-        
+
         return commandBuilder.toString()
     }
-    
+
+    /**
+     * Utility method to copy content URIs to temporary files.
+     */
+    private fun copyContentUriToTempFile(context: Context, uri: Uri): String? {
+        return try {
+            val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
+            val tempFile = File.createTempFile("temp_video", ".mp4", context.cacheDir)
+            val outputStream = FileOutputStream(tempFile)
+
+            inputStream?.use { input ->
+                outputStream.use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            tempFile.absolutePath
+        } catch (e: Exception) {
+            Log.e("VideoEditingViewModel", "Failed to copy content URI to temp file: ${e.message}")
+            null
+        }
+    }
+
     /**
      * Build FFmpeg command for merging videos.
      * Creates a concat demuxer list file and returns the merge command.
      */
     fun buildMergeCommand(
+        context: Context,
         currentVideoPath: String,
-        videoPathsToMerge: List<String>,
+        videoUrisToMerge: List<Uri>,
         listFilePath: String,
         outputFilePath: String
     ): String {
         val listContent = StringBuilder()
         listContent.append("file '$currentVideoPath'\n")
-        for (path in videoPathsToMerge) {
-            listContent.append("file '$path'\n")
+
+        for (uri in videoUrisToMerge) {
+            val tempFilePath = copyContentUriToTempFile(context, uri)
+            if (tempFilePath != null) {
+                listContent.append("file '$tempFilePath'\n")
+            } else {
+                Log.e("VideoEditingViewModel", "Skipping URI due to copy failure: $uri")
+            }
         }
-        
+
         // Write list file (caller should handle this)
+        File(listFilePath).writeText(listContent.toString())
+
         return "-f concat -safe 0 -i $listFilePath -c:v copy -c:a copy $outputFilePath"
     }
-    
+
     /**
      * Mark export as started (show loading screen).
      */
@@ -395,7 +460,7 @@ class VideoEditingViewModel : ViewModel() {
             )
         }
     }
-    
+
     /**
      * Update export progress.
      */
@@ -404,7 +469,7 @@ class VideoEditingViewModel : ViewModel() {
             state.copy(exportProgress = progress.coerceIn(0, 100))
         }
     }
-    
+
     /**
      * Mark export as completed.
      */
@@ -416,7 +481,7 @@ class VideoEditingViewModel : ViewModel() {
             )
         }
     }
-    
+
     /**
      * Handle export error.
      */
@@ -428,7 +493,7 @@ class VideoEditingViewModel : ViewModel() {
             )
         }
     }
-    
+
     /**
      * Clear error message.
      */
@@ -437,7 +502,7 @@ class VideoEditingViewModel : ViewModel() {
             state.copy(errorMessage = null)
         }
     }
-    
+
     /**
      * Save the current project as a Recipe for later loading.
      */
@@ -446,7 +511,7 @@ class VideoEditingViewModel : ViewModel() {
             EditRecipe.fromVideoProject(projectName, project)
         }
     }
-    
+
     /**
      * Load a previously saved Recipe.
      */
@@ -461,7 +526,7 @@ class VideoEditingViewModel : ViewModel() {
             )
         }
     }
-    
+
     /**
      * Update UI state using a lambda.
      */
