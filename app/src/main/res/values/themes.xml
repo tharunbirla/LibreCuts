@@ -34,4 +34,18 @@
         <item name="cornerSize">16dp</item>
     </style>
 
+    <!-- Floating panel title style with enhanced spacing -->
+    <style name="FloatingControlButtonText" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:letterSpacing">0.02</item>
+    </style>
+
+    <!-- Ensures proper spacing and interaction feedback for control buttons -->
+    <style name="ControlButtonContainer">
+        <item name="android:layout_weight">1</item>
+        <item name="android:paddingLeft">12dp</item>
+        <item name="android:paddingRight">12dp</item>
+    </style>
+
 </resources>

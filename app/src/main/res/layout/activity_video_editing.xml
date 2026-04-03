@@ -4,10 +4,11 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:background="@android:color/black"
+    android:background="@color/cinemaBlack"
     tools:context=".VideoEditingActivity"
     android:orientation="vertical">
 
+    <!-- Top toolbar with home, undo, redo, save buttons -->
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
@@ -60,26 +61,35 @@
                 android:alpha="0.5"
                 android:enabled="false"/>
 
-            <ImageButton
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSave"
-                android:minWidth="48dp"
-                android:minHeight="48dp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:src="@drawable/ic_save_color_24"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:text="Save"
+                android:textSize="12sp"
+                android:textColor="@color/colorOnPrimary"
                 android:contentDescription="@string/save_video"
-                android:layout_marginEnd="16dp"/>
+                android:layout_marginEnd="16dp"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                app:cornerRadius="24dp"
+                app:strokeColor="@color/colorOnPrimary"
+                app:strokeWidth="1dp"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"/>
         </LinearLayout>
 
     </androidx.appcompat.widget.Toolbar>
 
+    <!-- Cinematic video player container -->
     <FrameLayout
         android:id="@+id/playerContainer"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_above="@+id/textConfigs"
-        android:layout_below="@+id/toolbar">
+        android:layout_below="@+id/toolbar"
+        android:background="@color/cinemaBlack">
 
         <com.google.android.exoplayer2.ui.StyledPlayerView
             android:id="@+id/playerView"
@@ -93,6 +103,7 @@
             android:layout_height="match_parent"/>
     </FrameLayout>
 
+    <!-- Text configurations panel -->
     <LinearLayout
         android:id="@+id/textConfigs"
         android:layout_width="match_parent"
@@ -102,6 +113,7 @@
         android:padding="16dp"
         android:layout_above="@+id/seekerContainer"/>
 
+    <!-- Timeline/Seeker container -->
     <LinearLayout
         android:id="@+id/seekerContainer"
         android:layout_width="match_parent"
@@ -109,7 +121,7 @@
         android:background="#CC000000"
         android:orientation="vertical"
         android:gravity="center"
-        android:layout_above="@+id/editingControls">
+        android:layout_above="@+id/editingControlsWrapper">
 
         <TextView
             android:id="@+id/tvDuration"
@@ -139,76 +151,196 @@
         </FrameLayout>
     </LinearLayout>
 
+    <!-- Floating control panel wrapper with individual floating buttons -->
     <LinearLayout
-        android:id="@+id/editingControls"
+        android:id="@+id/editingControlsWrapper"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
         android:orientation="horizontal"
         android:gravity="center"
-        android:layout_alignParentBottom="true"
-        android:padding="16dp">
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp"
+        android:paddingBottom="20dp"
+        android:paddingTop="12dp"
+        android:spacing="12dp">
 
-        <ImageButton
-            android:id="@+id/btnTrim"
-            android:minWidth="48dp"
-            android:minHeight="48dp"
+        <!-- Individual floating button: Trim -->
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:padding="10dp"
-            android:src="@drawable/ic_split_24"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/add_overly"/>
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/floating_panel_background"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:layout_marginEnd="6dp">
 
-        <ImageButton
-            android:id="@+id/btnText"
-            android:minWidth="48dp"
-            android:minHeight="48dp"
+            <ImageButton
+                android:id="@+id/btnTrim"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="10dp"
+                android:src="@drawable/ic_split_24"
+                android:background="@drawable/button_ripple_effect"
+                android:contentDescription="Trim"
+                app:tint="@color/colorOnSecondary" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Trim"
+                android:textSize="10sp"
+                android:textColor="@android:color/white"
+                android:layout_marginTop="4dp"/>
+        </LinearLayout>
+
+        <!-- Individual floating button: Text -->
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:padding="10dp"
-            android:src="@drawable/ic_text_24"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/add_text"/>
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/floating_panel_background"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:layout_marginEnd="6dp">
 
-        <ImageButton
-            android:id="@+id/btnAudio"
-            android:minWidth="48dp"
-            android:minHeight="48dp"
+            <ImageButton
+                android:id="@+id/btnText"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="10dp"
+                android:src="@drawable/ic_text_24"
+                android:background="@drawable/button_ripple_effect"
+                android:contentDescription="Text"
+                app:tint="@color/colorOnSecondary"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Text"
+                android:textSize="10sp"
+                android:textColor="@android:color/white"
+                android:layout_marginTop="4dp"/>
+        </LinearLayout>
+
+        <!-- Individual floating button: Audio -->
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:padding="10dp"
-            android:src="@drawable/ic_audio_24"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/add_audio"/>
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/floating_panel_background"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:layout_marginEnd="6dp">
 
-        <ImageButton
-            android:id="@+id/btnCrop"
-            android:minWidth="48dp"
-            android:minHeight="48dp"
+            <ImageButton
+                android:id="@+id/btnAudio"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="10dp"
+                android:src="@drawable/ic_audio_24"
+                android:background="@drawable/button_ripple_effect"
+                android:contentDescription="Audio"
+                app:tint="@color/colorOnSecondary"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Audio"
+                android:textSize="10sp"
+                android:textColor="@android:color/white"
+                android:layout_marginTop="4dp"/>
+        </LinearLayout>
+
+        <!-- Individual floating button: Crop -->
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:padding="10dp"
-            android:src="@drawable/ic_crop_24"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/crop_video"/>
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/floating_panel_background"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:layout_marginEnd="6dp">
 
-        <ImageButton
-            android:id="@+id/btnMerge"
+            <ImageButton
+                android:id="@+id/btnCrop"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="10dp"
+                android:src="@drawable/ic_crop_24"
+                android:background="@drawable/button_ripple_effect"
+                android:contentDescription="Crop"
+                app:tint="@color/colorOnSecondary"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Crop"
+                android:textSize="10sp"
+                android:textColor="@android:color/white"
+                android:layout_marginTop="4dp"/>
+        </LinearLayout>
+
+        <!-- Individual floating button: Merge -->
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:padding="10dp"
-            android:minWidth="48dp"
-            android:minHeight="48dp"
-            android:src="@drawable/ic_add_photos_24"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/merge_video"/>
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/floating_panel_background"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp">
+
+            <ImageButton
+                android:id="@+id/btnMerge"
+                android:minWidth="48dp"
+                android:minHeight="48dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="10dp"
+                android:src="@drawable/ic_add_photos_24"
+                android:background="@drawable/button_ripple_effect"
+                android:contentDescription="Merge"
+                app:tint="@color/colorOnSecondary"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Merge"
+                android:textSize="10sp"
+                android:textColor="@android:color/white"
+                android:layout_marginTop="4dp"/>
+        </LinearLayout>
     </LinearLayout>
 
+    <!-- Loading and Export overlays -->
     <include
         layout="@layout/loading_screen"
         android:id="@+id/loadingScreen"

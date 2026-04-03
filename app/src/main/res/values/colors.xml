@@ -9,4 +9,7 @@
     <color name="textColor">#E0E0E0</color> <!-- Text color -->
     <color name="navigationBarColor">#121212</color> <!-- Navigation bar color -->
     <color name="statusBarColor">#121212</color> <!-- Status bar color -->
+    <color name="floatingPanelBackground">#1F1F1F</color> <!-- Floating panel semi-transparent background -->
+    <color name="iconSecondary">#B3B3B3</color> <!-- Secondary icon color (gray) -->
+    <color name="cinemaBlack">#000000</color> <!-- True black for cinematic effect -->
 </resources>

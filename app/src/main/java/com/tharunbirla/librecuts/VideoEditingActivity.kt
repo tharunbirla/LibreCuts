@@ -125,7 +125,7 @@ class VideoEditingActivity : AppCompatActivity() {
 
         // Set up button click listeners
         findViewById<ImageButton>(R.id.btnHome).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
-        findViewById<ImageButton>(R.id.btnSave).setOnClickListener { saveAction() }
+        findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSave).setOnClickListener { saveAction() }
         findViewById<ImageButton>(R.id.btnTrim).setOnClickListener { trimAction() }
         findViewById<ImageButton>(R.id.btnText).setOnClickListener { textAction() }
         findViewById<ImageButton>(R.id.btnAudio).setOnClickListener { audioAction() }
