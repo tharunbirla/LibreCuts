@@ -268,10 +268,17 @@ class VideoEditingViewModel : ViewModel() {
     /**
      * Build the consolidated FFmpeg command string for final export.
      * Combines all operations into a single, optimized FFmpeg pipeline.
+     *
+     * @param sourceFilePath  Absolute path to the source video file.
+     * @param outputFilePath  Absolute path where the exported video will be saved.
+     * @param fontFilePath    Absolute path to a TTF/OTF font file bundled in your app assets.
+     *                        Required for text overlays to render correctly on Android.
+     *                        Copy the font from assets to cacheDir before calling this method.
      */
     fun buildConsolidatedFFmpegCommand(
         sourceFilePath: String,
-        outputFilePath: String
+        outputFilePath: String,
+        fontFilePath: String? = null
     ): String? {
         val currentProject = _project.value ?: return null
         if (currentProject.operations.isEmpty()) {
@@ -284,18 +291,14 @@ class VideoEditingViewModel : ViewModel() {
         // Check if there's a merge operation - if so, skip other operations and handle merge only
         val mergeOp = operations.filterIsInstance<EditOperation.Merge>().firstOrNull()
         if (mergeOp != null) {
-            // Build merge command using concat demuxer
-            // This handles merging multiple videos
             val concatList = StringBuilder()
             concatList.append("file '$sourceFilePath'\n")
             for (videoUri in mergeOp.videoUris) {
                 val videoPath = videoUri.path ?: videoUri.toString()
                 concatList.append("file '$videoPath'\n")
             }
-
-            // Return a command with a placeholder for concat file path
             // The Activity will replace {CONCAT_FILE_PATH} with actual cache directory path
-            return "-f concat -safe 0 -i \"{CONCAT_FILE_PATH}\" -c:v libx264 -preset faster -crf 28 -c:a aac \"$outputFilePath\" (CONCAT_LIST:${concatList.toString()})"
+            return "-f concat -safe 0 -i \"{CONCAT_FILE_PATH}\" -c:v libx264 -preset faster -crf 28 -c:a aac \"$outputFilePath\" (CONCAT_LIST:${concatList})"
         }
 
         val filterChain = mutableListOf<String>()
@@ -312,6 +315,7 @@ class VideoEditingViewModel : ViewModel() {
                     trimStart = op.startMs
                     trimEnd = op.endMs
                 }
+
                 is EditOperation.Crop -> {
                     val cropFilter = when (op.aspectRatio) {
                         "16:9" -> "crop=iw:iw*9/16"
@@ -321,30 +325,50 @@ class VideoEditingViewModel : ViewModel() {
                     }
                     if (cropFilter != null) filterChain.add(cropFilter)
                 }
+
                 is EditOperation.AddText -> {
-                    // TEXT OVERLAY LIMITATION:
-                    // The drawtext filter requires FFmpeg to be compiled with libfreetype support.
-                    // The current FFmpeg binary (ffmpeg-kit.aar) was built without this.
-                    //
-                    // Current behavior:
-                    // - Text shows in real-time Canvas preview in the editor ✅
-                    // - Text is NOT encoded into the final exported video ❌
-                    //
-                    // WORKAROUND - Rebuild FFmpeg Kit with libfreetype:
-                    // 1. Get FFmpeg Kit source: https://github.com/tanersener/ffmpeg-kit
-                    // 2. Rebuild with: ./android/ffmpeg-kit-android.sh -x265 --enable-libfreetype
-                    // 3. Replace the ffmpeg-kit.aar with your custom build
-                    //
-                    // For now, text is preview-only via Canvas overlay.
-                    Log.d("VideoEditingViewModel", "Text operation (preview-only): ${op.text} at ${op.position}")
+                    // Escape characters that would break the FFmpeg filter string.
+                    // Single quotes must be escaped for the text='' wrapper.
+                    // Colons must be escaped as they are filter parameter separators.
+                    val escapedText = op.text
+                        .replace("\\", "\\\\")  // escape backslashes first
+                        .replace("'", "\\'")     // escape single quotes
+                        .replace(":", "\\:")     // escape colons
+
+                    // Build the drawtext filter.
+                    // Use fontfile= (not font=) — the only valid way to specify a font in FFmpeg drawtext.
+                    // If no fontFilePath is provided we omit it and rely on freetype's fallback,
+                    // but text may not render on all Android devices without an explicit fontfile.
+                    val fontPart = if (!fontFilePath.isNullOrBlank()) {
+                        val escapedFontPath = fontFilePath
+                            .replace("\\", "\\\\")
+                            .replace("'", "\\'")
+                            .replace(":", "\\:")
+                        "fontfile='$escapedFontPath':"
+                    } else {
+                        // No font provided — drawtext will attempt to use freetype's default.
+                        // This may silently produce no text on Android; always supply a fontFilePath.
+                        Log.w("VideoEditingViewModel", "No fontFilePath provided for text overlay. " +
+                                "Text may not render. Copy a TTF from assets to cacheDir and pass the path.")
+                        ""
+                    }
+
+                    val textFilter = "drawtext=${fontPart}text='$escapedText':" +
+                            "fontcolor=white:fontsize=${op.fontSize}:${op.position.ffmpegParam}"
+
+                    filterChain.add(textFilter)
+                    Log.d("VideoEditingViewModel", "Text filter added: $textFilter")
                 }
+
                 is EditOperation.MuteAudio -> {
                     audioMuted = true
                 }
+
                 is EditOperation.AddBackgroundAudio -> {
                     audioInputFile = op.audioUri.path ?: op.audioUri.toString()
                     removeOriginalAudio = op.removeOriginalAudio
                 }
+
                 is EditOperation.Merge -> {
                     // Already handled above
                 }
@@ -363,7 +387,7 @@ class VideoEditingViewModel : ViewModel() {
             commandBuilder.append("-i \"$sourceFilePath\"")
         }
 
-        // Audio section
+        // Audio input (background audio)
         if (audioInputFile != null && !removeOriginalAudio) {
             commandBuilder.append(" -i \"$audioInputFile\"")
         }
@@ -373,28 +397,31 @@ class VideoEditingViewModel : ViewModel() {
             commandBuilder.append(" -vf \"${filterChain.joinToString(",")}\"")
         }
 
-        // Codecs and audio handling
+        // Codecs
         commandBuilder.append(" -c:v libx264 -preset faster -crf 28")
 
+        // Audio handling
         when {
-            audioMuted -> commandBuilder.append(" -an") // No audio
+            audioMuted -> commandBuilder.append(" -an")
             audioInputFile != null && !removeOriginalAudio -> {
-                // Mix original and new audio
-                commandBuilder.append(" -filter_complex \"[1:a]aformat=sample_rates=44100:channel_layouts=stereo[a]\" -map 0:v -map \"[a]\" -c:a aac")
+                commandBuilder.append(
+                    " -filter_complex \"[1:a]aformat=sample_rates=44100:channel_layouts=stereo[a]\"" +
+                            " -map 0:v -map \"[a]\" -c:a aac"
+                )
             }
             audioInputFile != null && removeOriginalAudio -> {
-                // Use only the new audio
                 commandBuilder.append(" -map 0:v -map 1:a -c:a aac")
             }
             else -> {
-                // Keep original audio
                 commandBuilder.append(" -c:a aac")
             }
         }
 
         commandBuilder.append(" \"$outputFilePath\"")
 
-        return commandBuilder.toString()
+        val finalCommand = commandBuilder.toString()
+        Log.d("VideoEditingViewModel", "Built FFmpeg command: $finalCommand")
+        return finalCommand
     }
 
     /**
@@ -405,13 +432,11 @@ class VideoEditingViewModel : ViewModel() {
             val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
             val tempFile = File.createTempFile("temp_video", ".mp4", context.cacheDir)
             val outputStream = FileOutputStream(tempFile)
-
             inputStream?.use { input ->
                 outputStream.use { output ->
                     input.copyTo(output)
                 }
             }
-
             tempFile.absolutePath
         } catch (e: Exception) {
             Log.e("VideoEditingViewModel", "Failed to copy content URI to temp file: ${e.message}")
@@ -442,7 +467,6 @@ class VideoEditingViewModel : ViewModel() {
             }
         }
 
-        // Write list file (caller should handle this)
         File(listFilePath).writeText(listContent.toString())
 
         return "-f concat -safe 0 -i $listFilePath -c:v copy -c:a copy $outputFilePath"
