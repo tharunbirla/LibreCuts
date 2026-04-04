@@ -91,6 +91,7 @@ class FFmpegRenderEngine(private val context: Context) {
                         session = session
                     )
                 } else {
+                    // When FFmpeg fails
                     val failLog = session.failStackTrace
                         ?: session.allLogsAsString
                         ?: "Unknown error"

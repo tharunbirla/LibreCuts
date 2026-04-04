@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.tharunbirla.librecuts.databinding.ActivityMainBinding
+import com.tharunbirla.librecuts.utils.ErrorCode
 
 class MainActivity : AppCompatActivity() {
 
@@ -35,6 +36,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         setupPermissions()
+        setupGlobalCrashHandler()
 
         binding.addVideoButton.setOnClickListener {
             if (arePermissionsGranted()) {
@@ -44,6 +46,26 @@ class MainActivity : AppCompatActivity() {
                 Log.w("PermissionCheck", "Permissions not granted, showing request dialog.")
                 showPermissionRequestDialog()
             }
+        }
+    }
+
+    private fun setupGlobalCrashHandler() {
+        val oldHandler = Thread.getDefaultUncaughtExceptionHandler()
+
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            Log.e("LibreCutsCrash", "CRITICAL CRASH", throwable)
+
+            // Start a dedicated Error Activity to show the dialog
+            val intent = Intent(this, ErrorDisplayActivity::class.java).apply {
+                putExtra("ERROR_CODE", ErrorCode.UNEXPECTED_CRASH.code)
+                putExtra("ERROR_LOG", Log.getStackTraceString(throwable))
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            }
+            startActivity(intent)
+
+            // Terminate the crashed process
+            android.os.Process.killProcess(android.os.Process.myPid())
+            System.exit(1)
         }
     }
 

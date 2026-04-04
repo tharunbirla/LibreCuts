@@ -4,6 +4,9 @@ import android.widget.ImageView
 import kotlinx.coroutines.isActive
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
@@ -32,12 +35,14 @@ import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.ui.StyledPlayerView
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.slider.RangeSlider
 import com.google.android.material.textfield.TextInputEditText
 import com.tharunbirla.librecuts.customviews.CustomVideoSeeker
 import com.tharunbirla.librecuts.models.EditOperation
 import com.tharunbirla.librecuts.models.TextPosition
 import com.tharunbirla.librecuts.services.FFmpegRenderEngine
+import com.tharunbirla.librecuts.utils.ErrorCode
 import com.tharunbirla.librecuts.viewmodels.VideoEditingViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -156,6 +161,28 @@ class VideoEditingActivity : AppCompatActivity() {
                 }
             }
         })
+    }
+
+    private fun showProErrorDialog(errorCode: ErrorCode, technicalLog: String) {
+        val message = "${errorCode.description}\n\nError Code: ${errorCode.code}"
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Something Went Wrong")
+            .setMessage(message)
+            .setNeutralButton("Copy Log") { _, _ ->
+                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newPlainText("Error Log", technicalLog)
+                clipboard.setPrimaryClip(clip)
+                Toast.makeText(this, "Log copied to clipboard", Toast.LENGTH_SHORT).show()
+            }
+            .setPositiveButton("Report on GitHub") { _, _ ->
+                val githubUrl = "https://github.com/tharunbirla/librecuts/issues/new?title=" +
+                        "Error ${errorCode.code}&body=${technicalLog.take(1000)}"
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(githubUrl)))
+            }
+            .setNegativeButton("Close") { dialog, _ -> dialog.dismiss() }
+            .setCancelable(false)
+            .show()
     }
 
     private fun initializeViews() {
@@ -589,7 +616,7 @@ class VideoEditingActivity : AppCompatActivity() {
                     }
                     is FFmpegRenderEngine.RenderResult.Failure -> {
                         viewModel.exportError(result.error)
-                        Log.e(TAG, "Export failed: ${result.error}")
+                        showProErrorDialog(ErrorCode.FFMPEG_EXECUTION_FAILED, result.error)
                         Toast.makeText(
                             this@VideoEditingActivity,
                             "Export failed: ${result.error.take(200)}",
