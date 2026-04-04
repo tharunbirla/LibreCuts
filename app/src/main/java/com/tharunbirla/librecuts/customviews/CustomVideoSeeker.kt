@@ -28,17 +28,26 @@ class CustomVideoSeeker @JvmOverloads constructor(
 
     // ── Paints ────────────────────────────────────────────────────────────────
 
-    /** Thin accent line — the vertical playhead stem */
+    /** The main accent line */
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#FF4081")
-        strokeWidth = 3f
-        style = Paint.Style.STROKE
+        strokeWidth = 6f // Slightly thicker for a premium feel
+        style = Paint.Style.FILL_AND_STROKE
+        strokeCap = Paint.Cap.ROUND // Smooth ends
     }
 
-    /** Filled circle / handle at the top of the playhead */
+    /** The "Shield" handle at the top */
     private val handlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#FF4081")
         style = Paint.Style.FILL
+    }
+
+    /** Subtle drop shadow so the playhead doesn't get lost in light scenes */
+    private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.BLACK
+        alpha = 50 // Very subtle
+        style = Paint.Style.STROKE
+        strokeWidth = 8f
     }
 
     /** Subtle white glow behind the handle for depth */
@@ -60,15 +69,40 @@ class CustomVideoSeeker @JvmOverloads constructor(
         super.onDraw(canvas)
 
         val seekX = width * seekPosition
+        val handleWidth = 24f  // The width of the top pin
+        val handleHeight = 40f // The height of the top pin
+        val cornerRadius = 6f
 
-        // 1. Vertical stem
-        canvas.drawLine(seekX, handleRadius * 2f, seekX, height.toFloat(), linePaint)
+        // 1. Draw the subtle drop shadow for the vertical line
+        // We offset it slightly to the right to create depth
+        canvas.drawLine(seekX + 2f, handleHeight, seekX + 2f, height.toFloat(), shadowPaint)
 
-        // 2. Glow halo behind handle
-        canvas.drawCircle(seekX, handleRadius, handleRadius + 4f, glowPaint)
+        // 2. Draw the main vertical accent line (The Stem)
+        canvas.drawLine(seekX, handleHeight, seekX, height.toFloat(), linePaint)
 
-        // 3. Filled handle circle
-        canvas.drawCircle(seekX, handleRadius, handleRadius, handlePaint)
+        // 3. Draw the handle "Head" (A rounded rectangle/shield)
+        // This replaces the simple circle and looks much more like a timeline needle
+        handleRect.set(
+            seekX - (handleWidth / 2),
+            0f,
+            seekX + (handleWidth / 2),
+            handleHeight
+        )
+
+        // Draw a slight glow/shadow under the head
+        canvas.drawRoundRect(handleRect, cornerRadius, cornerRadius, glowPaint)
+
+        // Draw the actual head
+        canvas.drawRoundRect(handleRect, cornerRadius, cornerRadius, handlePaint)
+
+        // 4. Draw a tiny white indicator dot in the center of the head
+        // This gives it that "precision instrument" look
+//        val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+//            color = Color.WHITE
+//            style = Paint.Style.FILL
+//            alpha = 200
+//        }
+//        canvas.drawCircle(seekX, handleHeight / 2, 4f, dotPaint)
     }
 
     @SuppressLint("ClickableViewAccessibility")

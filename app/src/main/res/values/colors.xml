@@ -1,33 +1,57 @@
 <resources>
-    <color name="colorPrimary">#FF4081</color>
-    <color name="colorPrimaryVariant">#C2185B</color> <color name="colorOnPrimary">#FFFFFF</color> <color name="colorSecondary">#f06292</color> <color name="colorSecondaryVariant">#4A3940</color> <color name="colorOnSecondary">#FFFFFF</color>
 
-    <color name="background">#0e0e11</color>
-    <color name="statusBarColor">#0e0e11</color>
+    <!-- PRIMARY -->
+    <color name="colorPrimary">#FF4081</color>
+    <color name="colorPrimaryVariant">#C2185B</color>
+
+    <color name="colorOnPrimary">#C2185B</color>
+
+    <!-- SECONDARY -->
+    <color name="colorSecondary">#F06292</color>
+    <color name="colorSecondaryVariant">#4A3940</color>
+    <color name="colorOnSecondary">#FFFFFF</color>
+
+    <!-- BACKGROUND -->
+    <color name="background">#0E0E11</color>
+    <color name="colorOnBackground">#E6E1E5</color>
+
+    <color name="colorSurface">#1C1B1F</color>
+    <color name="colorOnSurface">#E6E1E5</color>
+
+    <!-- YOUR EXISTING UI COLORS -->
+    <color name="statusBarColor">#0E0E11</color>
     <color name="navigationBarColor">#1C1B1F</color>
     <color name="cinemaBlack">#000000</color>
-    <color name="textColor">#e8e3ee</color>
+    <color name="textColor">#E8E3EE</color>
 
-    <color name="surfaceContainer">#1a191f</color>
+    <color name="surfaceContainer">#1A191F</color>
     <color name="surfaceContainerHigh">#252429</color>
     <color name="surfaceContainerLowest">#000000</color>
-    <color name="surfaceVariant">#26252c</color>
-    <color name="floatingPanelBackground">#26252c</color>
+    <color name="surfaceVariant">#26252C</color>
+    <color name="floatingPanelBackground">#26252C</color>
 
+    <!-- CONTAINERS -->
     <color name="primaryContainer">#FF4081</color>
     <color name="onPrimaryContainer">#FFFFFF</color>
 
-    <color name="tertiary">#f4bfe2</color>
-    <color name="tertiaryContainer">#5e354d</color>
-    <color name="onTertiary">#ffffff</color>
+    <color name="tertiary">#F4BFE2</color>
+    <color name="tertiaryContainer">#5E354D</color>
+    <color name="onTertiary">#FFFFFF</color>
 
-    <color name="outline">#77747d</color>
-    <color name="outlineVariant">#49474f</color>
-    <color name="iconSecondary">#ada9b3</color>
+    <!-- OUTLINES -->
+    <color name="outline">#77747D</color>
+    <color name="outlineVariant">#49474F</color>
+    <color name="iconSecondary">#ADA9B3</color>
 
-    <color name="activeTool">#FF4081</color> <color name="activeToolBackground">#351d27</color> <color name="inactiveTool">#49454F</color>
+    <!-- TOOL COLORS -->
+    <color name="activeTool">#FF4081</color>
+    <color name="activeToolBackground">#351D27</color>
+    <color name="inactiveTool">#49454F</color>
     <color name="inactiveToolBackground">#1C1B1F</color>
 
     <color name="toolTextActive">#FF4081</color>
     <color name="toolTextInactive">#CAC4D0</color>
+
+    <color name="sliderHalo">#1C1B1F</color>
+
 </resources>

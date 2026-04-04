@@ -1,5 +1,7 @@
 package com.tharunbirla.librecuts
 
+import android.widget.ImageView
+import kotlinx.coroutines.isActive
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
@@ -15,6 +17,7 @@ import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageButton
+import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
@@ -295,14 +298,15 @@ class VideoEditingActivity : AppCompatActivity() {
     @SuppressLint("InflateParams")
     private fun trimAction() {
         val videoDuration = player.duration
-        if (videoDuration <= 0) {
-            Toast.makeText(this, "Video duration is invalid.", Toast.LENGTH_SHORT).show()
-            return
-        }
+        if (videoDuration <= 0) return
 
-        val bottomSheetDialog = BottomSheetDialog(this@VideoEditingActivity)
+        val bottomSheetDialog = BottomSheetDialog(this)
         val sheetView = layoutInflater.inflate(R.layout.trim_bottom_sheet_dialog, null)
         val rangeSlider: RangeSlider = sheetView.findViewById(R.id.rangeSlider)
+
+        // Set UI colors from your theme
+        rangeSlider.trackActiveTintList = getColorStateList(R.color.colorPrimary)
+        rangeSlider.thumbTintList = getColorStateList(R.color.colorPrimary)
 
         val totalSeconds = (videoDuration / 1000).toFloat()
         rangeSlider.valueFrom = 0f
@@ -311,7 +315,11 @@ class VideoEditingActivity : AppCompatActivity() {
 
         rangeSlider.addOnChangeListener { slider, _, fromUser ->
             if (fromUser) {
-                player.seekTo(slider.values[0].toLong() * 1000)
+                // PRO FEATURE: Live seeking while trimming
+                // If user moves start handle, seek to start. If end handle, seek to end.
+                val thumbIndex = slider.activeThumbIndex
+                val seekTargetMs = slider.values[thumbIndex].toLong() * 1000
+                player.seekTo(seekTargetMs)
             }
         }
 
@@ -321,7 +329,6 @@ class VideoEditingActivity : AppCompatActivity() {
             viewModel.addTrimOperation(startMs, endMs)
             updatePreviewWithClipping(startMs, endMs)
             bottomSheetDialog.dismiss()
-            Toast.makeText(this, "Trim operation added (preview active)", Toast.LENGTH_SHORT).show()
         }
 
         bottomSheetDialog.setContentView(sheetView)
@@ -350,24 +357,57 @@ class VideoEditingActivity : AppCompatActivity() {
         val bottomSheetDialog = BottomSheetDialog(this)
         val sheetView = layoutInflater.inflate(R.layout.crop_bottom_sheet_dialog, null)
 
-        sheetView.findViewById<TextView>(R.id.tvTitleCrop).text = getString(R.string.select_aspect_ratio)
+        // 1. Determine current active ratio from ViewModel
+        val currentRatio = viewModel.project.value?.operations
+            ?.filterIsInstance<EditOperation.Crop>()
+            ?.lastOrNull()?.aspectRatio ?: "Original"
 
-        sheetView.findViewById<FrameLayout>(R.id.frameAspectRatio1).setOnClickListener {
+        // 2. Helper function to update UI state
+        fun updateActiveUi(ratio: String) {
+            val ratios = mapOf(
+                "16:9" to Triple(R.id.bg16_9, R.id.ic16_9, R.id.txt16_9),
+                "9:16" to Triple(R.id.bg9_16, R.id.ic9_16, R.id.txt9_16),
+                "1:1" to Triple(R.id.bg1_1, R.id.ic1_1, R.id.txt1_1)
+            )
+
+            ratios.forEach { (key, views) ->
+                val isActive = key == ratio
+                sheetView.findViewById<View>(views.first).setBackgroundResource(
+                    if (isActive) R.drawable.bg_aspect_ratio_selected else R.drawable.bg_aspect_ratio_item
+                )
+                sheetView.findViewById<ImageView>(views.second).setColorFilter(
+                    resources.getColor(if (isActive) R.color.onPrimaryContainer else R.color.iconSecondary, null)
+                )
+                sheetView.findViewById<TextView>(views.third).apply {
+                    setTextColor(resources.getColor(if (isActive) R.color.activeTool else R.color.toolTextInactive, null))
+                    paint.isFakeBoldText = isActive
+                }
+            }
+        }
+
+        // Initialize UI with current state
+        updateActiveUi(currentRatio)
+
+        // 3. Click Listeners
+        sheetView.findViewById<LinearLayout>(R.id.frameAspectRatio1).setOnClickListener {
             viewModel.addCropOperation("16:9")
+            updateActiveUi("16:9")
             bottomSheetDialog.dismiss()
-            Toast.makeText(this, "Crop 16:9 added (pending)", Toast.LENGTH_SHORT).show()
         }
-        sheetView.findViewById<FrameLayout>(R.id.frameAspectRatio2).setOnClickListener {
+
+        sheetView.findViewById<LinearLayout>(R.id.frameAspectRatio2).setOnClickListener {
             viewModel.addCropOperation("9:16")
+            updateActiveUi("9:16")
             bottomSheetDialog.dismiss()
-            Toast.makeText(this, "Crop 9:16 added (pending)", Toast.LENGTH_SHORT).show()
         }
-        sheetView.findViewById<FrameLayout>(R.id.frameAspectRatio3).setOnClickListener {
+
+        sheetView.findViewById<LinearLayout>(R.id.frameAspectRatio3).setOnClickListener {
             viewModel.addCropOperation("1:1")
+            updateActiveUi("1:1")
             bottomSheetDialog.dismiss()
-            Toast.makeText(this, "Crop 1:1 added (pending)", Toast.LENGTH_SHORT).show()
         }
-        sheetView.findViewById<Button>(R.id.btnCancelCrop).setOnClickListener {
+
+        sheetView.findViewById<ImageButton>(R.id.btnCloseSheet).setOnClickListener {
             bottomSheetDialog.dismiss()
         }
 
@@ -383,24 +423,25 @@ class VideoEditingActivity : AppCompatActivity() {
         val etTextInput = view.findViewById<TextInputEditText>(R.id.etTextInput)
         val fontSizeInput = view.findViewById<TextInputEditText>(R.id.fontSize)
         val spinnerTextPosition = view.findViewById<Spinner>(R.id.spinnerTextPosition)
-        val btnDone = view.findViewById<Button>(R.id.btnDoneText)
 
-        val positionOptions = TextPosition.labels()
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, positionOptions)
+        // Setup position options
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, TextPosition.labels())
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerTextPosition.adapter = adapter
 
-        btnDone.setOnClickListener {
+        view.findViewById<Button>(R.id.btnDoneText).setOnClickListener {
             val text = etTextInput.text.toString()
-            val fontSize = fontSizeInput.text.toString().toIntOrNull() ?: 16
-            val textPosition = spinnerTextPosition.selectedItem.toString()
+            val fontSize = fontSizeInput.text.toString().toIntOrNull() ?: 24 // Default larger for pro look
+            val positionLabel = spinnerTextPosition.selectedItem.toString()
 
             if (text.isNotEmpty()) {
-                viewModel.addTextOperation(text, fontSize, textPosition)
+                viewModel.addTextOperation(text, fontSize, positionLabel)
+
+                // PRO STEP: Force a refresh of the text overlay view immediately
+                // so the user doesn't have to wait for export to see the text
+                textOverlayView?.postInvalidate()
+
                 bottomSheetDialog.dismiss()
-                Toast.makeText(this, "Text overlay added (pending)", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this, "Please enter text", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -620,11 +661,6 @@ class VideoEditingActivity : AppCompatActivity() {
                         isVideoLoaded = true
                         customVideoSeeker.setVideoDuration(player.duration)
                         updateDurationDisplay(player.currentPosition.toInt(), player.duration.toInt())
-                        loadingScreen.visibility = View.GONE
-
-                        if (player.isPlaying) {
-                            startProgressUpdater()
-                        }
                     }
                 }
 
@@ -735,35 +771,72 @@ class VideoEditingActivity : AppCompatActivity() {
         frameRecyclerView.adapter = FrameAdapter(emptyList())
     }
 
+    // Inside VideoEditingActivity
+    private var frameExtractionJob: kotlinx.coroutines.Job? = null
+
     private fun extractVideoFrames() {
-        lifecycleScope.launch(Dispatchers.IO) {
+        frameExtractionJob?.cancel()
+
+        // Ensure loading screen is visible at the start
+        loadingScreen.visibility = View.VISIBLE
+
+        frameExtractionJob = lifecycleScope.launch(Dispatchers.IO) {
+            val retriever = MediaMetadataRetriever()
             try {
-                val retriever = MediaMetadataRetriever()
                 retriever.setDataSource(tempInputFile.absolutePath)
+                val durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                val videoDurationMs = durationStr?.toLong() ?: 0L
 
-                val duration = withContext(Dispatchers.Main) { player.duration }
-                val frameInterval = duration / 10
+                if (videoDurationMs <= 0) return@launch
 
-                extractedFrames.clear()
-                for (i in 0 until 10) {
-                    val frameTime = i * frameInterval
-                    val bitmap = retriever.getFrameAtTime(
-                        frameTime * 1000,
-                        MediaMetadataRetriever.OPTION_CLOSEST_SYNC
-                    )
+                val frameCount = 10
+                val intervalUs = (videoDurationMs * 1000) / frameCount
+                val tempFrames = mutableListOf<Bitmap>()
+
+                // Process all frames in the background WITHOUT updating the UI partially
+                for (i in 0 until frameCount) {
+                    if (!coroutineContext.isActive) break
+
+                    val timeUs = i * intervalUs
+
+                    // Hardware-accelerated scaling
+                    val bitmap = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) {
+                        retriever.getScaledFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST, 200, 150)
+                    } else {
+                        retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST)
+                    }
+
                     bitmap?.let {
-                        extractedFrames.add(Bitmap.createScaledBitmap(it, 200, 150, false))
+                        val finalBitmap = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) it else processBitmap(it)
+                        tempFrames.add(finalBitmap)
                     }
                 }
-                retriever.release()
 
+                // ONLY update the UI once the loop is completely finished
                 withContext(Dispatchers.Main) {
+                    extractedFrames.clear()
+                    extractedFrames.addAll(tempFrames)
                     frameRecyclerView.adapter = FrameAdapter(extractedFrames)
+
+                    // FINALLY: Hide the loading screen now that everything is visible
+                    loadingScreen.visibility = View.GONE
                 }
+
             } catch (e: Exception) {
-                Log.e(TAG, "Error extracting frames: ${e.message}", e)
+                Log.e(TAG, "Extraction error: ${e.message}")
+                withContext(Dispatchers.Main) { loadingScreen.visibility = View.GONE }
+            } finally {
+                retriever.release()
             }
         }
+    }
+
+    // Helper to keep scaling logic clean and maintain aspect ratio
+    private fun processBitmap(source: Bitmap): Bitmap {
+        val aspectRatio = source.width.toFloat() / source.height.toFloat()
+        val targetHeight = 150
+        val targetWidth = (targetHeight * aspectRatio).toInt()
+        return Bitmap.createScaledBitmap(source, targetWidth, targetHeight, true)
     }
 
     @SuppressLint("SetTextI18n")
@@ -843,6 +916,8 @@ class VideoEditingActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        frameExtractionJob?.cancel()
+        extractedFrames.forEach { it.recycle() }
         super.onDestroy()
         player.release()
         ffmpegEngine.cleanup()

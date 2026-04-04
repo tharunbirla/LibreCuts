@@ -1,41 +1,62 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/exportScreen"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
     android:background="@android:color/black"
-    tools:context=".MainActivity">
+    android:visibility="gone">
 
-    <com.airbnb.lottie.LottieAnimationView
-        android:id="@+id/lottieAnimation"
+    <!-- Semi-transparent overlay -->
+    <View
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        app:lottie_rawRes="@raw/film"
-        app:lottie_autoPlay="true"
-        app:lottie_loop="true"/>
+        android:layout_height="match_parent"
+        android:background="#CC000000" />
 
-    <TextView
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:gravity="center"
-        android:text="@string/loading"
-        android:textSize="19sp"
-        android:textColor="@color/colorOnSecondary"/>
+        android:orientation="vertical"
+        android:padding="32dp"
+        tools:context=".MainActivity">
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="40dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="40dp"
-        android:gravity="center"
-        android:text="@string/loading_tag"
-        android:textColor="@color/colorOnSecondary"
-        android:textSize="14sp"/>
+        <com.airbnb.lottie.LottieAnimationView
+            android:id="@+id/lottieAnimation"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            app:lottie_rawRes="@raw/film"
+            app:lottie_autoPlay="true"
+            app:lottie_loop="true"/>
 
-</LinearLayout>
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/loading"
+            android:textSize="19sp"
+            android:textColor="@color/colorOnSecondary"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="40dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="40dp"
+            android:gravity="center"
+            android:text="@string/loading_tag"
+            android:textColor="@color/colorOnSecondary"
+            android:textSize="14sp"/>
+
+        <!-- Progress indicator -->
+        <ProgressBar
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginTop="24dp"
+            android:indeterminate="true"
+            android:indeterminateTint="@android:color/white" />
+
+    </LinearLayout>
+</FrameLayout>

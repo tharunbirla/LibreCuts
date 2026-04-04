@@ -1,121 +1,151 @@
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="@color/surfaceContainerHigh"
     android:orientation="vertical"
-    android:padding="25dp"
-    android:background="#1E1E1E">
+    android:paddingBottom="48dp"
+    android:paddingTop="12dp">
 
-    <TextView
-        android:id="@+id/tvTitleCrop"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Aspect ratio"
-        android:layout_gravity="center"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:textColor="@android:color/white"
-        android:layout_marginBottom="16dp"/>
+    <View
+        android:layout_width="32dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="24dp"
+        android:alpha="0.4"
+        android:background="@color/outlineVariant" />
 
-    <LinearLayout
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginBottom="16dp">
+        android:layout_marginBottom="24dp"
+        android:paddingHorizontal="24dp">
 
-        <FrameLayout
-            android:id="@+id/frameAspectRatio1"
-            android:layout_width="0dp"
+        <TextView
+            android:id="@+id/tvTitleCrop"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:background="@drawable/aspect_ratio_background"
-            android:layout_marginEnd="8dp"
-            android:padding="1dp">
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:padding="12dp"
-                android:background="#1E1E1E">
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_crop_16_9_24"
-                    android:layout_marginBottom="8dp"/>
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="16 x 9"
-                    android:textColor="@android:color/white"/>
-            </LinearLayout>
-        </FrameLayout>
+            android:layout_centerInParent="true"
+            android:fontFamily="sans-serif-medium"
+            android:text="Crop Aspect Ratio"
+            android:textColor="@color/textColor"
+            android:textSize="18sp" />
 
-        <FrameLayout
-            android:id="@+id/frameAspectRatio2"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:background="@drawable/aspect_ratio_background_selected"
-            android:layout_marginEnd="8dp"
-            android:padding="1dp">
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:padding="12dp"
-                android:background="#1E1E1E">
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_crop_portrait_24"
-                    android:layout_marginBottom="8dp"/>
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="9 x 16"
-                    android:textColor="@android:color/white"/>
-            </LinearLayout>
-        </FrameLayout>
+        <ImageButton
+            android:id="@+id/btnCloseSheet"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_alignParentEnd="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_close_24"
+            app:tint="@color/activeTool" />
+    </RelativeLayout>
 
-        <FrameLayout
-            android:id="@+id/frameAspectRatio3"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:background="@drawable/aspect_ratio_background"
-            android:padding="1dp">
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:padding="12dp"
-                android:background="#1E1E1E">
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_crop_square_24"
-                    android:layout_marginBottom="8dp"/>
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="1 x 1"
-                    android:textColor="@android:color/white"/>
-            </LinearLayout>
-        </FrameLayout>
-
-    </LinearLayout>
-
-    <Button
-        android:id="@+id/btnCancelCrop"
+    <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Cancel"
-        android:textColor="@android:color/black"
-        android:background="@drawable/rounded_button"
-        android:paddingTop="12dp"
-        android:paddingBottom="12dp"/>
+        android:overScrollMode="never"
+        android:scrollbars="none"
+        android:fillViewport="true">
 
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:layout_gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="24dp">
+
+            <LinearLayout
+                android:id="@+id/frameAspectRatio1"
+                android:layout_width="72dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="12dp"
+                android:gravity="center"
+                android:orientation="vertical">
+                <FrameLayout
+                    android:id="@+id/bg16_9"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@drawable/bg_aspect_ratio_item">
+                    <ImageView
+                        android:id="@+id/ic16_9"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_crop_16_9_24"
+                        app:tint="@color/iconSecondary" />
+                </FrameLayout>
+                <TextView
+                    android:id="@+id/txt16_9"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="16:9"
+                    android:textColor="@color/toolTextInactive"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/frameAspectRatio2"
+                android:layout_width="72dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="12dp"
+                android:gravity="center"
+                android:orientation="vertical">
+                <FrameLayout
+                    android:id="@+id/bg9_16"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@drawable/bg_aspect_ratio_item">
+                    <ImageView
+                        android:id="@+id/ic9_16"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_crop_portrait_24"
+                        app:tint="@color/iconSecondary" />
+                </FrameLayout>
+                <TextView
+                    android:id="@+id/txt9_16"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="9:16"
+                    android:textColor="@color/toolTextInactive"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/frameAspectRatio3"
+                android:layout_width="72dp"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical">
+                <FrameLayout
+                    android:id="@+id/bg1_1"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@drawable/bg_aspect_ratio_item">
+                    <ImageView
+                        android:id="@+id/ic1_1"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_crop_square_24"
+                        app:tint="@color/iconSecondary" />
+                </FrameLayout>
+                <TextView
+                    android:id="@+id/txt1_1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="1:1"
+                    android:textColor="@color/toolTextInactive"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </HorizontalScrollView>
 </LinearLayout>
