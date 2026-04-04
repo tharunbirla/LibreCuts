@@ -13,20 +13,14 @@ import java.io.File
 /**
  * FFmpegRenderEngine handles all FFmpeg operations for the video editor.
  *
- * This service decouples video processing logic from the UI layer, making it:
- * - Testable: Can mock FFmpeg operations in unit tests
- * - Reusable: Can be used from any layer of the app
- * - Maintainable: All FFmpeg logic is centralized
- * - Cancelable: Provides session management for long-running operations
- *
  * FONT NOTE:
- * The drawtext filter requires an explicit fontfile= pointing to a TTF/OTF file.
- * The font= option does NOT exist in FFmpeg's drawtext filter and will always cause:
+ * drawtext requires fontfile= pointing to a TTF/OTF file on disk.
+ * font= does NOT exist in FFmpeg's drawtext filter — it always causes:
  *   "Error applying option 'font' to filter 'drawtext': Option not found"
  *
- * To provide a font:
- *   1. Place a TTF file in app/src/main/assets/fonts/ (e.g. Roboto-Regular.ttf)
- *   2. Call copyFontToCache(context) once (e.g. in your Activity.onCreate)
+ * Usage:
+ *   1. Place TTF at app/src/main/assets/fonts/Roboto-Regular.ttf
+ *   2. Call copyFontToCache() once in Activity.onCreate
  *   3. Pass the returned path as fontFilePath to all text render methods
  */
 class FFmpegRenderEngine(private val context: Context) {
@@ -35,37 +29,26 @@ class FFmpegRenderEngine(private val context: Context) {
     private val TAG = "FFmpegRenderEngine"
 
     init {
-        // Configure FFmpeg font directory — points to Android system fonts as a fallback.
-        // This alone is NOT sufficient on most devices; always supply an explicit fontFilePath.
+        // System fonts as a last-resort fallback — not reliable on all Android devices.
+        // Always supply an explicit fontFilePath for guaranteed text rendering.
         FFmpegKitConfig.setFontDirectory(context, "/system/fonts", null)
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // Result type
-    // ──────────────────────────────────────────────────────────────────────────
+    // ── Result type ───────────────────────────────────────────────────────────
 
-    /**
-     * Represents the result of an FFmpeg operation.
-     */
     sealed class RenderResult {
         data class Success(val outputPath: String, val session: FFmpegSession) : RenderResult()
         data class Failure(val error: String, val session: FFmpegSession? = null) : RenderResult()
         object Cancelled : RenderResult()
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // Font helper
-    // ──────────────────────────────────────────────────────────────────────────
+    // ── Font helper ───────────────────────────────────────────────────────────
 
     /**
-     * Copies a font file from your app's assets to the cache directory so FFmpeg
-     * can access it via a plain file path.
+     * Copies a font from assets to cacheDir so FFmpeg can access it as a plain path.
      *
-     * Usage (call once from your Activity):
-     *   val fontPath = renderEngine.copyFontToCache("fonts/Roboto-Regular.ttf")
-     *
-     * @param assetPath  Path inside the assets folder, e.g. "fonts/Roboto-Regular.ttf"
-     * @return           Absolute path to the cached font file, or null on failure.
+     * @param assetPath  e.g. "fonts/Roboto-Regular.ttf"
+     * @return           Absolute path to the cached file, or null on failure.
      */
     fun copyFontToCache(assetPath: String = "fonts/Roboto-Regular.ttf"): String? {
         return try {
@@ -73,11 +56,11 @@ class FFmpegRenderEngine(private val context: Context) {
             val fontFile = File(context.cacheDir, fileName)
             if (!fontFile.exists()) {
                 context.assets.open(assetPath).use { input ->
-                    fontFile.outputStream().use { output ->
-                        input.copyTo(output)
-                    }
+                    fontFile.outputStream().use { input.copyTo(it) }
                 }
                 Log.d(TAG, "Font copied to cache: ${fontFile.absolutePath}")
+            } else {
+                Log.d(TAG, "Font already in cache: ${fontFile.absolutePath}")
             }
             fontFile.absolutePath
         } catch (e: Exception) {
@@ -86,9 +69,7 @@ class FFmpegRenderEngine(private val context: Context) {
         }
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // Core execution
-    // ──────────────────────────────────────────────────────────────────────────
+    // ── Core execution ────────────────────────────────────────────────────────
 
     /**
      * Execute an FFmpeg command and return the result.
@@ -110,7 +91,9 @@ class FFmpegRenderEngine(private val context: Context) {
                         session = session
                     )
                 } else {
-                    val failLog = session.failStackTrace ?: session.allLogsAsString ?: "Unknown error"
+                    val failLog = session.failStackTrace
+                        ?: session.allLogsAsString
+                        ?: "Unknown error"
                     Log.e(TAG, "FFmpeg error: $failLog")
                     RenderResult.Failure(error = failLog, session = session)
                 }
@@ -121,11 +104,8 @@ class FFmpegRenderEngine(private val context: Context) {
         }
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // Session management
-    // ──────────────────────────────────────────────────────────────────────────
+    // ── Session management ────────────────────────────────────────────────────
 
-    /** Cancel all active FFmpeg sessions. */
     suspend fun cancelAllSessions() {
         withContext(Dispatchers.IO) {
             FFmpegKit.cancel()
@@ -134,7 +114,6 @@ class FFmpegRenderEngine(private val context: Context) {
         }
     }
 
-    /** Cancel a specific session by ID. */
     suspend fun cancelSession(sessionId: Long) {
         withContext(Dispatchers.IO) {
             FFmpegKit.cancel(sessionId)
@@ -147,18 +126,8 @@ class FFmpegRenderEngine(private val context: Context) {
     fun getActiveSessionCount(): Int = activeSessions.size
     fun getLatestSession(): FFmpegSession? = activeSessions.lastOrNull()
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // Preview helpers
-    // ──────────────────────────────────────────────────────────────────────────
+    // ── Preview helpers ───────────────────────────────────────────────────────
 
-    /**
-     * Render a low-quality trim preview for fast feedback.
-     *
-     * @param sourceFilePath  Path to the source video.
-     * @param startMs         Trim start in milliseconds.
-     * @param endMs           Trim end in milliseconds.
-     * @param outputFilePath  Path for the preview output.
-     */
     suspend fun renderTrimPreview(
         sourceFilePath: String,
         startMs: Long,
@@ -166,19 +135,11 @@ class FFmpegRenderEngine(private val context: Context) {
         outputFilePath: String
     ): RenderResult {
         val startSecs = startMs / 1000.0
-        val endSecs = endMs / 1000.0
-        val durationSecs = endSecs - startSecs
+        val durationSecs = (endMs - startMs) / 1000.0
         val command = "-ss $startSecs -i \"$sourceFilePath\" -to $durationSecs -c copy \"$outputFilePath\""
         return executeCommand(command)
     }
 
-    /**
-     * Render a preview with the specified crop aspect ratio applied.
-     *
-     * @param sourceFilePath  Path to the source video.
-     * @param aspectRatio     "16:9", "9:16", or "1:1".
-     * @param outputFilePath  Path for the preview output.
-     */
     suspend fun renderCropPreview(
         sourceFilePath: String,
         aspectRatio: String,
@@ -193,15 +154,7 @@ class FFmpegRenderEngine(private val context: Context) {
     /**
      * Render a preview with a text overlay.
      *
-     * @param sourceFilePath  Path to the source video.
-     * @param text            Text to overlay.
-     * @param fontSize        Font size in pixels.
-     * @param positionParam   FFmpeg drawtext position string,
-     *                        e.g. "x=(w-text_w)/2:y=(h-text_h)/2".
-     * @param outputFilePath  Path for the preview output.
-     * @param fontFilePath    Absolute path to a TTF/OTF font file.
-     *                        Use [copyFontToCache] to obtain this path.
-     *                        If null, text may not render on Android.
+     * @param fontFilePath  Absolute path to a TTF file. Use [copyFontToCache] to get this.
      */
     suspend fun renderTextPreview(
         sourceFilePath: String,
@@ -216,41 +169,23 @@ class FFmpegRenderEngine(private val context: Context) {
         return executeCommand(command)
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // Full-quality operations
-    // ──────────────────────────────────────────────────────────────────────────
+    // ── Full-quality operations ───────────────────────────────────────────────
+
+    /** Export the final video using the consolidated command from the ViewModel. */
+    suspend fun exportFinal(ffmpegCommand: String): RenderResult = executeCommand(ffmpegCommand)
 
     /**
-     * Export/render the final video with all operations applied.
-     * The consolidated command is built by [VideoEditingViewModel.buildConsolidatedFFmpegCommand].
-     */
-    suspend fun exportFinal(ffmpegCommand: String): RenderResult {
-        return executeCommand(ffmpegCommand)
-    }
-
-    /**
-     * Merge multiple videos using the FFmpeg concat demuxer.
-     *
-     * @param listFilePath    Path to a file containing the concat list
-     *                        (created by [VideoEditingViewModel.buildMergeCommand]).
-     * @param outputFilePath  Path for the merged output.
+     * Merge videos using the FFmpeg concat demuxer.
+     * FIX: Both listFilePath and outputFilePath are quoted.
      */
     suspend fun mergeVideos(
         listFilePath: String,
         outputFilePath: String
     ): RenderResult {
-        val command = "-f concat -safe 0 -i $listFilePath -c:v copy -c:a copy $outputFilePath"
+        val command = "-f concat -safe 0 -i \"$listFilePath\" -c:v copy -c:a copy \"$outputFilePath\""
         return executeCommand(command)
     }
 
-    /**
-     * Trim a video segment.
-     *
-     * @param sourceFilePath  Path to the source video.
-     * @param startMs         Trim start in milliseconds.
-     * @param endMs           Trim end in milliseconds.
-     * @param outputFilePath  Path for the trimmed output.
-     */
     suspend fun trimVideo(
         sourceFilePath: String,
         startMs: Long,
@@ -258,19 +193,11 @@ class FFmpegRenderEngine(private val context: Context) {
         outputFilePath: String
     ): RenderResult {
         val startSecs = startMs / 1000.0
-        val endSecs = endMs / 1000.0
-        val durationSecs = endSecs - startSecs
+        val durationSecs = (endMs - startMs) / 1000.0
         val command = "-ss $startSecs -i \"$sourceFilePath\" -to $durationSecs -c copy \"$outputFilePath\""
         return executeCommand(command)
     }
 
-    /**
-     * Crop a video to a specific aspect ratio.
-     *
-     * @param sourceFilePath  Path to the source video.
-     * @param aspectRatio     "16:9", "9:16", or "1:1".
-     * @param outputFilePath  Path for the cropped output.
-     */
     suspend fun cropVideo(
         sourceFilePath: String,
         aspectRatio: String,
@@ -285,13 +212,7 @@ class FFmpegRenderEngine(private val context: Context) {
     /**
      * Add a text overlay to a video.
      *
-     * @param sourceFilePath  Path to the source video.
-     * @param text            Text to render.
-     * @param fontSize        Font size in pixels.
-     * @param positionParam   FFmpeg drawtext position string.
-     * @param outputFilePath  Path for the output with text.
-     * @param fontFilePath    Absolute path to a TTF/OTF font file.
-     *                        Use [copyFontToCache] to obtain this path.
+     * @param fontFilePath  Absolute path to a TTF file. Use [copyFontToCache] to get this.
      */
     suspend fun addTextOverlay(
         sourceFilePath: String,
@@ -306,14 +227,6 @@ class FFmpegRenderEngine(private val context: Context) {
         return executeCommand(command)
     }
 
-    /**
-     * Add background audio to a video.
-     *
-     * @param sourceFilePath  Path to the source video.
-     * @param audioFilePath   Path to the audio file.
-     * @param outputFilePath  Path for the output.
-     * @param replaceAudio    If true, replaces the original audio; if false, mixes them.
-     */
     suspend fun addBackgroundAudio(
         sourceFilePath: String,
         audioFilePath: String,
@@ -330,27 +243,11 @@ class FFmpegRenderEngine(private val context: Context) {
         return executeCommand(command)
     }
 
-    /**
-     * Remove audio from a video.
-     *
-     * @param sourceFilePath  Path to the source video.
-     * @param outputFilePath  Path for the output without audio.
-     */
-    suspend fun muteAudio(
-        sourceFilePath: String,
-        outputFilePath: String
-    ): RenderResult {
+    suspend fun muteAudio(sourceFilePath: String, outputFilePath: String): RenderResult {
         val command = "-i \"$sourceFilePath\" -an -c:v copy \"$outputFilePath\""
         return executeCommand(command)
     }
 
-    /**
-     * Extract a single frame from a video at a specific time.
-     *
-     * @param sourceFilePath  Path to the source video.
-     * @param timeMs          Time in milliseconds.
-     * @param outputImagePath Path for the output image (JPEG or PNG).
-     */
     suspend fun extractFrame(
         sourceFilePath: String,
         timeMs: Long,
@@ -361,24 +258,18 @@ class FFmpegRenderEngine(private val context: Context) {
         return executeCommand(command)
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // Cleanup
-    // ──────────────────────────────────────────────────────────────────────────
+    // ── Cleanup ───────────────────────────────────────────────────────────────
 
     fun cleanup() {
         activeSessions.clear()
         Log.d(TAG, "FFmpegRenderEngine cleaned up")
     }
 
-    // ──────────────────────────────────────────────────────────────────────────
-    // Private helpers
-    // ──────────────────────────────────────────────────────────────────────────
+    // ── Private helpers ───────────────────────────────────────────────────────
 
     /**
      * Build a drawtext filter string.
-     *
-     * KEY FIX: Uses fontfile= instead of the non-existent font= option.
-     * font= will always produce: "Error applying option 'font' to filter 'drawtext': Option not found"
+     * Uses fontfile= (not the non-existent font= option).
      */
     private fun buildDrawtextFilter(
         text: String,
@@ -387,9 +278,9 @@ class FFmpegRenderEngine(private val context: Context) {
         fontFilePath: String?
     ): String {
         val escapedText = text
-            .replace("\\", "\\\\")  // escape backslashes first
-            .replace("'", "\\'")     // escape single quotes
-            .replace(":", "\\:")     // escape colons (FFmpeg filter separator)
+            .replace("\\", "\\\\")
+            .replace("'", "\\'")
+            .replace(":", "\\:")
 
         val fontPart = if (!fontFilePath.isNullOrBlank()) {
             val escapedFontPath = fontFilePath
@@ -398,18 +289,13 @@ class FFmpegRenderEngine(private val context: Context) {
                 .replace(":", "\\:")
             "fontfile='$escapedFontPath':"
         } else {
-            Log.w(TAG, "No fontFilePath provided. Text overlay may not render on Android. " +
-                    "Call copyFontToCache() and pass the result as fontFilePath.")
+            Log.w(TAG, "No fontFilePath — text may not render. Call copyFontToCache() first.")
             ""
         }
 
         return "drawtext=${fontPart}text='$escapedText':fontcolor=white:fontsize=$fontSize:$positionParam"
     }
 
-    /**
-     * Build the crop filter string for a given aspect ratio.
-     * Returns null for unrecognised ratios.
-     */
     private fun buildCropFilter(aspectRatio: String): String? = when (aspectRatio) {
         "16:9" -> "crop=iw:iw*9/16"
         "9:16" -> "crop=ih*9/16:ih"
@@ -419,10 +305,18 @@ class FFmpegRenderEngine(private val context: Context) {
 
     /**
      * Extract the output file path from an FFmpeg command.
-     * Assumes the last double-quoted token is the output path.
+     *
+     * FIX: Handles both quoted paths (standard) and unquoted paths (legacy merge commands).
+     * Previously only matched quoted strings, which caused truncated paths when the output
+     * was accidentally left unquoted — producing errors like:
+     *   "Unable to find a suitable output format for '/data/user/0/com.tharunb'"
      */
     private fun extractOutputPath(command: String): String {
-        val regex = """"([^"]*)"\s*$""".toRegex()
-        return regex.find(command)?.groupValues?.get(1) ?: ""
+        // Try quoted path first (preferred — all new commands use this)
+        val quotedRegex = """"([^"]*)"\s*$""".toRegex()
+        quotedRegex.find(command)?.groupValues?.get(1)?.let { return it }
+
+        // Fallback: last whitespace-delimited token (for unquoted legacy commands)
+        return command.trimEnd().split("\\s+".toRegex()).lastOrNull() ?: ""
     }
 }

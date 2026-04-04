@@ -107,6 +107,52 @@ class VideoEditingActivity : AppCompatActivity() {
         setupCustomSeeker()
         setupFrameRecyclerView()
         observeViewModelState()
+
+        // Play/Pause button logic
+        val btnPlayPause = findViewById<ImageButton>(R.id.btnPlayPause)
+        btnPlayPause.setOnClickListener {
+            if (::player.isInitialized && isVideoLoaded) {
+                if (player.isPlaying) {
+                    player.pause()
+                    btnPlayPause.setImageResource(R.drawable.ic_play_24)
+                } else {
+                    // CHECK: If the player is at the end, seek to the start first
+                    if (player.currentPosition >= player.duration) {
+                        player.seekTo(0)
+                        // Also update your custom UI immediately
+                        customVideoSeeker.setSeekPosition(0f)
+                        updateDurationDisplay(0, player.duration.toInt())
+                    }
+                    player.play()
+                    btnPlayPause.setImageResource(R.drawable.ic_pause_24)
+                }
+            }
+        }
+
+        // Mute/Unmute button logic (icon only, no function yet)
+        val btnMute = findViewById<ImageButton>(R.id.btnMute)
+        btnMute.setOnClickListener {
+            if (::player.isInitialized) {
+                if (player.volume > 0f) {
+                    player.volume = 0f
+                    btnMute.setImageResource(R.drawable.ic_volume_off_24)
+                } else {
+                    player.volume = 1f
+                    btnMute.setImageResource(R.drawable.ic_volume_up_24)
+                }
+            }
+        }
+
+        // Update play/pause button icon on playback state change
+        player.addListener(object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                if (isPlaying) {
+                    btnPlayPause.setImageResource(R.drawable.ic_pause_24)
+                } else {
+                    btnPlayPause.setImageResource(R.drawable.ic_play_24)
+                }
+            }
+        })
     }
 
     private fun initializeViews() {
@@ -125,13 +171,35 @@ class VideoEditingActivity : AppCompatActivity() {
             null
         }
 
-        findViewById<ImageButton>(R.id.btnHome).setOnClickListener { onBackPressedDispatcher.onBackPressed() }
-        findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSave).setOnClickListener { saveAction() }
-        findViewById<ImageButton>(R.id.btnTrim).setOnClickListener { trimAction() }
-        findViewById<ImageButton>(R.id.btnText).setOnClickListener { textAction() }
-        findViewById<ImageButton>(R.id.btnAudio).setOnClickListener { audioAction() }
-        findViewById<ImageButton>(R.id.btnCrop).setOnClickListener { cropAction() }
-        findViewById<ImageButton>(R.id.btnMerge).setOnClickListener { mergeAction() }
+        findViewById<ImageButton>(R.id.btnHome).setOnClickListener {
+            onBackPressedDispatcher.onBackPressed()
+        }
+
+        findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSave).setOnClickListener {
+            saveAction()
+        }
+
+        // Tool Buttons with proper scoping
+        findViewById<ImageButton>(R.id.btnTrim).setOnClickListener {
+            setActiveToolButton(R.id.btnTrim)
+            trimAction()
+        }
+        findViewById<ImageButton>(R.id.btnText).setOnClickListener {
+            setActiveToolButton(R.id.btnText)
+            textAction()
+        }
+        findViewById<ImageButton>(R.id.btnAudio).setOnClickListener {
+            setActiveToolButton(R.id.btnAudio)
+            audioAction()
+        }
+        findViewById<ImageButton>(R.id.btnCrop).setOnClickListener {
+            setActiveToolButton(R.id.btnCrop)
+            cropAction()
+        }
+        findViewById<ImageButton>(R.id.btnMerge).setOnClickListener {
+            setActiveToolButton(R.id.btnMerge)
+            mergeAction()
+        }
 
         try {
             btnUndo = findViewById(R.id.btnUndo)
@@ -146,6 +214,18 @@ class VideoEditingActivity : AppCompatActivity() {
             lottieAnimationView.playAnimation()
         } catch (e: Exception) {
             Log.e("LottieError", "Error loading Lottie animation: ${e.message}")
+        }
+    }
+
+    private fun setActiveToolButton(activeId: Int) {
+        val toolIds = listOf(R.id.btnTrim, R.id.btnText, R.id.btnAudio, R.id.btnCrop, R.id.btnMerge)
+        for (id in toolIds) {
+            val btn = findViewById<ImageButton>(id)
+            btn.setBackgroundResource(if (id == activeId) R.drawable.tool_button_active else R.drawable.tool_button_inactive)
+            btn.setColorFilter(
+                if (id == activeId) resources.getColor(R.color.toolTextActive, null)
+                else resources.getColor(R.color.toolTextInactive, null)
+            )
         }
     }
 
@@ -523,27 +603,81 @@ class VideoEditingActivity : AppCompatActivity() {
 
             player.addListener(object : Player.Listener {
                 override fun onPlaybackStateChanged(state: Int) {
+                    if (state == Player.STATE_ENDED) {
+                        // Reset UI components when video reaches the end
+                        val btnPlayPause = findViewById<ImageButton>(R.id.btnPlayPause)
+                        btnPlayPause.setImageResource(R.drawable.ic_play_24)
+                        customVideoSeeker.setSeekPosition(1.0f) // Keep it at the end visually
+
+                        // OPTIONAL: If you want the seeker to jump back to 0 immediately
+                        // once it finishes, uncomment the next lines:
+                        // player.seekTo(0)
+                        // customVideoSeeker.setSeekPosition(0f)
+
+                        stopProgressUpdater()
+                    }
                     if (state == Player.STATE_READY) {
                         isVideoLoaded = true
                         customVideoSeeker.setVideoDuration(player.duration)
                         updateDurationDisplay(player.currentPosition.toInt(), player.duration.toInt())
                         loadingScreen.visibility = View.GONE
+
+                        if (player.isPlaying) {
+                            startProgressUpdater()
+                        }
                     }
                 }
 
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
-                    if (isPlaying && isVideoLoaded) {
-                        updateDurationDisplay(player.currentPosition.toInt(), player.duration.toInt())
+                    if (isPlaying) {
+                        startProgressUpdater()
+                    } else {
+                        stopProgressUpdater()
+                    }
+                }
+
+                override fun onPositionDiscontinuity(reason: Int) {
+                    // Update UI immediately on manual seek
+                    if (isVideoLoaded) {
+                        syncUiWithPlayer()
                     }
                 }
             })
 
             initializeVideoData()
-
             val displayName = videoUri!!.lastPathSegment ?: "video"
             viewModel.initializeProject(videoUri!!, displayName)
-        } else {
-            showError("Error loading video")
+        }
+    }
+
+    private fun startProgressUpdater() {
+        customVideoSeeker.removeCallbacks(updateSeekerRunnable)
+        customVideoSeeker.post(updateSeekerRunnable)
+    }
+
+    private fun stopProgressUpdater() {
+        customVideoSeeker.removeCallbacks(updateSeekerRunnable)
+    }
+
+    private fun syncUiWithPlayer() {
+        val currentPos = player.currentPosition
+        val duration = player.duration
+        if (duration > 0) {
+            val progress = currentPos.toFloat() / duration
+            customVideoSeeker.setSeekPosition(progress)
+            updateDurationDisplay(currentPos.toInt(), duration.toInt())
+        }
+    }
+
+    // Update your existing Runnable to include the text display update
+    private val updateSeekerRunnable = object : Runnable {
+        override fun run() {
+            if (::player.isInitialized && player.isPlaying) {
+                syncUiWithPlayer()
+                // 50ms (20fps) is a good balance for smooth seeker movement
+                // without slamming the main thread
+                customVideoSeeker.postDelayed(this, 50)
+            }
         }
     }
 

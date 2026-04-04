@@ -7,7 +7,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tharunbirla.librecuts.models.EditOperation
 import com.tharunbirla.librecuts.models.EditRecipe
-import com.tharunbirla.librecuts.models.ExportConfig
 import com.tharunbirla.librecuts.models.TextPosition
 import com.tharunbirla.librecuts.models.VideoEditingUiState
 import com.tharunbirla.librecuts.models.VideoProject
@@ -20,125 +19,55 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 
-/**
- * ViewModel for the VideoEditingActivity.
- * Manages the complete state of a video editing session using Kotlin StateFlow.
- *
- * Key responsibilities:
- * 1. Store and manage the VideoProject state (all pending operations)
- * 2. Provide methods to add/remove/undo operations
- * 3. Manage UI state (loading, exporting, errors)
- * 4. Build consolidated FFmpeg commands for final export
- * 5. Handle project persistence (save/load recipes)
- *
- * All operations are immutable and thread-safe via StateFlow.
- */
 class VideoEditingViewModel : ViewModel() {
 
-    // Private mutable state
     private val _project = MutableStateFlow<VideoProject?>(null)
     private val _uiState = MutableStateFlow(VideoEditingUiState())
     private val _undoStack = MutableStateFlow<List<VideoProject>>(emptyList())
     private val _redoStack = MutableStateFlow<List<VideoProject>>(emptyList())
 
-    // Public read-only state
     val project: StateFlow<VideoProject?> = _project.asStateFlow()
     val uiState: StateFlow<VideoEditingUiState> = _uiState.asStateFlow()
     val undoStack: StateFlow<List<VideoProject>> = _undoStack.asStateFlow()
     val redoStack: StateFlow<List<VideoProject>> = _redoStack.asStateFlow()
 
-    // Convenience flows
     val operations: StateFlow<List<EditOperation>>
-        get() = _project.asStateFlow().let { projectFlow ->
-            MutableStateFlow(project.value?.operations ?: emptyList()).asStateFlow()
-        }
+        get() = MutableStateFlow(project.value?.operations ?: emptyList()).asStateFlow()
 
-    /**
-     * Initialize the ViewModel with a source video.
-     */
     fun initializeProject(sourceUri: Uri, sourceName: String) {
-        val newProject = VideoProject(
-            sourceUri = sourceUri,
-            sourceName = sourceName
-        )
-        _project.value = newProject
+        _project.value = VideoProject(sourceUri = sourceUri, sourceName = sourceName)
         _undoStack.value = emptyList()
         _redoStack.value = emptyList()
         updateUiState { it.copy(canUndo = false) }
     }
 
-    /**
-     * Add a Trim operation to the project.
-     */
-    fun addTrimOperation(startMs: Long, endMs: Long) {
-        val operation = EditOperation.Trim(startMs, endMs)
-        addOperation(operation)
-    }
+    fun addTrimOperation(startMs: Long, endMs: Long) = addOperation(EditOperation.Trim(startMs, endMs))
+    fun addCropOperation(aspectRatio: String) = addOperation(EditOperation.Crop(aspectRatio))
 
-    /**
-     * Add a Crop operation to the project.
-     */
-    fun addCropOperation(aspectRatio: String) {
-        val operation = EditOperation.Crop(aspectRatio)
-        addOperation(operation)
-    }
-
-    /**
-     * Add a Text overlay operation to the project.
-     */
     fun addTextOperation(text: String, fontSize: Int, position: String) {
-        val textPosition = TextPosition.fromLabel(position)
-        val operation = EditOperation.AddText(text, fontSize, textPosition)
-        addOperation(operation)
+        addOperation(EditOperation.AddText(text, fontSize, TextPosition.fromLabel(position)))
     }
 
-    /**
-     * Add a Merge operation to the project.
-     */
-    fun addMergeOperation(videoUris: List<Uri>) {
-        val operation = EditOperation.Merge(videoUris)
-        addOperation(operation)
-    }
+    fun addMergeOperation(videoUris: List<Uri>) = addOperation(EditOperation.Merge(videoUris))
 
-    /**
-     * Add a Mute Audio operation to the project.
-     */
     fun addMuteAudioOperation() {
-        // Remove any existing audio operations first
-        _project.update { currentProject ->
-            currentProject?.removeOperationsOfType(EditOperation.AddBackgroundAudio::class.java)
-        }
-        val operation = EditOperation.MuteAudio()
-        addOperation(operation)
+        _project.update { it?.removeOperationsOfType(EditOperation.AddBackgroundAudio::class.java) }
+        addOperation(EditOperation.MuteAudio())
     }
 
-    /**
-     * Add a Background Audio operation to the project.
-     */
     fun addBackgroundAudioOperation(audioUri: Uri, removeOriginalAudio: Boolean = false) {
-        // Remove any existing mute operations if we're replacing
         if (removeOriginalAudio) {
-            _project.update { currentProject ->
-                currentProject?.removeOperationsOfType(EditOperation.MuteAudio::class.java)
-            }
+            _project.update { it?.removeOperationsOfType(EditOperation.MuteAudio::class.java) }
         }
-        val operation = EditOperation.AddBackgroundAudio(audioUri, removeOriginalAudio)
-        addOperation(operation)
+        addOperation(EditOperation.AddBackgroundAudio(audioUri, removeOriginalAudio))
     }
 
-    /**
-     * Generic method to add any operation to the project.
-     * Updates undo/redo stacks and UI state.
-     */
     private fun addOperation(operation: EditOperation) {
         viewModelScope.launch {
-            _project.update { currentProject ->
-                currentProject?.let {
-                    // Save current state to undo stack
-                    _undoStack.value = _undoStack.value + listOf(it)
-                    // Clear redo stack on new operation
+            _project.update { current ->
+                current?.let {
+                    _undoStack.value = _undoStack.value + it
                     _redoStack.value = emptyList()
-                    // Add the new operation
                     it.addOperation(operation)
                 }
             }
@@ -152,23 +81,16 @@ class VideoEditingViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Undo the last operation.
-     */
     fun undo() {
         viewModelScope.launch {
-            val currentProject = _project.value ?: return@launch
-            val lastUndoState = _undoStack.value.lastOrNull() ?: return@launch
-
-            // Save current to redo stack
-            _redoStack.value = _redoStack.value + listOf(currentProject)
-            // Remove from undo stack and restore
+            val current = _project.value ?: return@launch
+            val last = _undoStack.value.lastOrNull() ?: return@launch
+            _redoStack.value = _redoStack.value + current
             _undoStack.value = _undoStack.value.dropLast(1)
-            _project.value = lastUndoState
-
+            _project.value = last
             updateUiState { state ->
                 state.copy(
-                    pendingOperationCount = lastUndoState.getOperationCount(),
+                    pendingOperationCount = last.getOperationCount(),
                     canUndo = _undoStack.value.isNotEmpty(),
                     canRedo = _redoStack.value.isNotEmpty()
                 )
@@ -176,23 +98,16 @@ class VideoEditingViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Redo the last undone operation.
-     */
     fun redo() {
         viewModelScope.launch {
-            val currentProject = _project.value ?: return@launch
-            val lastRedoState = _redoStack.value.lastOrNull() ?: return@launch
-
-            // Save current to undo stack
-            _undoStack.value = _undoStack.value + listOf(currentProject)
-            // Remove from redo stack and restore
+            val current = _project.value ?: return@launch
+            val last = _redoStack.value.lastOrNull() ?: return@launch
+            _undoStack.value = _undoStack.value + current
             _redoStack.value = _redoStack.value.dropLast(1)
-            _project.value = lastRedoState
-
+            _project.value = last
             updateUiState { state ->
                 state.copy(
-                    pendingOperationCount = lastRedoState.getOperationCount(),
+                    pendingOperationCount = last.getOperationCount(),
                     canUndo = _undoStack.value.isNotEmpty(),
                     canRedo = _redoStack.value.isNotEmpty()
                 )
@@ -200,35 +115,26 @@ class VideoEditingViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Clear all operations and reset to original video.
-     */
     fun clearAllOperations() {
         viewModelScope.launch {
-            _project.update { currentProject ->
-                currentProject?.let {
-                    _undoStack.value = _undoStack.value + listOf(it)
+            _project.update { current ->
+                current?.let {
+                    _undoStack.value = _undoStack.value + it
                     _redoStack.value = emptyList()
                     it.copy(operations = emptyList())
                 }
             }
             updateUiState { state ->
-                state.copy(
-                    pendingOperationCount = 0,
-                    canUndo = _undoStack.value.isNotEmpty()
-                )
+                state.copy(pendingOperationCount = 0, canUndo = _undoStack.value.isNotEmpty())
             }
         }
     }
 
-    /**
-     * Remove a specific operation by ID.
-     */
     fun removeOperation(operationId: String) {
         viewModelScope.launch {
-            _project.update { currentProject ->
-                currentProject?.let {
-                    _undoStack.value = _undoStack.value + listOf(it)
+            _project.update { current ->
+                current?.let {
+                    _undoStack.value = _undoStack.value + it
                     _redoStack.value = emptyList()
                     it.copy(
                         operations = it.operations.filterNot { op ->
@@ -253,27 +159,17 @@ class VideoEditingViewModel : ViewModel() {
         }
     }
 
-    /**
-     * Set the current preview to show the video state after applying N operations.
-     * This is used for previewing intermediate states without re-rendering.
-     *
-     * @param operationIndex: -1 for original, 0 for after first op, etc.
-     */
     fun setPreviewOperationIndex(operationIndex: Int) {
-        updateUiState { state ->
-            state.copy(currentPreviewOperationIndex = operationIndex)
-        }
+        updateUiState { it.copy(currentPreviewOperationIndex = operationIndex) }
     }
 
     /**
-     * Build the consolidated FFmpeg command string for final export.
-     * Combines all operations into a single, optimized FFmpeg pipeline.
+     * Build the consolidated FFmpeg command for final export.
      *
-     * @param sourceFilePath  Absolute path to the source video file.
-     * @param outputFilePath  Absolute path where the exported video will be saved.
-     * @param fontFilePath    Absolute path to a TTF/OTF font file bundled in your app assets.
-     *                        Required for text overlays to render correctly on Android.
-     *                        Copy the font from assets to cacheDir before calling this method.
+     * @param sourceFilePath  Absolute path to the source video.
+     * @param outputFilePath  Absolute path for the exported video.
+     * @param fontFilePath    Absolute path to a TTF font file (from assets via copyFontToCache).
+     *                        Required for text overlays to render on Android.
      */
     fun buildConsolidatedFFmpegCommand(
         sourceFilePath: String,
@@ -281,14 +177,14 @@ class VideoEditingViewModel : ViewModel() {
         fontFilePath: String? = null
     ): String? {
         val currentProject = _project.value ?: return null
+
         if (currentProject.operations.isEmpty()) {
-            // No operations; just copy the source
             return "-i \"$sourceFilePath\" -c copy \"$outputFilePath\""
         }
 
         val operations = currentProject.operations
 
-        // Check if there's a merge operation - if so, skip other operations and handle merge only
+        // ── MERGE: handled separately via concat demuxer ─────────────────────
         val mergeOp = operations.filterIsInstance<EditOperation.Merge>().firstOrNull()
         if (mergeOp != null) {
             val concatList = StringBuilder()
@@ -297,10 +193,15 @@ class VideoEditingViewModel : ViewModel() {
                 val videoPath = videoUri.path ?: videoUri.toString()
                 concatList.append("file '$videoPath'\n")
             }
-            // The Activity will replace {CONCAT_FILE_PATH} with actual cache directory path
-            return "-f concat -safe 0 -i \"{CONCAT_FILE_PATH}\" -c:v libx264 -preset faster -crf 28 -c:a aac \"$outputFilePath\" (CONCAT_LIST:${concatList})"
+            // Activity replaces {CONCAT_FILE_PATH} with the actual concat list file path.
+            // FIX: output path is quoted AND concat file path placeholder is quoted.
+            return "-f concat -safe 0 -i \"{CONCAT_FILE_PATH}\" " +
+                    "-c:v libx264 -preset faster -crf 28 -c:a aac " +
+                    "\"$outputFilePath\" " +
+                    "(CONCAT_LIST:${concatList})"
         }
 
+        // ── NON-MERGE: build filter chain ────────────────────────────────────
         val filterChain = mutableListOf<String>()
         var trimStart: Long? = null
         var trimEnd: Long? = null
@@ -308,145 +209,114 @@ class VideoEditingViewModel : ViewModel() {
         var audioInputFile: String? = null
         var removeOriginalAudio = false
 
-        // First pass: collect all filter operations
         for (op in operations) {
             when (op) {
                 is EditOperation.Trim -> {
                     trimStart = op.startMs
                     trimEnd = op.endMs
                 }
-
                 is EditOperation.Crop -> {
                     val cropFilter = when (op.aspectRatio) {
                         "16:9" -> "crop=iw:iw*9/16"
                         "9:16" -> "crop=ih*9/16:ih"
-                        "1:1" -> "crop=min(iw\\,ih):min(iw\\,ih)"
-                        else -> null
+                        "1:1"  -> "crop=min(iw\\,ih):min(iw\\,ih)"
+                        else   -> null
                     }
                     if (cropFilter != null) filterChain.add(cropFilter)
                 }
-
                 is EditOperation.AddText -> {
-                    // Escape characters that would break the FFmpeg filter string.
-                    // Single quotes must be escaped for the text='' wrapper.
-                    // Colons must be escaped as they are filter parameter separators.
                     val escapedText = op.text
-                        .replace("\\", "\\\\")  // escape backslashes first
-                        .replace("'", "\\'")     // escape single quotes
-                        .replace(":", "\\:")     // escape colons
+                        .replace("\\", "\\\\")
+                        .replace("'", "\\'")
+                        .replace(":", "\\:")
 
-                    // Build the drawtext filter.
-                    // Use fontfile= (not font=) — the only valid way to specify a font in FFmpeg drawtext.
-                    // If no fontFilePath is provided we omit it and rely on freetype's fallback,
-                    // but text may not render on all Android devices without an explicit fontfile.
                     val fontPart = if (!fontFilePath.isNullOrBlank()) {
-                        val escapedFontPath = fontFilePath
+                        val escapedFont = fontFilePath
                             .replace("\\", "\\\\")
                             .replace("'", "\\'")
                             .replace(":", "\\:")
-                        "fontfile='$escapedFontPath':"
+                        "fontfile='$escapedFont':"
                     } else {
-                        // No font provided — drawtext will attempt to use freetype's default.
-                        // This may silently produce no text on Android; always supply a fontFilePath.
-                        Log.w("VideoEditingViewModel", "No fontFilePath provided for text overlay. " +
-                                "Text may not render. Copy a TTF from assets to cacheDir and pass the path.")
+                        Log.w("VideoEditingViewModel",
+                            "No fontFilePath — text overlay may not render on Android.")
                         ""
                     }
 
                     val textFilter = "drawtext=${fontPart}text='$escapedText':" +
                             "fontcolor=white:fontsize=${op.fontSize}:${op.position.ffmpegParam}"
-
                     filterChain.add(textFilter)
-                    Log.d("VideoEditingViewModel", "Text filter added: $textFilter")
+                    Log.d("VideoEditingViewModel", "Text filter: $textFilter")
                 }
-
-                is EditOperation.MuteAudio -> {
-                    audioMuted = true
-                }
-
+                is EditOperation.MuteAudio -> audioMuted = true
                 is EditOperation.AddBackgroundAudio -> {
                     audioInputFile = op.audioUri.path ?: op.audioUri.toString()
                     removeOriginalAudio = op.removeOriginalAudio
                 }
-
-                is EditOperation.Merge -> {
-                    // Already handled above
-                }
+                is EditOperation.Merge -> { /* handled above */ }
             }
         }
 
-        // Build the command
-        val commandBuilder = StringBuilder()
+        val cmd = StringBuilder()
 
-        // Trim section: use -ss and -to flags
+        // Input with optional trim
         if (trimStart != null && trimEnd != null) {
             val startSecs = trimStart / 1000.0
-            val endSecs = trimEnd / 1000.0
-            commandBuilder.append("-ss $startSecs -i \"$sourceFilePath\" -to ${endSecs - startSecs}")
+            val duration  = (trimEnd - trimStart) / 1000.0
+            cmd.append("-ss $startSecs -i \"$sourceFilePath\" -to $duration")
         } else {
-            commandBuilder.append("-i \"$sourceFilePath\"")
+            cmd.append("-i \"$sourceFilePath\"")
         }
 
-        // Audio input (background audio)
+        // Second input for background audio mix
         if (audioInputFile != null && !removeOriginalAudio) {
-            commandBuilder.append(" -i \"$audioInputFile\"")
+            cmd.append(" -i \"$audioInputFile\"")
         }
 
         // Video filter chain
         if (filterChain.isNotEmpty()) {
-            commandBuilder.append(" -vf \"${filterChain.joinToString(",")}\"")
+            cmd.append(" -vf \"${filterChain.joinToString(",")}\"")
         }
 
-        // Codecs
-        commandBuilder.append(" -c:v libx264 -preset faster -crf 28")
+        // Video codec
+        cmd.append(" -c:v libx264 -preset faster -crf 28")
 
         // Audio handling
         when {
-            audioMuted -> commandBuilder.append(" -an")
-            audioInputFile != null && !removeOriginalAudio -> {
-                commandBuilder.append(
-                    " -filter_complex \"[1:a]aformat=sample_rates=44100:channel_layouts=stereo[a]\"" +
-                            " -map 0:v -map \"[a]\" -c:a aac"
-                )
-            }
-            audioInputFile != null && removeOriginalAudio -> {
-                commandBuilder.append(" -map 0:v -map 1:a -c:a aac")
-            }
-            else -> {
-                commandBuilder.append(" -c:a aac")
-            }
+            audioMuted ->
+                cmd.append(" -an")
+            audioInputFile != null && !removeOriginalAudio ->
+                cmd.append(" -filter_complex \"[1:a]aformat=sample_rates=44100:channel_layouts=stereo[a]\"" +
+                        " -map 0:v -map \"[a]\" -c:a aac")
+            audioInputFile != null && removeOriginalAudio ->
+                cmd.append(" -map 0:v -map 1:a -c:a aac")
+            else ->
+                cmd.append(" -c:a aac")
         }
 
-        commandBuilder.append(" \"$outputFilePath\"")
+        // FIX: output path always quoted
+        cmd.append(" \"$outputFilePath\"")
 
-        val finalCommand = commandBuilder.toString()
-        Log.d("VideoEditingViewModel", "Built FFmpeg command: $finalCommand")
+        val finalCommand = cmd.toString()
+        Log.d("VideoEditingViewModel", "Built command: $finalCommand")
         return finalCommand
     }
 
-    /**
-     * Utility method to copy content URIs to temporary files.
-     */
     private fun copyContentUriToTempFile(context: Context, uri: Uri): String? {
         return try {
-            val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
             val tempFile = File.createTempFile("temp_video", ".mp4", context.cacheDir)
-            val outputStream = FileOutputStream(tempFile)
-            inputStream?.use { input ->
-                outputStream.use { output ->
-                    input.copyTo(output)
-                }
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                FileOutputStream(tempFile).use { input.copyTo(it) }
             }
             tempFile.absolutePath
         } catch (e: Exception) {
-            Log.e("VideoEditingViewModel", "Failed to copy content URI to temp file: ${e.message}")
+            Log.e("VideoEditingViewModel", "Failed to copy content URI: ${e.message}")
             null
         }
     }
 
     /**
-     * Build FFmpeg command for merging videos.
-     * Creates a concat demuxer list file and returns the merge command.
+     * Build the FFmpeg concat command for merging videos.
+     * FIX: All paths are now quoted to prevent truncation on long package-name paths.
      */
     fun buildMergeCommand(
         context: Context,
@@ -469,91 +339,40 @@ class VideoEditingViewModel : ViewModel() {
 
         File(listFilePath).writeText(listContent.toString())
 
-        return "-f concat -safe 0 -i $listFilePath -c:v copy -c:a copy $outputFilePath"
+        // Both listFilePath and outputFilePath are quoted
+        return "-f concat -safe 0 -i \"$listFilePath\" -c:v copy -c:a copy \"$outputFilePath\""
     }
 
-    /**
-     * Mark export as started (show loading screen).
-     */
     fun startExport() {
-        updateUiState { state ->
-            state.copy(
-                isExporting = true,
-                exportProgress = 0,
-                errorMessage = null
-            )
-        }
+        updateUiState { it.copy(isExporting = true, exportProgress = 0, errorMessage = null) }
     }
 
-    /**
-     * Update export progress.
-     */
     fun updateExportProgress(progress: Int) {
-        updateUiState { state ->
-            state.copy(exportProgress = progress.coerceIn(0, 100))
-        }
+        updateUiState { it.copy(exportProgress = progress.coerceIn(0, 100)) }
     }
 
-    /**
-     * Mark export as completed.
-     */
     fun finishExport() {
-        updateUiState { state ->
-            state.copy(
-                isExporting = false,
-                exportProgress = 100
-            )
-        }
+        updateUiState { it.copy(isExporting = false, exportProgress = 100) }
     }
 
-    /**
-     * Handle export error.
-     */
     fun exportError(error: String) {
-        updateUiState { state ->
-            state.copy(
-                isExporting = false,
-                errorMessage = error
-            )
-        }
+        updateUiState { it.copy(isExporting = false, errorMessage = error) }
     }
 
-    /**
-     * Clear error message.
-     */
     fun clearError() {
-        updateUiState { state ->
-            state.copy(errorMessage = null)
-        }
+        updateUiState { it.copy(errorMessage = null) }
     }
 
-    /**
-     * Save the current project as a Recipe for later loading.
-     */
-    fun saveRecipe(projectName: String): EditRecipe? {
-        return _project.value?.let { project ->
-            EditRecipe.fromVideoProject(projectName, project)
-        }
-    }
+    fun saveRecipe(projectName: String): EditRecipe? =
+        _project.value?.let { EditRecipe.fromVideoProject(projectName, it) }
 
-    /**
-     * Load a previously saved Recipe.
-     */
     fun loadRecipe(recipe: EditRecipe) {
         _project.value = recipe.toVideoProject()
         _undoStack.value = emptyList()
         _redoStack.value = emptyList()
-        updateUiState { state ->
-            state.copy(
-                pendingOperationCount = recipe.operations.size,
-                canUndo = false
-            )
-        }
+        updateUiState { it.copy(pendingOperationCount = recipe.operations.size, canUndo = false) }
     }
 
-    /**
-     * Update UI state using a lambda.
-     */
     private fun updateUiState(updater: (VideoEditingUiState) -> VideoEditingUiState) {
         _uiState.update(updater)
     }

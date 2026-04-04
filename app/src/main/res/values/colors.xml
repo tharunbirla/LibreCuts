@@ -1,15 +1,33 @@
 <resources>
-    <color name="colorPrimary">#000000</color> <!-- Pure black -->
-    <color name="colorPrimaryVariant">#1A1A1A</color> <!-- Dark variant of black -->
-    <color name="colorOnPrimary">#FF4081</color> <!-- Pink on primary -->
-    <color name="colorSecondary">#000000</color> <!-- Black -->
-    <color name="colorSecondaryVariant">#1A1A1A</color> <!-- Dark variant of black -->
-    <color name="colorOnSecondary">#FFFFFF</color> <!-- White on secondary -->
-    <color name="background">#121212</color> <!-- Background color -->
-    <color name="textColor">#E0E0E0</color> <!-- Text color -->
-    <color name="navigationBarColor">#121212</color> <!-- Navigation bar color -->
-    <color name="statusBarColor">#121212</color> <!-- Status bar color -->
-    <color name="floatingPanelBackground">#1F1F1F</color> <!-- Floating panel semi-transparent background -->
-    <color name="iconSecondary">#B3B3B3</color> <!-- Secondary icon color (gray) -->
-    <color name="cinemaBlack">#000000</color> <!-- True black for cinematic effect -->
+    <color name="colorPrimary">#FF4081</color>
+    <color name="colorPrimaryVariant">#C2185B</color> <color name="colorOnPrimary">#FFFFFF</color> <color name="colorSecondary">#f06292</color> <color name="colorSecondaryVariant">#4A3940</color> <color name="colorOnSecondary">#FFFFFF</color>
+
+    <color name="background">#0e0e11</color>
+    <color name="statusBarColor">#0e0e11</color>
+    <color name="navigationBarColor">#1C1B1F</color>
+    <color name="cinemaBlack">#000000</color>
+    <color name="textColor">#e8e3ee</color>
+
+    <color name="surfaceContainer">#1a191f</color>
+    <color name="surfaceContainerHigh">#252429</color>
+    <color name="surfaceContainerLowest">#000000</color>
+    <color name="surfaceVariant">#26252c</color>
+    <color name="floatingPanelBackground">#26252c</color>
+
+    <color name="primaryContainer">#FF4081</color>
+    <color name="onPrimaryContainer">#FFFFFF</color>
+
+    <color name="tertiary">#f4bfe2</color>
+    <color name="tertiaryContainer">#5e354d</color>
+    <color name="onTertiary">#ffffff</color>
+
+    <color name="outline">#77747d</color>
+    <color name="outlineVariant">#49474f</color>
+    <color name="iconSecondary">#ada9b3</color>
+
+    <color name="activeTool">#FF4081</color> <color name="activeToolBackground">#351d27</color> <color name="inactiveTool">#49454F</color>
+    <color name="inactiveToolBackground">#1C1B1F</color>
+
+    <color name="toolTextActive">#FF4081</color>
+    <color name="toolTextInactive">#CAC4D0</color>
 </resources>
