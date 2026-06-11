@@ -1,12 +1,14 @@
 package com.tharunbirla.librecuts
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -46,6 +48,64 @@ class MainActivity : AppCompatActivity() {
                 Log.w("PermissionCheck", "Permissions not granted, showing request dialog.")
                 showPermissionRequestDialog()
             }
+        }
+
+        // Initialize bottom navigation tab backgrounds
+        val attrs = intArrayOf(android.R.attr.selectableItemBackgroundBorderless)
+        val ta = obtainStyledAttributes(attrs)
+        val inactiveBg = ta.getDrawable(0)
+        ta.recycle()
+        binding.tabAbout.background = inactiveBg
+
+        // Setup bottom navigation tab switching
+        binding.tabHome.setOnClickListener {
+            switchTab(true)
+        }
+
+        binding.tabAbout.setOnClickListener {
+            switchTab(false)
+        }
+
+        // Setup GitHub button listeners
+        binding.btnStarGithub.setOnClickListener {
+            openUrl("https://github.com/tharunbirla/LibreCuts")
+        }
+
+        binding.btnReportBug.setOnClickListener {
+            openUrl("https://github.com/tharunbirla/LibreCuts/issues")
+        }
+    }
+
+    private fun switchTab(isHome: Boolean) {
+        val activeBg = ContextCompat.getDrawable(this, R.drawable.bg_nav_active)
+        val attrs = intArrayOf(android.R.attr.selectableItemBackgroundBorderless)
+        val ta = obtainStyledAttributes(attrs)
+        val inactiveBg = ta.getDrawable(0)
+        ta.recycle()
+
+        if (isHome) {
+            binding.layoutHomeContent.visibility = View.VISIBLE
+            binding.layoutAboutContent.visibility = View.GONE
+            binding.tabHome.background = activeBg
+            binding.ivHome.setColorFilter(ContextCompat.getColor(this, R.color.colorPrimary))
+            binding.tabAbout.background = inactiveBg
+            binding.ivAbout.setColorFilter(ContextCompat.getColor(this, R.color.inactiveTool))
+        } else {
+            binding.layoutHomeContent.visibility = View.GONE
+            binding.layoutAboutContent.visibility = View.VISIBLE
+            binding.tabAbout.background = activeBg
+            binding.ivAbout.setColorFilter(ContextCompat.getColor(this, R.color.colorPrimary))
+            binding.tabHome.background = inactiveBg
+            binding.ivHome.setColorFilter(ContextCompat.getColor(this, R.color.inactiveTool))
+        }
+    }
+
+    private fun openUrl(url: String) {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            startActivity(intent)
+        } catch (e: Exception) {
+            showToast("Unable to open link")
         }
     }
 

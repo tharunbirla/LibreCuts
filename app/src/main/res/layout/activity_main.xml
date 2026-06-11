@@ -5,12 +5,15 @@
     android:layout_height="match_parent"
     android:background="@color/background">
 
+    <!-- Home Page Content -->
     <LinearLayout
+        android:id="@+id/layoutHomeContent"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
+        android:layout_height="match_parent"
+        android:layout_above="@id/bottomNavBar"
         android:gravity="center"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:visibility="visible">
 
         <androidx.cardview.widget.CardView
             android:id="@+id/btnImport"
@@ -70,7 +73,144 @@
 
     </LinearLayout>
 
+    <!-- About Page Content -->
+    <ScrollView
+        android:id="@+id/layoutAboutContent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/bottomNavBar"
+        android:visibility="gone"
+        android:padding="24dp"
+        android:clipToPadding="false"
+        android:overScrollMode="never"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <ImageView
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:layout_marginTop="32dp"
+                android:src="@mipmap/ic_launcher_round" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:fontFamily="sans-serif-medium"
+                android:text="LibreCuts"
+                android:textColor="@color/textColor"
+                android:textSize="24sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:alpha="0.6"
+                android:text="v1.0.0 (Beta)"
+                android:textColor="@color/textColor"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:gravity="center"
+                android:lineSpacingMultiplier="1.3"
+                android:text="A privacy-friendly, open-source video editor for Android.\nTrim, crop, split, add music, and export watermark-free videos locally."
+                android:textColor="@color/iconSecondary"
+                android:textSize="14sp" />
+
+            <!-- Support & Feedback Card -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                app:cardBackgroundColor="@color/surfaceContainer"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp"
+                    android:gravity="center_horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="Support &amp; Feedback"
+                        android:textColor="@color/textColor"
+                        android:textSize="18sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center"
+                        android:text="LibreCuts is open-source. Help us improve by starring the project on GitHub or reporting bugs."
+                        android:textColor="@color/iconSecondary"
+                        android:textSize="13sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnStarGithub"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="20dp"
+                        android:text="Star on GitHub"
+                        android:textColor="@color/onPrimaryContainer"
+                        android:backgroundTint="@color/colorPrimary"
+                        app:cornerRadius="12dp"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        app:icon="@drawable/ic_star_24"
+                        app:iconTint="@color/onPrimaryContainer"
+                        app:iconGravity="textStart"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnReportBug"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="12dp"
+                        android:text="Report a Bug"
+                        android:textColor="@color/textColor"
+                        android:backgroundTint="@color/surfaceContainerHigh"
+                        app:strokeColor="@color/outline"
+                        app:strokeWidth="1dp"
+                        app:cornerRadius="12dp"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        app:icon="@drawable/ic_bug_24"
+                        app:iconTint="@color/textColor"
+                        app:iconGravity="textStart"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="48dp"
+                android:alpha="0.4"
+                android:text="Made with ❤️ by Tharun Birla"
+                android:textColor="@color/textColor"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Bottom Navigation Bar -->
     <LinearLayout
+        android:id="@+id/bottomNavBar"
         android:layout_width="match_parent"
         android:layout_height="80dp"
         android:layout_alignParentBottom="true"
@@ -82,28 +222,45 @@
 
         <FrameLayout
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView
+            <FrameLayout
+                android:id="@+id/tabHome"
                 android:layout_width="56dp"
                 android:layout_height="56dp"
                 android:layout_gravity="center"
                 android:background="@drawable/bg_nav_active"
-                android:padding="16dp"
-                android:src="@drawable/ic_home_24"
-                app:tint="@color/colorPrimary" />
+                android:clickable="true"
+                android:focusable="true">
+                <ImageView
+                    android:id="@+id/ivHome"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_home_24"
+                    app:tint="@color/colorPrimary" />
+            </FrameLayout>
         </FrameLayout>
 
         <FrameLayout
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1">
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+            <FrameLayout
+                android:id="@+id/tabAbout"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
                 android:layout_gravity="center"
-                android:src="@drawable/ic_settings_24"
-                app:tint="@color/inactiveTool" />
+                android:clickable="true"
+                android:focusable="true">
+                <ImageView
+                    android:id="@+id/ivAbout"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_info_24"
+                    app:tint="@color/inactiveTool" />
+            </FrameLayout>
         </FrameLayout>
 
     </LinearLayout>

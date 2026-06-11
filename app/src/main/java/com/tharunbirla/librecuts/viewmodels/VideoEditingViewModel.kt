@@ -19,6 +19,12 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 
+enum class ExportQuality(val crf: Int, val preset: String, val label: String) {
+    HIGH(22, "medium", "High Quality"),
+    MEDIUM(28, "faster", "Medium Quality"),
+    LOW(34, "ultrafast", "Low Quality")
+}
+
 class VideoEditingViewModel : ViewModel() {
 
     private companion object {
@@ -29,11 +35,17 @@ class VideoEditingViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(VideoEditingUiState())
     private val _undoStack = MutableStateFlow<List<VideoProject>>(emptyList())
     private val _redoStack = MutableStateFlow<List<VideoProject>>(emptyList())
+    private val _exportQuality = MutableStateFlow(ExportQuality.MEDIUM)
 
     val project: StateFlow<VideoProject?> = _project.asStateFlow()
     val uiState: StateFlow<VideoEditingUiState> = _uiState.asStateFlow()
     val undoStack: StateFlow<List<VideoProject>> = _undoStack.asStateFlow()
     val redoStack: StateFlow<List<VideoProject>> = _redoStack.asStateFlow()
+    val exportQuality: StateFlow<ExportQuality> = _exportQuality.asStateFlow()
+
+    fun setExportQuality(quality: ExportQuality) {
+        _exportQuality.value = quality
+    }
 
     val operations: StateFlow<List<EditOperation>>
         get() = MutableStateFlow(project.value?.operations ?: emptyList()).asStateFlow()
@@ -356,7 +368,7 @@ class VideoEditingViewModel : ViewModel() {
 
             cmd.append(" -filter_complex \"${filterParts.joinToString(";")}\"")
             cmd.append(" -map \"[outv]\" -map \"[outa]\"")
-            cmd.append(" -c:v libx264 -preset faster -crf 28 -c:a aac")
+            cmd.append(" -c:v libx264 -preset ${_exportQuality.value.preset} -crf ${_exportQuality.value.crf} -c:a aac")
             cmd.append(" \"$outputFilePath\"")
 
             val finalCommand = cmd.toString()
@@ -478,7 +490,7 @@ class VideoEditingViewModel : ViewModel() {
         }
 
         // Codecs
-        cmd.append(" -c:v libx264 -preset faster -crf 28")
+        cmd.append(" -c:v libx264 -preset ${_exportQuality.value.preset} -crf ${_exportQuality.value.crf}")
         if (!audioMuted) {
             cmd.append(" -c:a aac")
         }

@@ -67,6 +67,9 @@ class VideoEditingActivity : AppCompatActivity() {
     private lateinit var lottieAnimationView: LottieAnimationView
     private lateinit var btnUndo: ImageButton
     private lateinit var btnRedo: ImageButton
+    private lateinit var layoutSaveSplit: View
+    private lateinit var btnSaveText: View
+    private lateinit var btnSaveDropdown: View
     private var textOverlayView: com.tharunbirla.librecuts.customviews.TextOverlayView? = null
 
     // ViewModel and Services
@@ -287,8 +290,16 @@ class VideoEditingActivity : AppCompatActivity() {
             onBackPressedDispatcher.onBackPressed()
         }
 
-        findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSave).setOnClickListener {
+        layoutSaveSplit = findViewById(R.id.layoutSaveSplit)
+        btnSaveText = findViewById(R.id.btnSaveText)
+        btnSaveDropdown = findViewById(R.id.btnSaveDropdown)
+
+        btnSaveText.setOnClickListener {
             saveAction()
+        }
+
+        btnSaveDropdown.setOnClickListener {
+            showQualitySettingsDialog()
         }
 
         // Tool Buttons with proper scoping
@@ -379,6 +390,13 @@ class VideoEditingActivity : AppCompatActivity() {
             viewModel.project.collect { project ->
                 if (project != null) {
                     Log.d(TAG, "Project updated with ${project.getOperationCount()} operations")
+
+                    val hasOps = project.hasOperations()
+                    if (::layoutSaveSplit.isInitialized && ::btnSaveText.isInitialized && ::btnSaveDropdown.isInitialized) {
+                        layoutSaveSplit.alpha = if (hasOps) 1.0f else 0.5f
+                        btnSaveText.isEnabled = hasOps
+                        btnSaveDropdown.isEnabled = hasOps
+                    }
 
                     textOverlayView?.let { overlay ->
                         val textOps = project.operations.filterIsInstance<EditOperation.AddText>()
@@ -921,6 +939,69 @@ class VideoEditingActivity : AppCompatActivity() {
                 Log.e(TAG, "Export exception: ${e.message}", e)
             }
         }
+    }
+
+    private fun showQualitySettingsDialog() {
+        val bottomSheetDialog = BottomSheetDialog(this)
+        val sheetView = layoutInflater.inflate(R.layout.export_quality_bottom_sheet_dialog, null)
+
+        val layoutHigh = sheetView.findViewById<LinearLayout>(R.id.layoutQualityHigh)
+        val layoutMedium = sheetView.findViewById<LinearLayout>(R.id.layoutQualityMedium)
+        val layoutLow = sheetView.findViewById<LinearLayout>(R.id.layoutQualityLow)
+
+        val ivCheckHigh = sheetView.findViewById<ImageView>(R.id.ivCheckHigh)
+        val ivCheckMedium = sheetView.findViewById<ImageView>(R.id.ivCheckMedium)
+        val ivCheckLow = sheetView.findViewById<ImageView>(R.id.ivCheckLow)
+
+        val btnClose = sheetView.findViewById<ImageButton>(R.id.btnCloseSheet)
+
+        fun updateSelection(selected: com.tharunbirla.librecuts.viewmodels.ExportQuality) {
+            ivCheckHigh.visibility = if (selected == com.tharunbirla.librecuts.viewmodels.ExportQuality.HIGH) View.VISIBLE else View.GONE
+            ivCheckMedium.visibility = if (selected == com.tharunbirla.librecuts.viewmodels.ExportQuality.MEDIUM) View.VISIBLE else View.GONE
+            ivCheckLow.visibility = if (selected == com.tharunbirla.librecuts.viewmodels.ExportQuality.LOW) View.VISIBLE else View.GONE
+
+            layoutHigh.setBackgroundResource(
+                if (selected == com.tharunbirla.librecuts.viewmodels.ExportQuality.HIGH) R.drawable.bg_aspect_ratio_selected else R.drawable.bg_aspect_ratio_item
+            )
+            layoutMedium.setBackgroundResource(
+                if (selected == com.tharunbirla.librecuts.viewmodels.ExportQuality.MEDIUM) R.drawable.bg_aspect_ratio_selected else R.drawable.bg_aspect_ratio_item
+            )
+            layoutLow.setBackgroundResource(
+                if (selected == com.tharunbirla.librecuts.viewmodels.ExportQuality.LOW) R.drawable.bg_aspect_ratio_selected else R.drawable.bg_aspect_ratio_item
+            )
+        }
+
+        // Initialize state
+        val currentQuality = viewModel.exportQuality.value
+        updateSelection(currentQuality)
+
+        layoutHigh.setOnClickListener {
+            viewModel.setExportQuality(com.tharunbirla.librecuts.viewmodels.ExportQuality.HIGH)
+            updateSelection(com.tharunbirla.librecuts.viewmodels.ExportQuality.HIGH)
+            Toast.makeText(this, "Export quality set to High", Toast.LENGTH_SHORT).show()
+            bottomSheetDialog.dismiss()
+        }
+
+        layoutMedium.setOnClickListener {
+            viewModel.setExportQuality(com.tharunbirla.librecuts.viewmodels.ExportQuality.MEDIUM)
+            updateSelection(com.tharunbirla.librecuts.viewmodels.ExportQuality.MEDIUM)
+            Toast.makeText(this, "Export quality set to Medium", Toast.LENGTH_SHORT).show()
+            bottomSheetDialog.dismiss()
+        }
+
+        layoutLow.setOnClickListener {
+            viewModel.setExportQuality(com.tharunbirla.librecuts.viewmodels.ExportQuality.LOW)
+            updateSelection(com.tharunbirla.librecuts.viewmodels.ExportQuality.LOW)
+            Toast.makeText(this, "Export quality set to Low", Toast.LENGTH_SHORT).show()
+            bottomSheetDialog.dismiss()
+        }
+
+        btnClose.setOnClickListener {
+            bottomSheetDialog.dismiss()
+        }
+
+        bottomSheetDialog.setContentView(sheetView)
+        bottomSheetDialog.show()
     }
 
     private fun exportVideoFile(uri: Uri) {

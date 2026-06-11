@@ -57,19 +57,48 @@
                 android:alpha="0.5"
                 android:enabled="false"/>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSave"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:id="@+id/layoutSaveSplit"
+                android:layout_width="120dp"
                 android:layout_height="40dp"
-                android:text="Save"
-                android:textColor="@color/onPrimaryContainer"
-                android:backgroundTint="@color/primaryContainer"
-                app:cornerRadius="20dp"
-                android:fontFamily="sans-serif-medium"
-                android:textSize="16sp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:elevation="0dp" />
+                android:orientation="horizontal"
+                android:background="@drawable/bg_split_save_button"
+                android:clipToOutline="true"
+                android:elevation="0dp">
+
+                <TextView
+                    android:id="@+id/btnSaveText"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="0.75"
+                    android:gravity="center"
+                    android:text="Export"
+                    android:textColor="@color/onPrimaryContainer"
+                    android:fontFamily="sans-serif-medium"
+                    android:textSize="14sp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="match_parent"
+                    android:background="#33FFFFFF" />
+
+                <ImageView
+                    android:id="@+id/btnSaveDropdown"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="0.25"
+                    android:scaleType="centerInside"
+                    android:src="@drawable/ic_arrow_drop_down_24"
+                    android:padding="8dp"
+                    app:tint="@color/onPrimaryContainer"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground" />
+
+            </LinearLayout>
         </LinearLayout>
 
         <FrameLayout
