@@ -31,7 +31,20 @@ class FFmpegRenderEngine(private val context: Context) {
     init {
         // System fonts as a last-resort fallback — not reliable on all Android devices.
         // Always supply an explicit fontFilePath for guaranteed text rendering.
-        FFmpegKitConfig.setFontDirectory(context, "/system/fonts", null)
+        // Probe multiple vendor font directories since OEMs differ.
+        val fontDir = listOf(
+            "/system/fonts",
+            "/system/font",
+            "/data/fonts",
+            "/product/fonts"
+        ).firstOrNull { File(it).isDirectory } ?: "/system/fonts"
+
+        try {
+            FFmpegKitConfig.setFontDirectory(context, fontDir, null)
+            Log.d(TAG, "Font directory set to: $fontDir")
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to set font directory '$fontDir': ${e.message}")
+        }
     }
 
     // ── Result type ───────────────────────────────────────────────────────────

@@ -95,6 +95,27 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"/>
 
+            <com.tharunbirla.librecuts.customviews.DraggableTextOverlayView
+                android:id="@+id/draggableTextOverlay"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/tvPreviewBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|end"
+                android:layout_margin="12dp"
+                android:text="PREVIEW"
+                android:textColor="@color/textColor"
+                android:textSize="11sp"
+                android:fontFamily="sans-serif-medium"
+                android:background="@drawable/rounded_time_bg"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="3dp"
+                android:visibility="gone" />
+
             <TextView
                 android:id="@+id/tvDuration"
                 android:layout_width="wrap_content"
@@ -170,6 +191,14 @@
                 android:layout_marginTop="12dp"
                 android:layout_marginBottom="4dp" />
         </LinearLayout>
+
+        <!-- Text Editing Toolbar (inline mode, hidden by default) -->
+        <include
+            android:id="@+id/textEditingToolbar"
+            layout="@layout/text_editing_toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
 
         <LinearLayout
             android:id="@+id/editingControlsWrapper"

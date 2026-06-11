@@ -21,6 +21,10 @@ import java.io.InputStream
 
 class VideoEditingViewModel : ViewModel() {
 
+    private companion object {
+        const val TAG = "VideoEditingViewModel"
+    }
+
     private val _project = MutableStateFlow<VideoProject?>(null)
     private val _uiState = MutableStateFlow(VideoEditingUiState())
     private val _undoStack = MutableStateFlow<List<VideoProject>>(emptyList())
@@ -44,8 +48,24 @@ class VideoEditingViewModel : ViewModel() {
     fun addTrimOperation(startMs: Long, endMs: Long) = addOperation(EditOperation.Trim(startMs, endMs))
     fun addCropOperation(aspectRatio: String) = addOperation(EditOperation.Crop(aspectRatio))
 
-    fun addTextOperation(text: String, fontSize: Int, position: String) {
-        addOperation(EditOperation.AddText(text, fontSize, TextPosition.fromLabel(position)))
+    fun addTextOperation(
+        text: String,
+        fontSize: Int,
+        position: String,
+        relativeX: Float? = null,
+        relativeY: Float? = null,
+        color: String = "#FFFFFF"
+    ) {
+        addOperation(
+            EditOperation.AddText(
+                text = text,
+                fontSize = fontSize,
+                position = TextPosition.fromLabel(position),
+                relativeX = relativeX,
+                relativeY = relativeY,
+                color = color
+            )
+        )
     }
 
     fun addMergeOperation(videoUris: List<Uri>) = addOperation(EditOperation.Merge(videoUris))
@@ -55,11 +75,25 @@ class VideoEditingViewModel : ViewModel() {
         addOperation(EditOperation.MuteAudio())
     }
 
-    fun addBackgroundAudioOperation(audioUri: Uri, removeOriginalAudio: Boolean = false) {
+    fun addBackgroundAudioOperation(
+        audioUri: Uri,
+        removeOriginalAudio: Boolean = false,
+        delayMs: Long = 0L,
+        volume: Float = 1.0f,
+        startMs: Long = 0L,
+        endMs: Long = -1L
+    ) {
         if (removeOriginalAudio) {
             _project.update { it?.removeOperationsOfType(EditOperation.MuteAudio::class.java) }
         }
-        addOperation(EditOperation.AddBackgroundAudio(audioUri, removeOriginalAudio))
+        addOperation(EditOperation.AddBackgroundAudio(
+            audioUri = audioUri,
+            removeOriginalAudio = removeOriginalAudio,
+            delayMs = delayMs,
+            volume = volume,
+            startMs = startMs,
+            endMs = endMs
+        ))
     }
 
     private fun addOperation(operation: EditOperation) {
@@ -163,8 +197,82 @@ class VideoEditingViewModel : ViewModel() {
         updateUiState { it.copy(currentPreviewOperationIndex = operationIndex) }
     }
 
+    // ── Private filter-building helpers ─────────────────────────────────────
+
+    /** Build a crop filter expression for an aspect ratio. */
+    private fun buildCropFilterExpr(aspectRatio: String): String? = when (aspectRatio) {
+        "16:9" -> "crop=iw:iw*9/16"
+        "9:16" -> "crop=ih*9/16:ih"
+        "1:1"  -> "crop=min(iw\\,ih):min(iw\\,ih)"
+        else   -> null
+    }
+
+    /** Build a drawtext filter expression for a text operation. */
+    private fun buildDrawtextExpr(op: EditOperation.AddText, fontFilePath: String?): String {
+        val escapedText = op.text
+            .replace("\\", "\\\\")
+            .replace("'", "\\'")
+            .replace(":", "\\:")
+
+        val fontPart = if (!fontFilePath.isNullOrBlank()) {
+            val escapedFont = fontFilePath
+                .replace("\\", "\\\\")
+                .replace("'", "\\'")
+                .replace(":", "\\:")
+            "fontfile='$escapedFont':"
+        } else {
+            Log.w(TAG, "No fontFilePath — text overlay may not render on Android.")
+            ""
+        }
+
+        // Use WYSIWYG fractional coordinates if available, else fall back to enum position
+        val positionPart = if (op.hasCustomPosition()) {
+            "x='(w*${op.relativeX})-(tw/2)':y='(h*${op.relativeY})-(th/2)'"
+        } else {
+            op.position.ffmpegParam
+        }
+
+        return "drawtext=${fontPart}text='$escapedText':fontcolor='${op.color}':fontsize=${op.fontSize}:$positionPart"
+    }
+
+    /**
+     * Build the video portion of a filter_complex graph from non-merge, non-audio operations.
+     *
+     * @return Pair of (list of filter stages, final stream label) — e.g. (["[0:v]crop=...[v0]", "[v0]drawtext=...[v1]"], "[v1]")
+     *         If no video filters needed, returns (emptyList, "[0:v]")
+     */
+    private fun buildVideoFilterStages(
+        operations: List<EditOperation>,
+        fontFilePath: String?,
+        inputLabel: String = "[0:v]"
+    ): Pair<List<String>, String> {
+        val stages = mutableListOf<String>()
+        var currentLabel = inputLabel
+        var stageIndex = 0
+
+        for (op in operations) {
+            val filterExpr: String? = when (op) {
+                is EditOperation.Crop -> buildCropFilterExpr(op.aspectRatio)
+                is EditOperation.AddText -> buildDrawtextExpr(op, fontFilePath)
+                else -> null
+            }
+            if (filterExpr != null) {
+                val nextLabel = "[v$stageIndex]"
+                stages.add("$currentLabel$filterExpr$nextLabel")
+                currentLabel = nextLabel
+                stageIndex++
+            }
+        }
+
+        return Pair(stages, currentLabel)
+    }
+
     /**
      * Build the consolidated FFmpeg command for final export.
+     *
+     * Uses -filter_complex with explicit stream labels so each filter stage
+     * receives the correct input dimensions (e.g., drawtext after crop uses
+     * post-crop resolution).
      *
      * @param sourceFilePath  Absolute path to the source video.
      * @param outputFilePath  Absolute path for the exported video.
@@ -184,120 +292,249 @@ class VideoEditingViewModel : ViewModel() {
 
         val operations = currentProject.operations
 
-        // ── MERGE: handled separately via concat demuxer ─────────────────────
+        // Detect if source video has an audio stream
+        val hasAudio = try {
+            val retriever = android.media.MediaMetadataRetriever()
+            retriever.setDataSource(sourceFilePath)
+            val hasAudioStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO)
+            retriever.release()
+            hasAudioStr == "yes"
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking audio in source file: ${e.message}")
+            true // fallback to assuming it has audio
+        }
+
+        // ── Collect operation types ───────────────────────────────────────────
         val mergeOp = operations.filterIsInstance<EditOperation.Merge>().firstOrNull()
+        val nonMergeOps = operations.filterNot { it is EditOperation.Merge }
+        val trimOp = operations.filterIsInstance<EditOperation.Trim>().lastOrNull()
+        val audioOps = operations.filterIsInstance<EditOperation.AddBackgroundAudio>()
+        val audioMuted = operations.any { it is EditOperation.MuteAudio }
+        val videoOps = nonMergeOps.filter { it is EditOperation.Crop || it is EditOperation.AddText }
+
+        // ── MERGE PATH: apply source ops, normalize all inputs, concat ────────
         if (mergeOp != null) {
-            val concatList = StringBuilder()
-            concatList.append("file '$sourceFilePath'\n")
+            val inputCount = 1 + mergeOp.videoUris.size
+            val cmd = StringBuilder()
+
+            // Add all inputs
+            if (trimOp != null) {
+                val startSecs = trimOp.startMs / 1000.0
+                val duration = (trimOp.endMs - trimOp.startMs) / 1000.0
+                cmd.append("-ss $startSecs -i \"$sourceFilePath\" -to $duration")
+            } else {
+                cmd.append("-i \"$sourceFilePath\"")
+            }
             for (videoUri in mergeOp.videoUris) {
                 val videoPath = videoUri.path ?: videoUri.toString()
-                concatList.append("file '$videoPath'\n")
+                cmd.append(" -i \"$videoPath\"")
             }
-            // Activity replaces {CONCAT_FILE_PATH} with the actual concat list file path.
-            // FIX: output path is quoted AND concat file path placeholder is quoted.
-            return "-f concat -safe 0 -i \"{CONCAT_FILE_PATH}\" " +
-                    "-c:v libx264 -preset faster -crf 28 -c:a aac " +
-                    "\"$outputFilePath\" " +
-                    "(CONCAT_LIST:${concatList})"
+
+            // Build filter_complex
+            val filterParts = mutableListOf<String>()
+
+            // Apply video filters (crop, text) to source [0:v]
+            val (sourceVideoStages, sourceVideoLabel) = buildVideoFilterStages(videoOps, fontFilePath, "[0:v]")
+            filterParts.addAll(sourceVideoStages)
+
+            // Normalize source video
+            val normTarget = "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30"
+            filterParts.add("${sourceVideoLabel}${normTarget}[norm0]")
+
+            // Normalize source audio
+            filterParts.add("[0:a]aformat=sample_rates=44100:channel_layouts=stereo[anorm0]")
+
+            // Normalize each additional input
+            for (i in 1 until inputCount) {
+                filterParts.add("[$i:v]${normTarget}[norm$i]")
+                filterParts.add("[$i:a]aformat=sample_rates=44100:channel_layouts=stereo[anorm$i]")
+            }
+
+            // Concat all normalized streams
+            val concatInputs = (0 until inputCount).joinToString("") { "[norm$it][anorm$it]" }
+            filterParts.add("${concatInputs}concat=n=$inputCount:v=1:a=1[outv][outa]")
+
+            cmd.append(" -filter_complex \"${filterParts.joinToString(";")}\"")
+            cmd.append(" -map \"[outv]\" -map \"[outa]\"")
+            cmd.append(" -c:v libx264 -preset faster -crf 28 -c:a aac")
+            cmd.append(" \"$outputFilePath\"")
+
+            val finalCommand = cmd.toString()
+            Log.d(TAG, "Built merge command: $finalCommand")
+            return finalCommand
         }
 
-        // ── NON-MERGE: build filter chain ────────────────────────────────────
-        val filterChain = mutableListOf<String>()
-        var trimStart: Long? = null
-        var trimEnd: Long? = null
-        var audioMuted = false
-        var audioInputFile: String? = null
-        var removeOriginalAudio = false
-
-        for (op in operations) {
-            when (op) {
-                is EditOperation.Trim -> {
-                    trimStart = op.startMs
-                    trimEnd = op.endMs
-                }
-                is EditOperation.Crop -> {
-                    val cropFilter = when (op.aspectRatio) {
-                        "16:9" -> "crop=iw:iw*9/16"
-                        "9:16" -> "crop=ih*9/16:ih"
-                        "1:1"  -> "crop=min(iw\\,ih):min(iw\\,ih)"
-                        else   -> null
-                    }
-                    if (cropFilter != null) filterChain.add(cropFilter)
-                }
-                is EditOperation.AddText -> {
-                    val escapedText = op.text
-                        .replace("\\", "\\\\")
-                        .replace("'", "\\'")
-                        .replace(":", "\\:")
-
-                    val fontPart = if (!fontFilePath.isNullOrBlank()) {
-                        val escapedFont = fontFilePath
-                            .replace("\\", "\\\\")
-                            .replace("'", "\\'")
-                            .replace(":", "\\:")
-                        "fontfile='$escapedFont':"
-                    } else {
-                        Log.w("VideoEditingViewModel",
-                            "No fontFilePath — text overlay may not render on Android.")
-                        ""
-                    }
-
-                    val textFilter = "drawtext=${fontPart}text='$escapedText':" +
-                            "fontcolor=white:fontsize=${op.fontSize}:${op.position.ffmpegParam}"
-                    filterChain.add(textFilter)
-                    Log.d("VideoEditingViewModel", "Text filter: $textFilter")
-                }
-                is EditOperation.MuteAudio -> audioMuted = true
-                is EditOperation.AddBackgroundAudio -> {
-                    audioInputFile = op.audioUri.path ?: op.audioUri.toString()
-                    removeOriginalAudio = op.removeOriginalAudio
-                }
-                is EditOperation.Merge -> { /* handled above */ }
-            }
-        }
-
+        // ── NON-MERGE PATH: build filter_complex with stream labels ──────────
         val cmd = StringBuilder()
 
         // Input with optional trim
-        if (trimStart != null && trimEnd != null) {
-            val startSecs = trimStart / 1000.0
-            val duration  = (trimEnd - trimStart) / 1000.0
+        if (trimOp != null) {
+            val startSecs = trimOp.startMs / 1000.0
+            val duration = (trimOp.endMs - trimOp.startMs) / 1000.0
             cmd.append("-ss $startSecs -i \"$sourceFilePath\" -to $duration")
         } else {
             cmd.append("-i \"$sourceFilePath\"")
         }
 
-        // Second input for background audio mix
-        if (audioInputFile != null && !removeOriginalAudio) {
-            cmd.append(" -i \"$audioInputFile\"")
+        // Additional audio inputs
+        var audioInputIndex = 1
+        val audioInputIndices = mutableListOf<Pair<Int, EditOperation.AddBackgroundAudio>>()
+        for (audioOp in audioOps) {
+            val audioPath = audioOp.audioUri.path ?: audioOp.audioUri.toString()
+            cmd.append(" -i \"$audioPath\"")
+            audioInputIndices.add(Pair(audioInputIndex, audioOp))
+            audioInputIndex++
         }
 
-        // Video filter chain
-        if (filterChain.isNotEmpty()) {
-            cmd.append(" -vf \"${filterChain.joinToString(",")}\"")
+        // Build the filter_complex graph
+        val filterComplexParts = mutableListOf<String>()
+
+        // ── Video filter stages (crop, text) with stream labels ──
+        val (videoStages, finalVideoLabel) = buildVideoFilterStages(videoOps, fontFilePath)
+        filterComplexParts.addAll(videoStages)
+
+        // ── Audio filter stages (multi-track adelay + volume mixing) ──
+        var finalAudioLabel: String? = null
+        if (audioMuted) {
+            // No audio output — will use -an flag
+        } else if (audioInputIndices.isNotEmpty()) {
+            // Build per-track adelay + volume filters
+            val mixInputLabels = mutableListOf<String>()
+
+            for ((idx, pair) in audioInputIndices.withIndex()) {
+                val (inputIdx, audioOp) = pair
+                val trackLabel = "[a$idx]"
+                val filters = mutableListOf<String>()
+
+                if (audioOp.startMs > 0L || audioOp.endMs > 0L) {
+                    val startSec = audioOp.startMs / 1000.0
+                    if (audioOp.endMs > 0L) {
+                        val endSec = audioOp.endMs / 1000.0
+                        filters.add("atrim=start=$startSec:end=$endSec,asetpts=PTS-STARTPTS")
+                    } else {
+                        filters.add("atrim=start=$startSec,asetpts=PTS-STARTPTS")
+                    }
+                }
+                if (audioOp.delayMs > 0) {
+                    filters.add("adelay=${audioOp.delayMs}|${audioOp.delayMs}")
+                }
+                if (audioOp.volume < 1.0f) {
+                    filters.add("volume=${audioOp.volume}")
+                }
+
+                if (filters.isNotEmpty()) {
+                    filterComplexParts.add("[$inputIdx:a]${filters.joinToString(",")}$trackLabel")
+                    mixInputLabels.add(trackLabel)
+                } else {
+                    mixInputLabels.add("[$inputIdx:a]")
+                }
+            }
+
+            // Mix original audio with all background tracks
+            if (hasAudio && !audioInputIndices.any { it.second.removeOriginalAudio }) {
+                // Keep original audio — mix all together
+                val allInputs = "[0:a]" + mixInputLabels.joinToString("")
+                val totalInputs = 1 + mixInputLabels.size
+                filterComplexParts.add("${allInputs}amix=inputs=$totalInputs:duration=longest[outa]")
+                finalAudioLabel = "[outa]"
+            } else {
+                // Replace original audio OR source has no audio — mix only background tracks
+                if (mixInputLabels.size == 1) {
+                    // Single replacement track: use aformat instead of amix
+                    val singleLabel = mixInputLabels[0]
+                    filterComplexParts.add("${singleLabel}aformat=sample_rates=44100:channel_layouts=stereo[outa]")
+                    finalAudioLabel = "[outa]"
+                } else {
+                    val allBg = mixInputLabels.joinToString("")
+                    filterComplexParts.add("${allBg}amix=inputs=${mixInputLabels.size}:duration=longest[outa]")
+                    finalAudioLabel = "[outa]"
+                }
+            }
         }
 
-        // Video codec
-        cmd.append(" -c:v libx264 -preset faster -crf 28")
+        // ── Assemble the command ──
+        val hasVideoFilters = videoStages.isNotEmpty()
+        val hasAudioFilters = finalAudioLabel != null
 
-        // Audio handling
-        when {
-            audioMuted ->
+        if (hasVideoFilters || hasAudioFilters) {
+            cmd.append(" -filter_complex \"${filterComplexParts.joinToString(";")}\"")
+
+            // Explicit stream mapping when using filter_complex
+            if (hasVideoFilters) {
+                cmd.append(" -map \"$finalVideoLabel\"")
+            } else {
+                cmd.append(" -map 0:v")
+            }
+
+            if (audioMuted) {
                 cmd.append(" -an")
-            audioInputFile != null && !removeOriginalAudio ->
-                cmd.append(" -filter_complex \"[1:a]aformat=sample_rates=44100:channel_layouts=stereo[a]\"" +
-                        " -map 0:v -map \"[a]\" -c:a aac")
-            audioInputFile != null && removeOriginalAudio ->
-                cmd.append(" -map 0:v -map 1:a -c:a aac")
-            else ->
-                cmd.append(" -c:a aac")
+            } else if (hasAudioFilters) {
+                cmd.append(" -map \"$finalAudioLabel\"")
+            } else {
+                cmd.append(" -map 0:a?")
+            }
+        } else if (audioMuted) {
+            cmd.append(" -an")
         }
 
-        // FIX: output path always quoted
+        // Codecs
+        cmd.append(" -c:v libx264 -preset faster -crf 28")
+        if (!audioMuted) {
+            cmd.append(" -c:a aac")
+        }
+
         cmd.append(" \"$outputFilePath\"")
 
         val finalCommand = cmd.toString()
-        Log.d("VideoEditingViewModel", "Built command: $finalCommand")
+        Log.d(TAG, "Built command: $finalCommand")
+        return finalCommand
+    }
+
+    /**
+     * Build an FFmpeg command for a fast 3-second preview around the playhead.
+     * Uses ultrafast preset and high CRF for speed over quality.
+     * Skips merge operations (preview is source-only).
+     *
+     * @param seekPositionMs  Current playhead position in ms.
+     */
+    fun buildPreviewCommand(
+        sourceFilePath: String,
+        previewOutputPath: String,
+        seekPositionMs: Long,
+        fontFilePath: String? = null
+    ): String? {
+        val currentProject = _project.value ?: return null
+        val operations = currentProject.operations
+            .filterNot { it is EditOperation.Merge } // Skip merge for preview
+
+        if (operations.none { it is EditOperation.Crop || it is EditOperation.AddText }) {
+            return null // No visual operations to preview
+        }
+
+        val videoOps = operations.filter { it is EditOperation.Crop || it is EditOperation.AddText }
+        val trimOp = operations.filterIsInstance<EditOperation.Trim>().lastOrNull()
+
+        val cmd = StringBuilder()
+        if (trimOp != null) {
+            val durationSecs = (trimOp.endMs - trimOp.startMs) / 1000.0
+            cmd.append("-ss ${trimOp.startMs / 1000.0} -i \"$sourceFilePath\" -t $durationSecs")
+        } else {
+            cmd.append("-i \"$sourceFilePath\"")
+        }
+
+        // Build filter_complex for video operations
+        val (videoStages, finalLabel) = buildVideoFilterStages(videoOps, fontFilePath)
+        if (videoStages.isNotEmpty()) {
+            cmd.append(" -filter_complex \"${videoStages.joinToString(";")}\"")
+            cmd.append(" -map \"$finalLabel\" -map 0:a?")
+        }
+
+        // Fast preview settings
+        cmd.append(" -c:v libx264 -preset ultrafast -crf 35 -c:a aac")
+        cmd.append(" -y \"$previewOutputPath\"")
+
+        val finalCommand = cmd.toString()
+        Log.d(TAG, "Built preview command: $finalCommand")
         return finalCommand
     }
 

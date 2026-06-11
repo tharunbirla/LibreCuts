@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@color/surfaceContainerHigh"
+    android:elevation="4dp">
+
+    <!-- Color Picker Container (Visible in Palette Mode) -->
+    <HorizontalScrollView
+        android:id="@+id/colorPickerContainer"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:scrollbars="none"
+        android:background="@color/surfaceContainer"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/colorPickerList"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="16dp" />
+    </HorizontalScrollView>
+
+    <!-- Toolbar Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp">
+
+        <!-- Cancel Button -->
+        <ImageButton
+            android:id="@+id/btnTextCancel"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_close_24"
+            android:contentDescription="Cancel text"
+            app:tint="@color/toolTextInactive" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- Modes Tab Container -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <!-- Keyboard Mode Tab -->
+            <ImageButton
+                android:id="@+id/btnTextKeyboardTab"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_keyboard_24"
+                android:contentDescription="Keyboard input"
+                app:tint="@color/colorPrimary" />
+
+            <View
+                android:layout_width="16dp"
+                android:layout_height="match_parent" />
+
+            <!-- Palette Mode Tab -->
+            <ImageButton
+                android:id="@+id/btnTextPaletteTab"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_palette_24"
+                android:contentDescription="Text color palette"
+                app:tint="@color/toolTextInactive" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- Done Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTextDone"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="Done"
+            android:textColor="@color/onPrimaryContainer"
+            android:backgroundTint="@color/primaryContainer"
+            app:cornerRadius="18dp"
+            android:fontFamily="sans-serif-medium"
+            android:textSize="14sp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:elevation="0dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

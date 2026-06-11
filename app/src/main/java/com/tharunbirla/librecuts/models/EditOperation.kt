@@ -50,12 +50,20 @@ sealed class EditOperation : Serializable {
         val text: String,
         val fontSize: Int,
         val position: TextPosition,
+        val relativeX: Float? = null,
+        val relativeY: Float? = null,
+        val color: String = "#FFFFFF",
         val id: String = System.nanoTime().toString()
     ) : EditOperation() {
         init {
             require(text.isNotEmpty()) { "Text cannot be empty" }
             require(fontSize > 0) { "Font size must be positive" }
+            relativeX?.let { require(it in 0f..1f) { "relativeX must be in 0.0..1.0" } }
+            relativeY?.let { require(it in 0f..1f) { "relativeY must be in 0.0..1.0" } }
         }
+
+        /** True when this text was placed via drag-and-drop (WYSIWYG coordinates). */
+        fun hasCustomPosition(): Boolean = relativeX != null && relativeY != null
     }
     
     /**
@@ -87,8 +95,18 @@ sealed class EditOperation : Serializable {
     data class AddBackgroundAudio(
         val audioUri: Uri,
         val removeOriginalAudio: Boolean = false,
+        val delayMs: Long = 0L,
+        val volume: Float = 1.0f,
+        val startMs: Long = 0L,
+        val endMs: Long = -1L,
         val id: String = System.nanoTime().toString()
-    ) : EditOperation()
+    ) : EditOperation() {
+        init {
+            require(delayMs >= 0) { "Delay cannot be negative" }
+            require(volume in 0f..1f) { "Volume must be in 0.0..1.0" }
+            require(startMs >= 0) { "Start time cannot be negative" }
+        }
+    }
 }
 
 /**

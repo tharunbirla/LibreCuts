@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/surfaceContainerHigh"
+    android:orientation="vertical"
+    android:paddingHorizontal="24dp"
+    android:paddingBottom="48dp"
+    android:paddingTop="12dp">
+
+    <!-- Drag Handle -->
+    <View
+        android:layout_width="32dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp"
+        android:alpha="0.4"
+        android:background="@color/outlineVariant" />
+
+    <!-- Title and Cancel -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:id="@+id/tvTitleAudio"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:fontFamily="sans-serif-medium"
+            android:text="Background Audio"
+            android:textColor="@color/textColor"
+            android:textSize="18sp" />
+
+        <ImageButton
+            android:id="@+id/btnCloseAudioSheet"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_alignParentEnd="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_close_24"
+            app:tint="@color/activeTool"
+            android:contentDescription="Close" />
+    </RelativeLayout>
+
+    <!-- Preview Controls (Play/Pause & Progress) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
+
+        <ImageButton
+            android:id="@+id/btnAudioPlayPause"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_play_24"
+            app:tint="@color/colorPrimary"
+            android:contentDescription="Play preview" />
+
+        <TextView
+            android:id="@+id/tvAudioProgress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFamily="sans-serif-medium"
+            android:text="00:00 / 00:00"
+            android:textColor="@color/textColor"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <!-- RangeSlider for Select Audio Segment -->
+    <TextView
+        android:id="@+id/tvAudioStartLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Select Audio Segment"
+        android:textColor="@color/toolTextInactive"
+        android:textSize="12sp"
+        android:layout_marginBottom="4dp" />
+
+    <com.google.android.material.slider.RangeSlider
+        android:id="@+id/audioRangeSlider"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        app:values="@array/slider_values"
+        app:thumbColor="@color/colorPrimary"
+        app:trackColorActive="@color/colorPrimary"
+        app:trackColorInactive="@color/outlineVariant" />
+
+    <!-- Replace Original Audio Switch -->
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/switchReplaceAudio"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:text="Replace Original Audio"
+        android:textColor="@color/textColor"
+        android:textSize="14sp"
+        app:useMaterialThemeColors="true" />
+
+    <!-- Volume Adjust Slider -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="24dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Volume"
+            android:textColor="@color/toolTextInactive"
+            android:textSize="12sp"
+            android:minWidth="60dp" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/audioVolumeSlider"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:value="0.8"
+            android:valueFrom="0.0"
+            android:valueTo="1.0"
+            app:thumbColor="@color/colorPrimary"
+            app:trackColorActive="@color/colorPrimary"
+            app:trackColorInactive="@color/outlineVariant" />
+
+        <TextView
+            android:id="@+id/tvAudioVolumePercent"
+            android:layout_width="40dp"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:fontFamily="sans-serif-medium"
+            android:text="80%"
+            android:textColor="@color/textColor"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- Done Button -->
+    <Button
+        android:id="@+id/btnDoneAudio"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/done"
+        android:textColor="@android:color/white"
+        android:backgroundTint="@color/colorPrimary"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"
+        app:cornerRadius="24dp" />
+
+</LinearLayout>

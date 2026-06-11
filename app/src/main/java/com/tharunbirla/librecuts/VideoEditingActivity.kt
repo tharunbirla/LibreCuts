@@ -23,6 +23,7 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
@@ -39,8 +40,10 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.slider.RangeSlider
 import com.google.android.material.textfield.TextInputEditText
 import com.tharunbirla.librecuts.customviews.CustomVideoSeeker
+import com.tharunbirla.librecuts.customviews.DraggableTextOverlayView
 import com.tharunbirla.librecuts.models.EditOperation
 import com.tharunbirla.librecuts.models.TextPosition
+import kotlinx.coroutines.Job
 import com.tharunbirla.librecuts.services.FFmpegRenderEngine
 import com.tharunbirla.librecuts.utils.ErrorCode
 import com.tharunbirla.librecuts.viewmodels.VideoEditingViewModel
@@ -83,6 +86,16 @@ class VideoEditingActivity : AppCompatActivity() {
 
     // Cache for frame extraction
     private val extractedFrames = mutableListOf<Bitmap>()
+
+    // Inline text editing state
+    private var draggableTextOverlay: DraggableTextOverlayView? = null
+    private var textEditingToolbar: View? = null
+    private var isTextEditingActive = false
+
+    // Segmented preview state
+    private var previewJob: Job? = null
+    private var isShowingPreview = false
+    private var previewFile: File? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -141,12 +154,20 @@ class VideoEditingActivity : AppCompatActivity() {
         val btnMute = findViewById<ImageButton>(R.id.btnMute)
         btnMute.setOnClickListener {
             if (::player.isInitialized) {
-                if (player.volume > 0f) {
-                    player.volume = 0f
-                    btnMute.setImageResource(R.drawable.ic_volume_off_24)
-                } else {
+                val isCurrentlyMuted = player.volume == 0f
+                if (isCurrentlyMuted) {
                     player.volume = 1f
                     btnMute.setImageResource(R.drawable.ic_volume_up_24)
+                    viewModel.project.value?.let { proj ->
+                        val muteOp = proj.operations.find { it is EditOperation.MuteAudio } as? EditOperation.MuteAudio
+                        if (muteOp != null) {
+                            viewModel.removeOperation(muteOp.id)
+                        }
+                    }
+                } else {
+                    player.volume = 0f
+                    btnMute.setImageResource(R.drawable.ic_volume_off_24)
+                    viewModel.addMuteAudioOperation()
                 }
             }
         }
@@ -198,6 +219,67 @@ class VideoEditingActivity : AppCompatActivity() {
             findViewById(R.id.textOverlayView)
         } catch (e: Exception) {
             Log.w(TAG, "TextOverlayView not found in layout: ${e.message}")
+            null
+        }
+
+        // Inline text editing components
+        draggableTextOverlay = try {
+            findViewById<DraggableTextOverlayView>(R.id.draggableTextOverlay)?.also { overlay ->
+                overlay.onTextCommitted = { text, fontSize, relX, relY, color ->
+                    viewModel.addTextOperation(
+                        text = text,
+                        fontSize = fontSize,
+                        position = "Center Align",
+                        relativeX = relX,
+                        relativeY = relY,
+                        color = color
+                    )
+                    exitTextEditingMode()
+                    renderSegmentedPreview()
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "DraggableTextOverlayView not found: ${e.message}")
+            null
+        }
+
+        textEditingToolbar = try {
+            findViewById<View>(R.id.textEditingToolbar)?.also { toolbar ->
+                toolbar.findViewById<ImageButton>(R.id.btnTextCancel)?.setOnClickListener {
+                    draggableTextOverlay?.deactivate()
+                    exitTextEditingMode()
+                }
+                toolbar.findViewById<View>(R.id.btnTextDone)?.setOnClickListener {
+                    draggableTextOverlay?.commitText()
+                }
+
+                val btnKeyboard = toolbar.findViewById<ImageButton>(R.id.btnTextKeyboardTab)
+                val btnPalette = toolbar.findViewById<ImageButton>(R.id.btnTextPaletteTab)
+                val colorContainer = toolbar.findViewById<View>(R.id.colorPickerContainer)
+
+                btnKeyboard?.setOnClickListener {
+                    colorContainer?.visibility = View.GONE
+                    btnKeyboard.setColorFilter(getColor(R.color.colorPrimary))
+                    btnPalette?.setColorFilter(getColor(R.color.toolTextInactive))
+                    draggableTextOverlay?.requestEditingFocus()
+                }
+
+                btnPalette?.setOnClickListener {
+                    val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                    imm.hideSoftInputFromWindow(toolbar.windowToken, 0)
+
+                    colorContainer?.visibility = View.VISIBLE
+                    btnPalette.setColorFilter(getColor(R.color.colorPrimary))
+                    btnKeyboard?.setColorFilter(getColor(R.color.toolTextInactive))
+                    setupColorPicker(toolbar)
+                }
+
+                btnKeyboard?.setColorFilter(getColor(R.color.colorPrimary))
+                btnPalette?.setColorFilter(getColor(R.color.toolTextInactive))
+                colorContainer?.visibility = View.GONE
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Text editing toolbar not found: ${e.message}")
             null
         }
 
@@ -337,16 +419,19 @@ class VideoEditingActivity : AppCompatActivity() {
 
         val totalSeconds = (videoDuration / 1000).toFloat()
         rangeSlider.valueFrom = 0f
-        rangeSlider.valueTo = totalSeconds
+        rangeSlider.valueTo = maxOf(100f, totalSeconds)
         rangeSlider.values = listOf(0f, totalSeconds)
+        rangeSlider.valueTo = totalSeconds
 
         rangeSlider.addOnChangeListener { slider, _, fromUser ->
             if (fromUser) {
                 // PRO FEATURE: Live seeking while trimming
                 // If user moves start handle, seek to start. If end handle, seek to end.
                 val thumbIndex = slider.activeThumbIndex
-                val seekTargetMs = slider.values[thumbIndex].toLong() * 1000
-                player.seekTo(seekTargetMs)
+                if (thumbIndex in 0 until slider.values.size) {
+                    val seekTargetMs = slider.values[thumbIndex].toLong() * 1000
+                    player.seekTo(seekTargetMs)
+                }
             }
         }
 
@@ -420,18 +505,21 @@ class VideoEditingActivity : AppCompatActivity() {
             viewModel.addCropOperation("16:9")
             updateActiveUi("16:9")
             bottomSheetDialog.dismiss()
+            renderSegmentedPreview()
         }
 
         sheetView.findViewById<LinearLayout>(R.id.frameAspectRatio2).setOnClickListener {
             viewModel.addCropOperation("9:16")
             updateActiveUi("9:16")
             bottomSheetDialog.dismiss()
+            renderSegmentedPreview()
         }
 
         sheetView.findViewById<LinearLayout>(R.id.frameAspectRatio3).setOnClickListener {
             viewModel.addCropOperation("1:1")
             updateActiveUi("1:1")
             bottomSheetDialog.dismiss()
+            renderSegmentedPreview()
         }
 
         sheetView.findViewById<ImageButton>(R.id.btnCloseSheet).setOnClickListener {
@@ -444,36 +532,35 @@ class VideoEditingActivity : AppCompatActivity() {
 
     @SuppressLint("InflateParams")
     private fun textAction() {
-        val bottomSheetDialog = BottomSheetDialog(this)
-        val view = layoutInflater.inflate(R.layout.text_bottom_sheet_dialog, null)
-
-        val etTextInput = view.findViewById<TextInputEditText>(R.id.etTextInput)
-        val fontSizeInput = view.findViewById<TextInputEditText>(R.id.fontSize)
-        val spinnerTextPosition = view.findViewById<Spinner>(R.id.spinnerTextPosition)
-
-        // Setup position options
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, TextPosition.labels())
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerTextPosition.adapter = adapter
-
-        view.findViewById<Button>(R.id.btnDoneText).setOnClickListener {
-            val text = etTextInput.text.toString()
-            val fontSize = fontSizeInput.text.toString().toIntOrNull() ?: 24 // Default larger for pro look
-            val positionLabel = spinnerTextPosition.selectedItem.toString()
-
-            if (text.isNotEmpty()) {
-                viewModel.addTextOperation(text, fontSize, positionLabel)
-
-                // PRO STEP: Force a refresh of the text overlay view immediately
-                // so the user doesn't have to wait for export to see the text
-                textOverlayView?.postInvalidate()
-
-                bottomSheetDialog.dismiss()
-            }
+        if (isTextEditingActive) {
+            // Already editing — commit current text
+            draggableTextOverlay?.commitText()
+            return
         }
+        enterTextEditingMode()
+    }
 
-        bottomSheetDialog.setContentView(view)
-        bottomSheetDialog.show()
+    private fun enterTextEditingMode() {
+        isTextEditingActive = true
+        selectedTextColor = "#FFFFFF"
+        draggableTextOverlay?.activate("", 36)
+        textEditingToolbar?.visibility = View.VISIBLE
+        textEditingToolbar?.let { toolbar ->
+            toolbar.findViewById<View>(R.id.colorPickerContainer)?.visibility = View.GONE
+            toolbar.findViewById<ImageButton>(R.id.btnTextKeyboardTab)?.setColorFilter(getColor(R.color.colorPrimary))
+            toolbar.findViewById<ImageButton>(R.id.btnTextPaletteTab)?.setColorFilter(getColor(R.color.toolTextInactive))
+            setupColorPicker(toolbar)
+        }
+        findViewById<LinearLayout>(R.id.editingControlsWrapper)?.visibility = View.GONE
+        if (::player.isInitialized && player.isPlaying) {
+            player.pause()
+        }
+    }
+
+    private fun exitTextEditingMode() {
+        isTextEditingActive = false
+        textEditingToolbar?.visibility = View.GONE
+        findViewById<LinearLayout>(R.id.editingControlsWrapper)?.visibility = View.VISIBLE
     }
 
     private fun mergeAction() {
@@ -508,16 +595,211 @@ class VideoEditingActivity : AppCompatActivity() {
                     Toast.makeText(this, "Merge operation added (pending)", Toast.LENGTH_SHORT).show()
                 }
             }
+        } else if (requestCode == PICK_AUDIO_REQUEST && resultCode == Activity.RESULT_OK) {
+            data?.data?.let { audioUri ->
+                showAudioConfigDialog(audioUri)
+            }
         }
     }
 
     private fun audioAction() {
-        val bottomSheetDialog = BottomSheetDialog(this)
-        val view = layoutInflater.inflate(android.R.layout.simple_list_item_1, null)
-        val tvOptions = view.findViewById<TextView>(android.R.id.text1)
-        tvOptions.text = "Audio options:\n\n1. Mute original audio\n2. Add background audio\n\nNote: Audio features require proper setup. Coming soon!"
-        bottomSheetDialog.setContentView(view)
-        bottomSheetDialog.show()
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "audio/*"
+            addCategory(Intent.CATEGORY_OPENABLE)
+        }
+        startActivityForResult(Intent.createChooser(intent, "Select Audio"), PICK_AUDIO_REQUEST)
+    }
+
+    private fun showAudioConfigDialog(audioUri: Uri) {
+        lifecycleScope.launch {
+            val tempAudioFile = withContext(Dispatchers.IO) {
+                copyContentUriToTempFile(audioUri, "audio")
+            }
+
+            if (tempAudioFile == null) {
+                Toast.makeText(this@VideoEditingActivity, "Failed to load audio file", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+
+            val tempAudioUri = Uri.fromFile(tempAudioFile)
+
+            // Get audio file duration
+            val audioDuration = try {
+                val retriever = MediaMetadataRetriever()
+                retriever.setDataSource(tempAudioFile.absolutePath)
+                val durStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                retriever.release()
+                durStr?.toLong() ?: 0L
+            } catch (e: Exception) {
+                Log.e(TAG, "Error reading audio duration: ${e.message}")
+                0L
+            }
+
+            if (audioDuration <= 0L) {
+                Toast.makeText(this@VideoEditingActivity, "Invalid audio file", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+
+            // Inflate sheet layout
+            val bottomSheet = BottomSheetDialog(this@VideoEditingActivity)
+            val view = layoutInflater.inflate(R.layout.audio_trim_bottom_sheet_dialog, null)
+            bottomSheet.setContentView(view)
+
+            val tvProgress = view.findViewById<TextView>(R.id.tvAudioProgress)
+            val rangeSlider = view.findViewById<com.google.android.material.slider.RangeSlider>(R.id.audioRangeSlider)
+            val switchReplace = view.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchReplaceAudio)
+            val volumeSlider = view.findViewById<com.google.android.material.slider.Slider>(R.id.audioVolumeSlider)
+            val tvVolumePercent = view.findViewById<TextView>(R.id.tvAudioVolumePercent)
+            val btnPlayPause = view.findViewById<ImageButton>(R.id.btnAudioPlayPause)
+            val btnDone = view.findViewById<Button>(R.id.btnDoneAudio)
+            val btnClose = view.findViewById<ImageButton>(R.id.btnCloseAudioSheet)
+
+            val videoDurationMs = if (::player.isInitialized) player.duration else 0L
+
+            // Configure rangeSlider
+            val initialEnd = minOf(audioDuration, videoDurationMs).toFloat()
+            rangeSlider.valueFrom = 0f
+            rangeSlider.valueTo = maxOf(100f, audioDuration.toFloat())
+            rangeSlider.values = listOf(0f, initialEnd)
+            rangeSlider.valueTo = audioDuration.toFloat()
+
+            var startMs = 0L
+            var endMs = initialEnd.toLong()
+
+            var lastStartMs = startMs
+            var lastEndMs = endMs
+
+            fun updateTimeDisplay() {
+                val duration = endMs - startMs
+                tvProgress.text = "${formatDuration(startMs.toInt())} - ${formatDuration(endMs.toInt())} (${formatDuration(duration.toInt())})"
+            }
+            updateTimeDisplay()
+
+            // Media Player Setup for Preview
+            var mediaPlayer: android.media.MediaPlayer? = null
+            var isPlaying = false
+            val handler = android.os.Handler(android.os.Looper.getMainLooper())
+
+            val checkPlayback = object : Runnable {
+                override fun run() {
+                    mediaPlayer?.let { mp ->
+                        if (mp.isPlaying) {
+                            val currentPos = mp.currentPosition.toLong()
+                            if (currentPos >= endMs || currentPos < startMs) {
+                                mp.seekTo(startMs.toInt())
+                            }
+                            handler.postDelayed(this, 100)
+                        }
+                    }
+                }
+            }
+
+            fun stopPlayback() {
+                isPlaying = false
+                btnPlayPause.setImageResource(R.drawable.ic_play_24)
+                handler.removeCallbacks(checkPlayback)
+                try {
+                    mediaPlayer?.pause()
+                } catch (_: Exception) {}
+            }
+
+            fun startPlayback() {
+                if (mediaPlayer == null) {
+                    try {
+                        mediaPlayer = android.media.MediaPlayer().apply {
+                            setDataSource(tempAudioFile.absolutePath)
+                            prepare()
+                            isLooping = false
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error preparing MediaPlayer: ${e.message}")
+                        return
+                    }
+                }
+                isPlaying = true
+                btnPlayPause.setImageResource(R.drawable.ic_pause_24)
+                val vol = volumeSlider.value
+                mediaPlayer?.setVolume(vol, vol)
+                mediaPlayer?.seekTo(startMs.toInt())
+                mediaPlayer?.start()
+                handler.post(checkPlayback)
+            }
+
+            btnPlayPause.setOnClickListener {
+                if (isPlaying) {
+                    stopPlayback()
+                } else {
+                    startPlayback()
+                }
+            }
+
+            rangeSlider.addOnChangeListener { slider, _, fromUser ->
+                if (fromUser) {
+                    val values = slider.values
+                    var start = values[0]
+                    var end = values[1]
+
+                    if (end - start > videoDurationMs) {
+                        // Enforce select segment length does not exceed videoDurationMs
+                        if (start != lastStartMs.toFloat()) {
+                            // Left thumb (start) was dragged: adjust end
+                            end = (start + videoDurationMs).coerceAtMost(audioDuration.toFloat())
+                            start = (end - videoDurationMs).coerceAtLeast(0f)
+                        } else {
+                            // Right thumb (end) was dragged: adjust start
+                            start = (end - videoDurationMs).coerceAtLeast(0f)
+                        }
+                        slider.values = listOf(start, end)
+                    }
+
+                    startMs = start.toLong()
+                    endMs = end.toLong()
+                    lastStartMs = startMs
+                    lastEndMs = endMs
+
+                    updateTimeDisplay()
+
+                    if (isPlaying) {
+                        mediaPlayer?.seekTo(startMs.toInt())
+                    }
+                }
+            }
+
+            volumeSlider.addOnChangeListener { _, value, _ ->
+                val percent = (value * 100).toInt()
+                tvVolumePercent.text = "$percent%"
+                mediaPlayer?.setVolume(value, value)
+            }
+
+            btnClose.setOnClickListener {
+                bottomSheet.dismiss()
+            }
+
+            btnDone.setOnClickListener {
+                stopPlayback()
+                val replaceOriginal = switchReplace?.isChecked ?: false
+                viewModel.addBackgroundAudioOperation(
+                    audioUri = tempAudioUri,
+                    removeOriginalAudio = replaceOriginal,
+                    delayMs = 0L,
+                    volume = volumeSlider.value,
+                    startMs = startMs,
+                    endMs = endMs
+                )
+                Toast.makeText(this@VideoEditingActivity, "Background audio added", Toast.LENGTH_SHORT).show()
+                bottomSheet.dismiss()
+            }
+
+            bottomSheet.setOnDismissListener {
+                stopPlayback()
+                try {
+                    mediaPlayer?.release()
+                } catch (_: Exception) {}
+                mediaPlayer = null
+            }
+
+            bottomSheet.show()
+        }
     }
 
     /**
@@ -570,17 +852,23 @@ class VideoEditingActivity : AppCompatActivity() {
                 var concatFile: File? = null
                 val currentProject = viewModel.project.value
                 if (currentProject != null && ffmpegCommand.contains("(CONCAT_LIST:")) {
-                    val concatListStart = ffmpegCommand.indexOf("(CONCAT_LIST:") + "(CONCAT_LIST:".length
-                    val concatListEnd = ffmpegCommand.lastIndexOf(")")
-                    if (concatListStart > 13 && concatListEnd > concatListStart) {
-                        val concatList = ffmpegCommand.substring(concatListStart, concatListEnd)
-                        val processedConcatList = processConcatList(concatList)
+                    val cmdSnapshot = ffmpegCommand  // capture for closure — var can't be smart-cast
+                    concatFile = withContext(Dispatchers.IO) {
+                        val concatListStart = cmdSnapshot.indexOf("(CONCAT_LIST:") + "(CONCAT_LIST:".length
+                        val concatListEnd = cmdSnapshot.lastIndexOf(")")
+                        if (concatListStart > 13 && concatListEnd > concatListStart) {
+                            val concatList = cmdSnapshot.substring(concatListStart, concatListEnd)
+                            val processedConcatList = processConcatList(concatList)
 
-                        concatFile = File(cacheDir, "concat_${System.currentTimeMillis()}.txt")
-                        concatFile.writeText(processedConcatList)
-                        Log.d(TAG, "Concat file: ${concatFile.absolutePath}")
-                        Log.d(TAG, "Concat content:\n$processedConcatList")
+                            val file = File(cacheDir, "concat_${System.currentTimeMillis()}.txt")
+                            file.writeText(processedConcatList)
+                            Log.d(TAG, "Concat file: ${file.absolutePath}")
+                            Log.d(TAG, "Concat content:\n$processedConcatList")
+                            file
+                        } else null
+                    }
 
+                    if (concatFile != null) {
                         ffmpegCommand = ffmpegCommand
                             .replace("{CONCAT_FILE_PATH}", concatFile.absolutePath)
                             .substring(0, ffmpegCommand.indexOf("(CONCAT_LIST:"))
@@ -688,6 +976,12 @@ class VideoEditingActivity : AppCompatActivity() {
                         isVideoLoaded = true
                         customVideoSeeker.setVideoDuration(player.duration)
                         updateDurationDisplay(player.currentPosition.toInt(), player.duration.toInt())
+
+                        val format = player.videoFormat
+                        if (format != null && format.width > 0 && format.height > 0) {
+                            textOverlayView?.setVideoSize(format.width, format.height)
+                            draggableTextOverlay?.setVideoSize(format.width, format.height)
+                        }
                     }
                 }
 
@@ -696,6 +990,13 @@ class VideoEditingActivity : AppCompatActivity() {
                         startProgressUpdater()
                     } else {
                         stopProgressUpdater()
+                    }
+                }
+
+                override fun onVideoSizeChanged(videoSize: com.google.android.exoplayer2.video.VideoSize) {
+                    if (videoSize.width > 0 && videoSize.height > 0) {
+                        textOverlayView?.setVideoSize(videoSize.width, videoSize.height)
+                        draggableTextOverlay?.setVideoSize(videoSize.width, videoSize.height)
                     }
                 }
 
@@ -783,6 +1084,9 @@ class VideoEditingActivity : AppCompatActivity() {
 
     private fun setupCustomSeeker() {
         customVideoSeeker.onSeekListener = { seekPosition ->
+            // Dismiss preview when user manually seeks
+            if (isShowingPreview) dismissPreview()
+
             val newSeekTime = (player.duration * seekPosition).toLong()
             if (newSeekTime >= 0 && newSeekTime <= player.duration) {
                 player.seekTo(newSeekTime)
@@ -809,6 +1113,7 @@ class VideoEditingActivity : AppCompatActivity() {
 
         frameExtractionJob = lifecycleScope.launch(Dispatchers.IO) {
             val retriever = MediaMetadataRetriever()
+            val tempFrames = mutableListOf<Bitmap>()
             try {
                 retriever.setDataSource(tempInputFile.absolutePath)
                 val durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
@@ -818,7 +1123,6 @@ class VideoEditingActivity : AppCompatActivity() {
 
                 val frameCount = 10
                 val intervalUs = (videoDurationMs * 1000) / frameCount
-                val tempFrames = mutableListOf<Bitmap>()
 
                 // Process all frames in the background WITHOUT updating the UI partially
                 for (i in 0 until frameCount) {
@@ -841,6 +1145,8 @@ class VideoEditingActivity : AppCompatActivity() {
 
                 // ONLY update the UI once the loop is completely finished
                 withContext(Dispatchers.Main) {
+                    // FIX: Recycle OLD bitmaps before replacing to prevent memory leak
+                    extractedFrames.forEach { if (!it.isRecycled) it.recycle() }
                     extractedFrames.clear()
                     extractedFrames.addAll(tempFrames)
                     frameRecyclerView.adapter = FrameAdapter(extractedFrames)
@@ -851,9 +1157,15 @@ class VideoEditingActivity : AppCompatActivity() {
 
             } catch (e: Exception) {
                 Log.e(TAG, "Extraction error: ${e.message}")
+                // FIX: Recycle tempFrames on error — they won't reach the UI
+                tempFrames.forEach { if (!it.isRecycled) it.recycle() }
                 withContext(Dispatchers.Main) { loadingScreen.visibility = View.GONE }
             } finally {
                 retriever.release()
+                // FIX: If cancelled mid-extraction, recycle orphaned bitmaps
+                if (!coroutineContext.isActive) {
+                    tempFrames.forEach { if (!it.isRecycled) it.recycle() }
+                }
             }
         }
     }
@@ -928,9 +1240,44 @@ class VideoEditingActivity : AppCompatActivity() {
         return processedLines.joinToString("\n").trim() + "\n"
     }
 
+    private fun getAudioExtension(uri: Uri): String {
+        val mimeType = contentResolver.getType(uri)
+        if (mimeType != null) {
+            val mime = android.webkit.MimeTypeMap.getSingleton()
+            val extension = mime.getExtensionFromMimeType(mimeType)
+            if (extension != null) {
+                return ".$extension"
+            }
+        }
+        try {
+            contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (nameIndex != -1) {
+                        val name = cursor.getString(nameIndex)
+                        val lastDot = name.lastIndexOf('.')
+                        if (lastDot != -1) {
+                            return name.substring(lastDot)
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+        return ".mp3"
+    }
+
     private fun copyContentUriToTempFile(contentUri: Uri): File? {
+        return copyContentUriToTempFile(contentUri, "merge_video", ".mp4")
+    }
+
+    private fun copyContentUriToTempFile(contentUri: Uri, prefix: String, extension: String = ".mp4"): File? {
         return try {
-            val tempFile = File(cacheDir, "merge_video_${System.currentTimeMillis()}.mp4")
+            val ext = if (prefix == "audio") {
+                getAudioExtension(contentUri)
+            } else {
+                extension
+            }
+            val tempFile = File(cacheDir, "${prefix}_${System.currentTimeMillis()}$ext")
             contentResolver.openInputStream(contentUri)?.use { input ->
                 tempFile.outputStream().use { output -> input.copyTo(output) }
             }
@@ -942,16 +1289,131 @@ class VideoEditingActivity : AppCompatActivity() {
         }
     }
 
+    // ── Segmented Preview Rendering ────────────────────────────────────────────
+
+    /**
+     * Render a fast 3-second preview segment around the current playhead.
+     * Swaps ExoPlayer's source to the preview clip for immediate visual feedback.
+     */
+    private fun renderSegmentedPreview() {
+        if (!::tempInputFile.isInitialized || !isVideoLoaded) return
+
+        previewJob?.cancel()
+        previewJob = lifecycleScope.launch {
+            val seekPos = if (::player.isInitialized) player.currentPosition else 0L
+            val previewOutput = File(cacheDir, "preview_segment_${System.currentTimeMillis()}.mp4")
+
+            val cmd = viewModel.buildPreviewCommand(
+                sourceFilePath = tempInputFile.absolutePath,
+                previewOutputPath = previewOutput.absolutePath,
+                seekPositionMs = seekPos,
+                fontFilePath = fontFilePath
+            ) ?: return@launch
+
+            Log.d(TAG, "Rendering segmented preview...")
+
+            val result = withContext(Dispatchers.IO) {
+                ffmpegEngine.executeCommand(cmd)
+            }
+
+            if (result is FFmpegRenderEngine.RenderResult.Success && previewOutput.exists()) {
+                isShowingPreview = true
+                previewFile?.delete() // Clean up previous preview
+                previewFile = previewOutput
+
+                player.setMediaItem(MediaItem.fromUri(Uri.fromFile(previewOutput)))
+                player.prepare()
+                player.play()
+
+                // Show preview badge
+                try {
+                    findViewById<TextView>(R.id.tvPreviewBadge)?.visibility = View.VISIBLE
+                } catch (_: Exception) {}
+            } else {
+                Log.w(TAG, "Preview render failed or was cancelled")
+                previewOutput.delete()
+            }
+        }
+    }
+
+    /**
+     * Dismiss the preview and restore the original video source.
+     */
+    private fun dismissPreview() {
+        if (!isShowingPreview) return
+        isShowingPreview = false
+        previewJob?.cancel()
+
+        videoUri?.let {
+            player.setMediaItem(MediaItem.fromUri(it))
+            player.prepare()
+        }
+
+        try {
+            findViewById<TextView>(R.id.tvPreviewBadge)?.visibility = View.GONE
+        } catch (_: Exception) {}
+
+        previewFile?.delete()
+        previewFile = null
+    }
+
     override fun onDestroy() {
         frameExtractionJob?.cancel()
-        extractedFrames.forEach { it.recycle() }
+        previewJob?.cancel()
+        extractedFrames.forEach { if (!it.isRecycled) it.recycle() }
+        draggableTextOverlay?.deactivate()
+        previewFile?.delete()
         super.onDestroy()
         player.release()
         ffmpegEngine.cleanup()
     }
 
+    private val colorsList = listOf(
+        "#FFFFFF", "#000000", "#FF3B30", "#FF9500", "#FFCC00",
+        "#34C759", "#30B0C7", "#007AFF", "#5856D6", "#AF52DE", "#FF2D55"
+    )
+    private var selectedTextColor = "#FFFFFF"
+
+    private fun setupColorPicker(toolbar: View) {
+        val colorPickerList = toolbar.findViewById<LinearLayout>(R.id.colorPickerList) ?: return
+        colorPickerList.removeAllViews()
+
+        val density = resources.displayMetrics.density
+        val sizePx = (36 * density).toInt()
+        val marginPx = (8 * density).toInt()
+
+        for (colorHex in colorsList) {
+            val colorView = View(this).apply {
+                layoutParams = LinearLayout.LayoutParams(sizePx, sizePx).apply {
+                    setMargins(marginPx, 0, marginPx, 0)
+                }
+
+                val shape = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.OVAL
+                    setColor(android.graphics.Color.parseColor(colorHex))
+                    if (colorHex == selectedTextColor) {
+                        setStroke((3 * density).toInt(), android.graphics.Color.parseColor("#007AFF"))
+                    } else {
+                        if (colorHex == "#FFFFFF" || colorHex == "#000000") {
+                            setStroke(1, android.graphics.Color.GRAY)
+                        }
+                    }
+                }
+                background = shape
+
+                setOnClickListener {
+                    selectedTextColor = colorHex
+                    draggableTextOverlay?.setTextColor(colorHex)
+                    setupColorPicker(toolbar)
+                }
+            }
+            colorPickerList.addView(colorView)
+        }
+    }
+
     companion object {
         private const val TAG = "VideoEditingActivity"
         private const val PICK_VIDEO_REQUEST = 1
+        private const val PICK_AUDIO_REQUEST = 2
     }
 }
