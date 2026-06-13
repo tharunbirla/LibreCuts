@@ -68,7 +68,7 @@ class CustomVideoSeeker @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        val seekX = width * seekPosition
+        val seekX = width / 2f
         val handleWidth = 24f  // The width of the top pin
         val handleHeight = 40f // The height of the top pin
         val cornerRadius = 6f
@@ -94,46 +94,14 @@ class CustomVideoSeeker @JvmOverloads constructor(
 
         // Draw the actual head
         canvas.drawRoundRect(handleRect, cornerRadius, cornerRadius, handlePaint)
-
-        // 4. Draw a tiny white indicator dot in the center of the head
-        // This gives it that "precision instrument" look
-//        val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-//            color = Color.WHITE
-//            style = Paint.Style.FILL
-//            alpha = 200
-//        }
-//        canvas.drawCircle(seekX, handleHeight / 2, 4f, dotPaint)
     }
 
     private var isDragging = false
+    val isUserSeeking: Boolean get() = isDragging
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        when (event.action) {
-            MotionEvent.ACTION_DOWN -> {
-                // Only intercept touches at the very top (the handle area)
-                if (event.y <= 120f) {
-                    isDragging = true
-                    seekPosition = (event.x / width).coerceIn(0f, 1f)
-                    onSeekListener?.invoke(seekPosition)
-                    invalidate()
-                    return true
-                }
-                return false // Let the touch fall through to the layers below!
-            }
-            MotionEvent.ACTION_MOVE -> {
-                if (isDragging) {
-                    seekPosition = (event.x / width).coerceIn(0f, 1f)
-                    onSeekListener?.invoke(seekPosition)
-                    invalidate()
-                    return true
-                }
-            }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                isDragging = false
-            }
-        }
-        return super.onTouchEvent(event)
+        return false // Let touch events pass through to the timeline below!
     }
 
     fun setVideoDuration(duration: Long) {

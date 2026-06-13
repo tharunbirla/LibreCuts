@@ -66,6 +66,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Preview Render"
                 android:layout_marginEnd="16dp"
+                android:visibility="gone"
                 app:tint="@color/colorOnPrimary" />
 
             <LinearLayout
@@ -216,6 +217,7 @@
                     android:src="@drawable/ic_play_24"
                     app:tint="@color/colorOnSecondary" />
 
+
                 <ImageButton
                     android:id="@+id/btnMute"
                     android:layout_width="40dp"
@@ -231,72 +233,83 @@
                 android:layout_height="180dp"
                 android:layout_marginHorizontal="16dp">
 
-                <ScrollView
+                <HorizontalScrollView
+                    android:id="@+id/timelineHorizontalScroll"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:paddingTop="28dp"
-                    android:clipToPadding="false">
-                    
+                    android:clipToPadding="false"
+                    android:scrollbars="none">
+
                     <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:paddingBottom="16dp">
-                        
-                        <!-- Video Track (Always visible) -->
-                        <FrameLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="64dp"
-                            android:layout_marginBottom="4dp">
-                            <androidx.recyclerview.widget.RecyclerView
-                                android:id="@+id/frameRecyclerView"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"/>
-                            <com.tharunbirla.librecuts.customviews.TrackTrimView
-                                android:id="@+id/mainVideoTrimTrack"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent" />
-                        </FrameLayout>
+                        android:id="@+id/scrollableTimelineContent"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:orientation="vertical">
 
-                        <!-- Text Track Container -->
-                        <LinearLayout
-                            android:id="@+id/textTrackContainer"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:visibility="gone"/>
+                        <com.tharunbirla.librecuts.customviews.TimeRulerView
+                            android:id="@+id/timeRulerView"
+                            android:layout_width="wrap_content"
+                            android:layout_height="24dp"
+                            android:background="@color/background" />
 
-                        <!-- Image Track Container -->
-                        <LinearLayout
-                            android:id="@+id/imageTrackContainer"
+                        <ScrollView
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:visibility="gone"/>
+                            android:layout_height="0dp"
+                            android:layout_weight="1"
+                            android:clipToPadding="false"
+                            android:scrollbars="none">
+                            
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:paddingBottom="16dp">
+                                
+                                <!-- Video Track Sequence Container -->
+                                <LinearLayout
+                                    android:id="@+id/sequenceTrackContainer"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="64dp"
+                                    android:layout_marginBottom="4dp"
+                                    android:orientation="horizontal">
+                                </LinearLayout>
 
-                        <!-- Audio Track Container -->
-                        <LinearLayout
-                            android:id="@+id/audioTrackContainer"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:visibility="gone"/>
+                                <!-- Text Track Container -->
+                                <LinearLayout
+                                    android:id="@+id/textTrackContainer"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical"
+                                    android:visibility="gone"/>
 
+                                <!-- Image Track Container -->
+                                <LinearLayout
+                                    android:id="@+id/imageTrackContainer"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical"
+                                    android:visibility="gone"/>
+
+                                <!-- Audio Track Container -->
+                                <LinearLayout
+                                    android:id="@+id/audioTrackContainer"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical"
+                                    android:visibility="gone"/>
+
+                            </LinearLayout>
+                        </ScrollView>
                     </LinearLayout>
-                </ScrollView>
-
-                <com.tharunbirla.librecuts.customviews.TimeRulerView
-                    android:id="@+id/timeRulerView"
-                    android:layout_width="match_parent"
-                    android:layout_height="24dp"
-                    android:layout_gravity="top"
-                    android:background="@color/background" />
+                </HorizontalScrollView>
 
                 <com.tharunbirla.librecuts.customviews.CustomVideoSeeker
                     android:id="@+id/customVideoSeeker"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:elevation="10dp"/>
+                    android:elevation="10dp"
+                    android:clickable="false"
+                    android:focusable="false" />
             </FrameLayout>
 
             <View

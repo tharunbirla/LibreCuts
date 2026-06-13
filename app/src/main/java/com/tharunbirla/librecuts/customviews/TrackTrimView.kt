@@ -25,11 +25,15 @@ class TrackTrimView @JvmOverloads constructor(
 
     var onTrimChanged: ((Long, Long) -> Unit)? = null
     var onTrimAdjusting: ((Long, Long) -> Unit)? = null
+    var onTrimAdjustingWithDelta: ((Long, Long, Long, Long) -> Unit)? = null
+    var onDragStateChanged: ((Boolean) -> Unit)? = null
+    var customMsPerPixel: Float? = null
 
     var trackColor: Int = Color.parseColor("#4285F4") // Default blue
     var trackLabel: String? = null
     var isSelectedTrack: Boolean = false
     var isMainVideoTrack: Boolean = false
+    var isTrimEnabled: Boolean = true
     var trackIcon: android.graphics.drawable.Drawable? = null
     var trackThumbnail: android.graphics.Bitmap? = null
     var isAudioTrack: Boolean = false
@@ -111,7 +115,7 @@ class TrackTrimView @JvmOverloads constructor(
         super.onDraw(canvas)
         if (videoDurationMs <= 0 || width <= 0) return
 
-        val msPerPixel = videoDurationMs.toFloat() / width
+        val msPerPixel = customMsPerPixel ?: (videoDurationMs.toFloat() / width)
         val startX = startTimeMs / msPerPixel
         val endX = endTimeMs / msPerPixel
 
@@ -125,6 +129,10 @@ class TrackTrimView @JvmOverloads constructor(
             if (endX < width) {
                 canvas.drawRect(endX, 0f, width.toFloat(), height.toFloat(), dimPaint)
             }
+            // Draw a thick yellow border enclosing the active range
+            borderPaint.color = Color.parseColor("#FF4081")
+            borderPaint.strokeWidth = 8f
+            canvas.drawRect(rectF, borderPaint)
         } else {
             trackPaint.color = trackColor
             trackPaint.alpha = 200
@@ -206,18 +214,41 @@ class TrackTrimView @JvmOverloads constructor(
             }
         }
 
-        // Draw left handle
-        val currentHandleWidth = handleWidth * currentHandleScale
-        canvas.drawRect(startX, 0f, startX + currentHandleWidth, height.toFloat(), handlePaint)
-        // Draw right handle
-        canvas.drawRect(endX - currentHandleWidth, 0f, endX, height.toFloat(), handlePaint)
+        if (isTrimEnabled) {
+            val currentHandleWidth = handleWidth * currentHandleScale
+            if (isMainVideoTrack) {
+                handlePaint.color = Color.parseColor("#FF4081")
+            } else {
+                handlePaint.color = Color.WHITE
+            }
+            // Draw left handle
+            canvas.drawRect(startX, 0f, startX + currentHandleWidth, height.toFloat(), handlePaint)
+            // Draw right handle
+            canvas.drawRect(endX - currentHandleWidth, 0f, endX, height.toFloat(), handlePaint)
+
+            // Draw vertical grip lines on the handles
+            val gripPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#4D000000") // Subtle dark overlay for grips
+                style = Paint.Style.STROKE
+                strokeWidth = 3f
+            }
+            // Left handle grip lines
+            val leftMidX = startX + currentHandleWidth / 2f
+            canvas.drawLine(leftMidX - 4f, height * 0.3f, leftMidX - 4f, height * 0.7f, gripPaint)
+            canvas.drawLine(leftMidX + 4f, height * 0.3f, leftMidX + 4f, height * 0.7f, gripPaint)
+            
+            // Right handle grip lines
+            val rightMidX = endX - currentHandleWidth / 2f
+            canvas.drawLine(rightMidX - 4f, height * 0.3f, rightMidX - 4f, height * 0.7f, gripPaint)
+            canvas.drawLine(rightMidX + 4f, height * 0.3f, rightMidX + 4f, height * 0.7f, gripPaint)
+        }
     }
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (videoDurationMs <= 0) return false
 
-        val msPerPixel = videoDurationMs.toFloat() / width
+        val msPerPixel = customMsPerPixel ?: (videoDurationMs.toFloat() / width)
         val startX = startTimeMs / msPerPixel
         val endX = endTimeMs / msPerPixel
 
@@ -225,41 +256,44 @@ class TrackTrimView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> {
                 lastTouchX = event.x
                 downTouchX = event.x
-                dragTarget = when {
-                    event.x >= startX - 30f && event.x <= startX + handleWidth + 30f -> DragTarget.LEFT
-                    event.x >= endX - handleWidth - 30f && event.x <= endX + 30f -> DragTarget.RIGHT
-                    event.x > startX + handleWidth && event.x < endX - handleWidth -> DragTarget.CENTER
-                    else -> DragTarget.NONE
+                dragTarget = if (isTrimEnabled) {
+                    when {
+                        event.x >= startX - 30f && event.x <= startX + handleWidth + 30f -> DragTarget.LEFT
+                        event.x >= endX - handleWidth - 30f && event.x <= endX + 30f -> DragTarget.RIGHT
+                        event.x > startX + handleWidth && event.x < endX - handleWidth -> DragTarget.CENTER
+                        else -> DragTarget.NONE
+                    }
+                } else {
+                    if (event.x >= startX && event.x <= endX) DragTarget.CENTER else DragTarget.NONE
                 }
-                isDraggingHandle = (dragTarget == DragTarget.LEFT || dragTarget == DragTarget.RIGHT)
+                isDraggingHandle = isTrimEnabled && (dragTarget == DragTarget.LEFT || dragTarget == DragTarget.RIGHT)
                 if (dragTarget != DragTarget.NONE) {
                     parent?.requestDisallowInterceptTouchEvent(true)
+                    onDragStateChanged?.invoke(true)
                 }
                 return dragTarget != DragTarget.NONE
             }
             MotionEvent.ACTION_MOVE -> {
+                if (!isTrimEnabled) return true
                 val dx = event.x - lastTouchX
                 val dtMs = (dx * msPerPixel).toLong()
 
                 when (dragTarget) {
                     DragTarget.LEFT -> {
-                        val minStart = if (!isMainVideoTrack) activeStartMs else 0L
-                        val maxStart = if (!isMainVideoTrack) activeEndMs - 100L else endTimeMs - 100L
+                        val minStart = 0L
+                        val maxStart = endTimeMs - 100L
                         startTimeMs = (startTimeMs + dtMs).coerceIn(minStart, maxStart.coerceAtLeast(minStart))
                     }
                     DragTarget.RIGHT -> {
-                        val minEnd = if (!isMainVideoTrack) activeStartMs + 100L else startTimeMs + 100L
-                        val limit = if (isMainVideoTrack) {
-                            if (maxDurationMs > 0L) maxDurationMs else videoDurationMs
-                        } else {
-                            activeEndMs
-                        }
+                        val minEnd = startTimeMs + 100L
+                        val limit = if (maxDurationMs > 0L) maxDurationMs else videoDurationMs
                         endTimeMs = (endTimeMs + dtMs).coerceIn(minEnd, limit.coerceAtLeast(minEnd))
                     }
                     DragTarget.CENTER -> {
                         val duration = endTimeMs - startTimeMs
-                        val minCenterStart = if (!isMainVideoTrack) activeStartMs else 0L
-                        val maxCenterStart = if (!isMainVideoTrack) activeEndMs - duration else videoDurationMs - duration
+                        val minCenterStart = 0L
+                        val limit = if (maxDurationMs > 0L) maxDurationMs else videoDurationMs
+                        val maxCenterStart = limit - duration
                         startTimeMs = (startTimeMs + dtMs).coerceIn(minCenterStart, maxCenterStart.coerceAtLeast(minCenterStart))
                         endTimeMs = startTimeMs + duration
                     }
@@ -269,19 +303,27 @@ class TrackTrimView @JvmOverloads constructor(
                 lastTouchX = event.x
                 invalidate()
                 onTrimAdjusting?.invoke(startTimeMs, endTimeMs)
+                onTrimAdjustingWithDelta?.invoke(startTimeMs, endTimeMs, if (dragTarget == DragTarget.LEFT) dtMs else 0L, if (dragTarget == DragTarget.RIGHT) dtMs else 0L)
                 return true
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if (dragTarget != DragTarget.NONE) {
                     val wasDrag = Math.abs(event.x - downTouchX) > 10f
-                    if (!wasDrag && dragTarget == DragTarget.CENTER && event.action == MotionEvent.ACTION_UP) {
-                        onTrackClicked?.invoke()
-                    } else if (wasDrag) {
-                        onTrimChanged?.invoke(startTimeMs, endTimeMs)
+                    if (!isTrimEnabled) {
+                        if (!wasDrag && event.action == MotionEvent.ACTION_UP) {
+                            onTrackClicked?.invoke()
+                        }
+                    } else {
+                        if (!wasDrag && dragTarget == DragTarget.CENTER && event.action == MotionEvent.ACTION_UP) {
+                            onTrackClicked?.invoke()
+                        } else if (wasDrag) {
+                            onTrimChanged?.invoke(startTimeMs, endTimeMs)
+                        }
                     }
                     dragTarget = DragTarget.NONE
                     isDraggingHandle = false
                     parent?.requestDisallowInterceptTouchEvent(false)
+                    onDragStateChanged?.invoke(false)
                 }
                 return true
             }

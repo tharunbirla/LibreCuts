@@ -63,9 +63,7 @@ class DraggableImageOverlayView @JvmOverloads constructor(
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             val scaleFactor = detector.scaleFactor
             relativeWidth = (relativeWidth * scaleFactor).coerceIn(0.1f, 0.9f)
-            val videoRect = getVideoRect()
-            val videoAspect = if (videoRect.height() > 0) videoRect.width() / videoRect.height() else 1.0f
-            relativeHeight = relativeWidth * videoAspect / imageAspectRatio
+            relativeHeight = relativeWidth / imageAspectRatio
             updateImageViewSizeAndPosition()
             return true
         }
@@ -154,10 +152,7 @@ class DraggableImageOverlayView @JvmOverloads constructor(
         relativeX = 0.5f
         relativeY = 0.5f
         relativeWidth = 0.3f
-        
-        val videoRect = getVideoRect()
-        val videoAspect = if (videoRect.height() > 0) videoRect.width() / videoRect.height() else 1.0f
-        relativeHeight = relativeWidth * videoAspect / aspect
+        relativeHeight = 0.3f / aspect
         rotationAngle = 0f
 
         imageView.setImageURI(uri)
@@ -170,7 +165,7 @@ class DraggableImageOverlayView @JvmOverloads constructor(
     fun activateForEdit(op: com.tharunbirla.librecuts.models.EditOperation.AddImageOverlay) {
         isEditingActive = true
         imageUri = op.imageUri
-        imageAspectRatio = op.relativeWidth / op.relativeHeight
+        imageAspectRatio = if (op.relativeHeight > 0) op.relativeWidth / op.relativeHeight else 1.0f
         relativeX = op.relativeX
         relativeY = op.relativeY
         relativeWidth = op.relativeWidth

@@ -69,11 +69,22 @@ class VideoEditingActivity : AppCompatActivity() {
     private lateinit var player: ExoPlayer
     private lateinit var playerView: StyledPlayerView
     private lateinit var tvDuration: TextView
-    private lateinit var frameRecyclerView: RecyclerView
+    private lateinit var sequenceTrackContainer: LinearLayout
     private lateinit var textTrackContainer: LinearLayout
     private lateinit var imageTrackContainer: LinearLayout
     private lateinit var playerContainer: FrameLayout
     private lateinit var audioTrackContainer: LinearLayout
+    private lateinit var btnPlayPause: ImageButton
+
+    private lateinit var timelineHorizontalScroll: android.widget.HorizontalScrollView
+    private lateinit var timelineContainer: FrameLayout
+    private var isUserScrollingTimeline = false
+    private var isTrackDragging = false
+    private var isProgrammaticScroll = false
+    private var pixelsPerMs: Float = 0.3f
+    private enum class ZoomMode { FIT, MEDIUM, PRECISION }
+    private var currentZoomMode = ZoomMode.MEDIUM
+    private lateinit var scaleDetector: android.view.ScaleGestureDetector
 
     private fun Int.dpToPx(): Int {
         return (this * resources.displayMetrics.density).toInt()
@@ -90,6 +101,9 @@ class VideoEditingActivity : AppCompatActivity() {
     private lateinit var layoutSaveSplit: View
     private lateinit var btnSaveText: View
     private lateinit var btnSaveDropdown: View
+    private lateinit var editingControlsWrapper: LinearLayout
+    private var btnDeleteLayer: View? = null
+    private var tvPreviewBadge: TextView? = null
     private var textOverlayView: com.tharunbirla.librecuts.customviews.TextOverlayView? = null
 
     // ViewModel and Services
@@ -100,8 +114,14 @@ class VideoEditingActivity : AppCompatActivity() {
     private var videoUri: Uri? = null
     private var videoFileName: String = ""
     private lateinit var tempInputFile: File
+    private var frameExtractionJob: Job? = null
+    private val activeRenderJobs = mutableListOf<Job>()
+    private var pendingRenderRunnable: Runnable? = null
     private var isVideoLoaded = false
-    private var isVideoFramesExtracted = false
+    private var isImportLoading = true
+    private var activeExtractionCount = 0
+    private var originalMainVideoDurationMs: Long = 0L
+    private val frameCache = mutableMapOf<Uri, List<Bitmap>>()
 
     // ── FONT: cached absolute path to Roboto-Regular.ttf in cacheDir ──────────
     // Populated in onCreate via ffmpegEngine.copyFontToCache().
@@ -131,6 +151,7 @@ class VideoEditingActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_video_editing)
+        pixelsPerMs = 0.15f * resources.displayMetrics.density
 
         // Set fullscreen flags
         window.decorView.systemUiVisibility = (
@@ -164,11 +185,9 @@ class VideoEditingActivity : AppCompatActivity() {
         initializeViews()
         setupExoPlayer()
         setupCustomSeeker()
-        setupFrameRecyclerView()
         observeViewModelState()
 
         // Play/Pause button logic
-        val btnPlayPause = findViewById<ImageButton>(R.id.btnPlayPause)
         btnPlayPause.setOnClickListener {
             if (::player.isInitialized && isVideoLoaded) {
                 if (player.isPlaying) {
@@ -181,8 +200,7 @@ class VideoEditingActivity : AppCompatActivity() {
                     val endMs = trimOp?.endMs ?: player.duration
                     if (player.currentPosition < startMs || player.currentPosition >= endMs) {
                         player.seekTo(startMs)
-                        val progress = startMs.toFloat() / player.duration
-                        customVideoSeeker.setSeekPosition(progress)
+                        timelineHorizontalScroll.scrollTo((startMs * pixelsPerMs).toInt(), 0)
                         updateDurationDisplay(startMs.toInt(), player.duration.toInt())
                     }
                     player.play()
@@ -212,6 +230,28 @@ class VideoEditingActivity : AppCompatActivity() {
                 }
             }
         }
+        scaleDetector = android.view.ScaleGestureDetector(this, object : android.view.ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScale(detector: android.view.ScaleGestureDetector): Boolean {
+                val scaleFactor = detector.scaleFactor
+                val density = resources.displayMetrics.density
+                val totalDuration = getTotalSequenceDuration()
+                if (totalDuration <= 0L) return true
+
+                val minPixelsPerMs = maxOf(0.015f * density, (timelineHorizontalScroll.width.toFloat() - 32.dpToPx()) / totalDuration)
+                val maxPixelsPerMs = 1.5f * density
+
+                val newPixelsPerMs = pixelsPerMs * scaleFactor
+                pixelsPerMs = newPixelsPerMs.coerceIn(minPixelsPerMs, maxPixelsPerMs)
+
+                viewModel.project.value?.let { renderTracks(it) }
+
+                val currentPos = if (::player.isInitialized) player.currentPosition else 0L
+                isProgrammaticScroll = true
+                timelineHorizontalScroll.scrollTo((currentPos * pixelsPerMs).toInt(), 0)
+                isProgrammaticScroll = false
+                return true
+            }
+        })
 
         // Update play/pause button icon on playback state change
         player.addListener(object : Player.Listener {
@@ -224,6 +264,7 @@ class VideoEditingActivity : AppCompatActivity() {
             }
         })
     }
+
 
     private fun showProErrorDialog(errorCode: ErrorCode, technicalLog: String) {
         val message = "${errorCode.description}\n\nError Code: ${errorCode.code}"
@@ -251,16 +292,58 @@ class VideoEditingActivity : AppCompatActivity() {
         playerView = findViewById(R.id.playerView)
         playerContainer = findViewById(R.id.playerContainer)
         tvDuration = findViewById(R.id.tvDuration)
-        frameRecyclerView = findViewById(R.id.frameRecyclerView)
+        sequenceTrackContainer = findViewById(R.id.sequenceTrackContainer)
         customVideoSeeker = findViewById(R.id.customVideoSeeker)
         timeRulerView = findViewById(R.id.timeRulerView)
         loadingScreen = findViewById(R.id.loadingScreen)
+        loadingScreen.visibility = View.VISIBLE
+        isImportLoading = true
         exportScreen = findViewById(R.id.exportScreen)
         previewLoadingOverlay = findViewById(R.id.previewLoadingOverlay)
         lottieAnimationView = findViewById(R.id.lottieAnimation)
         textTrackContainer = findViewById(R.id.textTrackContainer)
         imageTrackContainer = findViewById(R.id.imageTrackContainer)
         audioTrackContainer = findViewById(R.id.audioTrackContainer)
+
+        btnPlayPause = findViewById(R.id.btnPlayPause)
+        timelineHorizontalScroll = findViewById(R.id.timelineHorizontalScroll)
+        timelineContainer = findViewById(R.id.timelineContainer)
+
+        timelineContainer.post {
+            val halfWidth = timelineContainer.width / 2
+            timelineHorizontalScroll.setPadding(halfWidth, 0, halfWidth, 0)
+        }
+
+        timelineHorizontalScroll.setOnScrollChangeListener { _, scrollX, _, _, _ ->
+            if (!isProgrammaticScroll) {
+                val targetMs = (scrollX / pixelsPerMs).toLong()
+                seekToGlobalPosition(targetMs)
+            }
+        }
+
+        timelineHorizontalScroll.setOnTouchListener { _, event ->
+            scaleDetector.onTouchEvent(event)
+            if (scaleDetector.isInProgress) {
+                true
+            } else {
+                when (event.action) {
+                    android.view.MotionEvent.ACTION_DOWN -> {
+                        isUserScrollingTimeline = true
+                        if (::player.isInitialized && player.isPlaying) {
+                            player.pause()
+                            btnPlayPause.setImageResource(R.drawable.ic_play_24)
+                        }
+                    }
+                    android.view.MotionEvent.ACTION_MOVE -> {
+                        isUserScrollingTimeline = true
+                    }
+                    android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                        isUserScrollingTimeline = false
+                    }
+                }
+                false
+            }
+        }
 
         textOverlayView = try {
             findViewById(R.id.textOverlayView)
@@ -289,9 +372,8 @@ class VideoEditingActivity : AppCompatActivity() {
                             ))
                         }
                     } else {
-                        val trimOp = viewModel.project.value?.operations?.filterIsInstance<EditOperation.Trim>()?.lastOrNull()
-                        val start = trimOp?.startMs ?: 0L
-                        val end = trimOp?.endMs ?: (if (::player.isInitialized) player.duration else 0L)
+                        val start = getGlobalPosition()
+                        val end = minOf(start + 3000L, getTotalSequenceDuration())
                         viewModel.addTextOperation(
                             text = text,
                             fontSize = fontSize,
@@ -365,9 +447,8 @@ class VideoEditingActivity : AppCompatActivity() {
                             ))
                         }
                     } else {
-                        val trimOp = viewModel.project.value?.operations?.filterIsInstance<EditOperation.Trim>()?.lastOrNull()
-                        val start = trimOp?.startMs ?: 0L
-                        val end = trimOp?.endMs ?: (if (::player.isInitialized) player.duration else 0L)
+                        val start = getGlobalPosition()
+                        val end = minOf(start + 3000L, getTotalSequenceDuration())
                         viewModel.addImageOverlayOperation(
                             imageUri = uri,
                             relativeX = relX,
@@ -417,6 +498,9 @@ class VideoEditingActivity : AppCompatActivity() {
         layoutSaveSplit = findViewById(R.id.layoutSaveSplit)
         btnSaveText = findViewById(R.id.btnSaveText)
         btnSaveDropdown = findViewById(R.id.btnSaveDropdown)
+        editingControlsWrapper = findViewById(R.id.editingControlsWrapper)
+        btnDeleteLayer = findViewById(R.id.btnDeleteLayer)
+        tvPreviewBadge = findViewById(R.id.tvPreviewBadge)
 
         btnSaveText.setOnClickListener {
             saveAction()
@@ -488,10 +572,10 @@ class VideoEditingActivity : AppCompatActivity() {
         
         val alpha = if (isBusy) 0.4f else 1.0f
         
-        findViewById<LinearLayout>(R.id.editingControlsWrapper)?.let { wrapper ->
-            wrapper.alpha = alpha
-            for (i in 0 until wrapper.childCount) {
-                wrapper.getChildAt(i).isEnabled = !isBusy
+        if (::editingControlsWrapper.isInitialized) {
+            editingControlsWrapper.alpha = alpha
+            for (i in 0 until editingControlsWrapper.childCount) {
+                editingControlsWrapper.getChildAt(i)?.isEnabled = !isBusy
             }
         }
         
@@ -534,11 +618,11 @@ class VideoEditingActivity : AppCompatActivity() {
     private fun observeViewModelState() {
         lifecycleScope.launch {
             viewModel.uiState.collect { uiState ->
-                if (!uiState.isExporting) {
-                    if (uiState.isExporting) {
-                        loadingScreen.visibility = View.VISIBLE
-                        lottieAnimationView.playAnimation()
-                    } else if (!isVideoLoaded || !isVideoFramesExtracted) {
+                if (uiState.isExporting) {
+                    loadingScreen.visibility = View.VISIBLE
+                    lottieAnimationView.playAnimation()
+                } else {
+                    if (isImportLoading || !isVideoLoaded) {
                         loadingScreen.visibility = View.VISIBLE
                     } else {
                         loadingScreen.visibility = View.GONE
@@ -572,10 +656,9 @@ class VideoEditingActivity : AppCompatActivity() {
                 textOverlayView?.hiddenOperationId = selectedId
                 imageOverlayView?.hiddenOperationId = selectedId
                 
-                val btnDelete = findViewById<View>(R.id.btnDeleteLayer)
                 if (selectedId != null) {
-                    btnDelete?.visibility = View.VISIBLE
-                    btnDelete?.setOnClickListener {
+                    btnDeleteLayer?.visibility = View.VISIBLE
+                    btnDeleteLayer?.setOnClickListener {
                         viewModel.deleteOperation(selectedId)
                         viewModel.selectOperation(null)
                         draggableTextOverlay?.deactivate()
@@ -610,7 +693,7 @@ class VideoEditingActivity : AppCompatActivity() {
                         else -> {} // Audio track
                     }
                 } else {
-                    btnDelete?.visibility = View.GONE
+                    btnDeleteLayer?.visibility = View.GONE
                     draggableTextOverlay?.deactivate()
                     draggableImageOverlay?.deactivate()
                     exitTextEditingMode()
@@ -671,8 +754,10 @@ class VideoEditingActivity : AppCompatActivity() {
             var targetHeight = containerHeight
 
             if (targetRatio > containerRatio) {
+                // Wider than container — fit width, shrink height
                 targetHeight = containerWidth / targetRatio
             } else {
+                // Taller than container — fit height, shrink width
                 targetWidth = containerHeight * targetRatio
             }
 
@@ -929,8 +1014,38 @@ class VideoEditingActivity : AppCompatActivity() {
                     it.data?.let { uri -> selectedVideoUris.add(uri) }
                 }
                 if (selectedVideoUris.isNotEmpty()) {
-                    viewModel.addMergeOperation(selectedVideoUris)
-                    Toast.makeText(this, "Merge operation added (pending)", Toast.LENGTH_SHORT).show()
+                    // Copy content URIs to temp files so FFmpeg can access them, and fetch duration
+                    lifecycleScope.launch {
+                        val mergeItems = withContext(Dispatchers.IO) {
+                            selectedVideoUris.mapNotNull { uri ->
+                                val tempFile = copyContentUriToTempFile(uri, "merge_video", ".mp4")
+                                if (tempFile != null) {
+                                    val tempUri = Uri.fromFile(tempFile)
+                                    val duration = try {
+                                        val retriever = MediaMetadataRetriever()
+                                        try {
+                                            retriever.setDataSource(tempFile.absolutePath)
+                                            val durStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                                            durStr?.toLong() ?: 0L
+                                        } finally {
+                                            retriever.release()
+                                        }
+                                    } catch (e: Exception) {
+                                        0L
+                                    }
+                                    com.tharunbirla.librecuts.models.EditOperation.MergeItem(tempUri, duration)
+                                } else null
+                            }
+                        }
+                        if (mergeItems.isNotEmpty()) {
+                            isImportLoading = true
+                            loadingScreen.visibility = View.VISIBLE
+                            viewModel.addMergeOperation(mergeItems)
+                            Toast.makeText(this@VideoEditingActivity, "${mergeItems.size} video(s) added to sequence", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(this@VideoEditingActivity, "Failed to load selected video(s)", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 }
             }
         } else if (requestCode == PICK_AUDIO_REQUEST && resultCode == Activity.RESULT_OK) {
@@ -968,10 +1083,13 @@ class VideoEditingActivity : AppCompatActivity() {
             // Get audio file duration
             val audioDuration = try {
                 val retriever = MediaMetadataRetriever()
-                retriever.setDataSource(tempAudioFile.absolutePath)
-                val durStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-                retriever.release()
-                durStr?.toLong() ?: 0L
+                try {
+                    retriever.setDataSource(tempAudioFile.absolutePath)
+                    val durStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                    durStr?.toLong() ?: 0L
+                } finally {
+                    retriever.release()
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Error reading audio duration: ${e.message}")
                 0L
@@ -1121,9 +1239,8 @@ class VideoEditingActivity : AppCompatActivity() {
             btnDone.setOnClickListener {
                 stopPlayback()
                 val replaceOriginal = switchReplace?.isChecked ?: false
-                val trimOp = viewModel.project.value?.operations?.filterIsInstance<EditOperation.Trim>()?.lastOrNull()
-                val start = trimOp?.startMs ?: 0L
-                val end = trimOp?.endMs ?: (if (::player.isInitialized) player.duration else 0L)
+                val start = getGlobalPosition()
+                val end = minOf(start + 3000L, getTotalSequenceDuration())
                 viewModel.addBackgroundAudioOperation(
                     audioUri = tempAudioUri,
                     removeOriginalAudio = replaceOriginal,
@@ -1375,7 +1492,7 @@ class VideoEditingActivity : AppCompatActivity() {
                         // Reset UI components when video reaches the end
                         val btnPlayPause = findViewById<ImageButton>(R.id.btnPlayPause)
                         btnPlayPause.setImageResource(R.drawable.ic_play_24)
-                        customVideoSeeker.setSeekPosition(1.0f) // Keep it at the end visually
+                        timelineHorizontalScroll.scrollTo((getTotalSequenceDuration() * pixelsPerMs).toInt(), 0)
 
                         // OPTIONAL: If you want the seeker to jump back to 0 immediately
                         // once it finishes, uncomment the next lines:
@@ -1387,9 +1504,6 @@ class VideoEditingActivity : AppCompatActivity() {
                     }
                     if (state == Player.STATE_READY) {
                         isVideoLoaded = true
-                        if (isVideoFramesExtracted) {
-                            loadingScreen.visibility = View.GONE
-                        }
                         customVideoSeeker.setVideoDuration(player.duration)
                         timeRulerView.setVideoDuration(player.duration)
                         updateDurationDisplay(player.currentPosition.toInt(), player.duration.toInt())
@@ -1452,24 +1566,89 @@ class VideoEditingActivity : AppCompatActivity() {
         customVideoSeeker.removeCallbacks(updateSeekerRunnable)
     }
 
-    private fun syncUiWithPlayer() {
-        val currentPos = player.currentPosition
-        val duration = player.duration
+    private fun getSequenceItems(): List<com.tharunbirla.librecuts.models.EditOperation.MergeItem> {
+        val items = mutableListOf<com.tharunbirla.librecuts.models.EditOperation.MergeItem>()
+        if (!::tempInputFile.isInitialized) return items
         
-        val trimOp = viewModel.project.value?.operations?.filterIsInstance<EditOperation.Trim>()?.lastOrNull()
-        if (trimOp != null && currentPos >= trimOp.endMs) {
-            player.seekTo(trimOp.startMs)
-            return
+        val sourceUri = android.net.Uri.fromFile(tempInputFile)
+        val sourceDuration = if (originalMainVideoDurationMs > 0L) {
+            originalMainVideoDurationMs
+        } else {
+            try {
+                val r = android.media.MediaMetadataRetriever()
+                try {
+                    r.setDataSource(tempInputFile.absolutePath)
+                    val duration = r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong() ?: 0L
+                    originalMainVideoDurationMs = duration
+                    duration
+                } finally {
+                    r.release()
+                }
+            } catch (e: Exception) { 0L }
         }
 
-        if (duration > 0) {
-            val progress = currentPos.toFloat() / duration
-            customVideoSeeker.setSeekPosition(progress)
-            updateDurationDisplay(currentPos.toInt(), duration.toInt())
-            
-            textOverlayView?.currentPositionMs = currentPos
-            imageOverlayView?.currentPositionMs = currentPos
+        val trimOp = viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.Trim>()?.lastOrNull()
+        val sTrimStart = trimOp?.startMs ?: 0L
+        val sTrimEnd = trimOp?.endMs ?: sourceDuration
+        items.add(com.tharunbirla.librecuts.models.EditOperation.MergeItem(sourceUri, sourceDuration, sTrimStart, sTrimEnd))
+        
+        val mergeOp = viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.Merge>()?.firstOrNull()
+        if (mergeOp != null) {
+            items.addAll(mergeOp.items)
         }
+        return items
+    }
+
+    private fun getGlobalPosition(): Long {
+        if (!::player.isInitialized) return 0L
+        val index = player.currentMediaItemIndex
+        val items = getSequenceItems()
+        var pos = 0L
+        for (i in 0 until minOf(index, items.size)) {
+            pos += items[i].trimmedDurationMs
+        }
+        return pos + player.currentPosition
+    }
+
+    private fun getTotalSequenceDuration(): Long {
+        return getSequenceItems().sumOf { it.trimmedDurationMs }
+    }
+
+    private fun syncUiWithPlayer() {
+        val currentGlobalPos = getGlobalPosition()
+        val totalDuration = getTotalSequenceDuration()
+
+        if (totalDuration > 0) {
+            updateDurationDisplay(currentGlobalPos.toInt(), totalDuration.toInt())
+            
+            if (!isUserScrollingTimeline && !isTrackDragging) {
+                val targetScrollX = (currentGlobalPos * pixelsPerMs).toInt()
+                isProgrammaticScroll = true
+                timelineHorizontalScroll.scrollTo(targetScrollX, 0)
+                isProgrammaticScroll = false
+            }
+
+            textOverlayView?.currentPositionMs = currentGlobalPos
+            imageOverlayView?.currentPositionMs = currentGlobalPos
+        }
+    }
+
+    private fun seekToGlobalPosition(globalPos: Long) {
+        if (!::player.isInitialized) return
+        val items = getSequenceItems()
+        var remainingPos = globalPos
+        var index = 0
+        while (index < items.size && remainingPos > items[index].trimmedDurationMs) {
+            remainingPos -= items[index].trimmedDurationMs
+            index++
+        }
+        if (index < items.size) {
+            player.seekTo(index, remainingPos)
+        }
+        val totalDuration = getTotalSequenceDuration()
+        updateDurationDisplay(globalPos.toInt(), totalDuration.toInt())
+        textOverlayView?.currentPositionMs = globalPos
+        imageOverlayView?.currentPositionMs = globalPos
     }
 
     // Update your existing Runnable to include the text display update
@@ -1489,9 +1668,20 @@ class VideoEditingActivity : AppCompatActivity() {
             try {
                 val videoFilePath = getFilePathFromUri(videoUri!!)
                 if (videoFilePath != null) {
-                    tempInputFile = File(videoFilePath)
-                    videoFileName = tempInputFile.name
-                    extractVideoFrames()
+                        tempInputFile = File(videoFilePath)
+                        videoFileName = tempInputFile.name
+                        
+                        try {
+                            val r = android.media.MediaMetadataRetriever()
+                            r.setDataSource(tempInputFile.absolutePath)
+                            originalMainVideoDurationMs = r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong() ?: 0L
+                            r.release()
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error getting original duration: ${e.message}")
+                        }
+
+                        isVideoLoaded = true
+                        viewModel.project.value?.let { renderTracks(it) }
                 }
             } catch (e: Exception) {
                 showError("Error initializing video: ${e.message}")
@@ -1522,34 +1712,167 @@ class VideoEditingActivity : AppCompatActivity() {
     }
 
     private fun renderTracks(project: VideoProject) {
-        val originalDuration = if (::player.isInitialized) player.duration else 0L
-        if (originalDuration <= 0L) return
+        if (!::sequenceTrackContainer.isInitialized) return
+        pendingRenderRunnable?.let { sequenceTrackContainer.removeCallbacks(it) }
+        val runnable = Runnable {
+            performRenderTracks(project)
+        }
+        pendingRenderRunnable = runnable
+        sequenceTrackContainer.post(runnable)
+    }
 
-        val trimOp = project.operations.filterIsInstance<EditOperation.Trim>().lastOrNull()
-        val activeStart = trimOp?.startMs ?: 0L
-        val activeEnd = trimOp?.endMs ?: originalDuration
+    private fun performRenderTracks(project: VideoProject) {
+        activeRenderJobs.forEach { it.cancel() }
+        activeRenderJobs.clear()
 
-        // Update ruler and seeker durations to original duration
-        timeRulerView.setVideoDuration(originalDuration)
-        customVideoSeeker.setVideoDuration(originalDuration)
+        val sequenceItems = getSequenceItems()
 
-        // Main Video Track
-        val mainVideoTrack = findViewById<com.tharunbirla.librecuts.customviews.TrackTrimView>(R.id.mainVideoTrimTrack)
-        if (mainVideoTrack != null) {
-            mainVideoTrack.isMainVideoTrack = true
-            mainVideoTrack.trackColor = android.graphics.Color.TRANSPARENT
-            mainVideoTrack.maxDurationMs = originalDuration
-            mainVideoTrack.activeStartMs = 0L
-            mainVideoTrack.activeEndMs = originalDuration
-            mainVideoTrack.setRange(originalDuration, activeStart, activeEnd)
-            mainVideoTrack.onTrimChanged = { start, end ->
-                viewModel.updateMainVideoTrim(start, end)
-                player.seekTo(start) // Seek when trim handles moved
+        val totalSequenceDuration = getTotalSequenceDuration()
+        if (totalSequenceDuration <= 0L) return
+
+        // Update ExoPlayer playlist if needed
+        val newMediaItems = sequenceItems.map { item ->
+            com.google.android.exoplayer2.MediaItem.Builder()
+                .setUri(item.uri)
+                .setClippingConfiguration(
+                    com.google.android.exoplayer2.MediaItem.ClippingConfiguration.Builder()
+                        .setStartPositionMs(item.trimStartMs)
+                        .setEndPositionMs(item.trimEndMs)
+                        .build()
+                )
+                .build()
+        }
+
+        var changed = player.mediaItemCount != newMediaItems.size
+        if (!changed) {
+            for (i in newMediaItems.indices) {
+                val existing = player.getMediaItemAt(i)
+                val existingStart = existing.clippingConfiguration.startPositionMs
+                val existingEnd = existing.clippingConfiguration.endPositionMs
+                val existingUri = existing.localConfiguration?.uri
+                val newStart = newMediaItems[i].clippingConfiguration.startPositionMs
+                val newEnd = newMediaItems[i].clippingConfiguration.endPositionMs
+                val newUri = newMediaItems[i].localConfiguration?.uri
+                if (existingStart != newStart || existingEnd != newEnd || existingUri != newUri) {
+                    changed = true
+                    break
+                }
             }
-            mainVideoTrack.onTrimAdjusting = { start, end ->
-                updateActiveBoundaries(start, end)
+        }
+
+        if (changed) {
+            val position = player.currentPosition
+            val windowIndex = player.currentMediaItemIndex
+            val wasPlaying = player.isPlaying
+            
+            player.setMediaItems(newMediaItems)
+            player.prepare()
+            
+            if (windowIndex < newMediaItems.size) {
+                player.seekTo(windowIndex, position)
             }
-            mainVideoTrack.invalidate()
+            if (wasPlaying) player.play()
+        }
+
+
+        val timelineWidth = (totalSequenceDuration * pixelsPerMs).toInt()
+
+        // Set explicit widths for ruler and track containers
+        timeRulerView.layoutParams = timeRulerView.layoutParams.apply {
+            width = timelineWidth
+        }
+        timeRulerView.setVideoDuration(totalSequenceDuration)
+
+        customVideoSeeker.setVideoDuration(totalSequenceDuration)
+
+        sequenceTrackContainer.layoutParams = sequenceTrackContainer.layoutParams.apply {
+            width = timelineWidth
+        }
+        textTrackContainer.layoutParams = textTrackContainer.layoutParams.apply {
+            width = timelineWidth
+        }
+        imageTrackContainer.layoutParams = imageTrackContainer.layoutParams.apply {
+            width = timelineWidth
+        }
+        audioTrackContainer.layoutParams = audioTrackContainer.layoutParams.apply {
+            width = timelineWidth
+        }
+
+        // Render Sequence Track
+        sequenceTrackContainer.removeAllViews()
+        sequenceItems.forEachIndexed { index, item ->
+            val segmentView = layoutInflater.inflate(R.layout.item_sequence_segment, sequenceTrackContainer, false) as FrameLayout
+            val segmentWidth = (item.trimmedDurationMs * pixelsPerMs).toInt()
+            val params = LinearLayout.LayoutParams(segmentWidth, ViewGroup.LayoutParams.MATCH_PARENT)
+            segmentView.layoutParams = params
+
+            val rv = segmentView.findViewById<RecyclerView>(R.id.segmentFrameRecyclerView)
+            val lm = LinearLayoutManager(this, RecyclerView.HORIZONTAL, false)
+            rv.layoutManager = lm
+            val itemWidth = maxOf(1, ((item.durationMs * pixelsPerMs) / 15).toInt())
+            val adapter = FrameAdapter(emptyList(), itemWidth)
+            rv.adapter = adapter
+            
+            // Align frames precisely with the trim bounds by offsetting the RecyclerView scroll
+            rv.post {
+                lm.scrollToPositionWithOffset(0, -(item.trimStartMs * pixelsPerMs).toInt())
+            }
+
+            // Extract or load cached frames
+            val job = extractFramesForSegment(item.uri, item.durationMs, adapter)
+            if (job != null) {
+                activeRenderJobs.add(job)
+            }
+
+            val trackTrimView = segmentView.findViewById<com.tharunbirla.librecuts.customviews.TrackTrimView>(R.id.segmentTrimTrack)
+            trackTrimView.isMainVideoTrack = true
+            trackTrimView.trackColor = android.graphics.Color.TRANSPARENT
+            trackTrimView.maxDurationMs = item.durationMs
+            trackTrimView.customMsPerPixel = 1.0f / pixelsPerMs
+            trackTrimView.isTrimEnabled = false
+            
+            // Set the full untrimmed width on TrackTrimView and offset it
+            val trackWidth = (item.durationMs * pixelsPerMs).toInt()
+            trackTrimView.layoutParams = FrameLayout.LayoutParams(trackWidth, ViewGroup.LayoutParams.MATCH_PARENT).apply {
+                leftMargin = -(item.trimStartMs * pixelsPerMs).toInt()
+            }
+            
+            trackTrimView.activeStartMs = item.trimStartMs
+            trackTrimView.activeEndMs = item.trimEndMs
+            trackTrimView.setRange(item.durationMs, item.trimStartMs, item.trimEndMs)
+            
+            trackTrimView.onTrackClicked = {
+                showVideoSegmentTrimDialog(index, item)
+            }
+            
+            segmentView.setOnClickListener {
+                showVideoSegmentTrimDialog(index, item)
+            }
+            segmentView.setOnLongClickListener {
+                showVideoSegmentTrimDialog(index, item)
+                true
+            }
+            
+            val btnLeft = segmentView.findViewById<ImageButton>(R.id.btnMoveLeft)
+            val btnRight = segmentView.findViewById<ImageButton>(R.id.btnMoveRight)
+            
+            if (index > 0) { // Merged items
+                btnLeft.visibility = View.VISIBLE
+                btnRight.visibility = if (index < sequenceItems.size - 1) View.VISIBLE else View.GONE
+                
+                btnLeft.setOnClickListener { viewModel.reorderMergeVideo(index - 1, moveForward = true) }
+                btnRight.setOnClickListener { viewModel.reorderMergeVideo(index - 1, moveForward = false) }
+            } else {
+                // Source video cannot be reordered from here
+                btnLeft.visibility = View.GONE
+                btnRight.visibility = View.GONE
+            }
+
+            sequenceTrackContainer.addView(segmentView)
+        }
+        
+        if (activeRenderJobs.isNotEmpty()) {
+            // Keep track if needed but don't block
         }
 
         // Text tracks
@@ -1573,12 +1896,25 @@ class VideoEditingActivity : AppCompatActivity() {
                             viewModel.selectOperation(op.id)
                         }
                     }
-                    maxDurationMs = originalDuration
-                    activeStartMs = activeStart
-                    activeEndMs = activeEnd
-                    setRange(originalDuration, op.startTimeMs ?: activeStart, op.endTimeMs ?: activeEnd)
+                    maxDurationMs = totalSequenceDuration
+                    activeStartMs = op.startTimeMs ?: 0L
+                    activeEndMs = op.endTimeMs ?: totalSequenceDuration
+                    customMsPerPixel = 1.0f / pixelsPerMs
+                    setRange(totalSequenceDuration, op.startTimeMs ?: 0L, op.endTimeMs ?: totalSequenceDuration)
                     onTrimChanged = { start, end ->
                         viewModel.updateOperation(op.copy(startTimeMs = start, endTimeMs = end))
+                    }
+                    onTrimAdjustingWithDelta = { start, end, deltaStart, deltaEnd ->
+                        if (deltaStart != 0L) {
+                            seekToGlobalPosition(start)
+                        } else if (deltaEnd != 0L) {
+                            seekToGlobalPosition(end)
+                        } else {
+                            seekToGlobalPosition(start)
+                        }
+                    }
+                    onDragStateChanged = { isDragging ->
+                        isTrackDragging = isDragging
                     }
                 }
                 textTrackContainer.addView(trackView)
@@ -1608,16 +1944,29 @@ class VideoEditingActivity : AppCompatActivity() {
                             viewModel.selectOperation(op.id)
                         }
                     }
-                    maxDurationMs = originalDuration
-                    activeStartMs = activeStart
-                    activeEndMs = activeEnd
-                    setRange(originalDuration, op.startTimeMs ?: activeStart, op.endTimeMs ?: activeEnd)
+                    maxDurationMs = totalSequenceDuration
+                    activeStartMs = op.startTimeMs ?: 0L
+                    activeEndMs = op.endTimeMs ?: totalSequenceDuration
+                    customMsPerPixel = 1.0f / pixelsPerMs
+                    setRange(totalSequenceDuration, op.startTimeMs ?: 0L, op.endTimeMs ?: totalSequenceDuration)
                     onTrimChanged = { start, end ->
                         viewModel.updateOperation(op.copy(startTimeMs = start, endTimeMs = end))
                     }
+                    onTrimAdjustingWithDelta = { start, end, deltaStart, deltaEnd ->
+                        if (deltaStart != 0L) {
+                            seekToGlobalPosition(start)
+                        } else if (deltaEnd != 0L) {
+                            seekToGlobalPosition(end)
+                        } else {
+                            seekToGlobalPosition(start)
+                        }
+                    }
+                    onDragStateChanged = { isDragging ->
+                        isTrackDragging = isDragging
+                    }
                     
                     val viewRef = this
-                    lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    val imageJob = lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                         val path = getFilePathFromUri(op.imageUri)
                         if (path != null) {
                             try {
@@ -1630,6 +1979,7 @@ class VideoEditingActivity : AppCompatActivity() {
                             } catch (e: Exception) {}
                         }
                     }
+                    activeRenderJobs.add(imageJob)
                 }
                 imageTrackContainer.addView(trackView)
             }
@@ -1659,12 +2009,25 @@ class VideoEditingActivity : AppCompatActivity() {
                             viewModel.selectOperation(op.id)
                         }
                     }
-                    maxDurationMs = originalDuration
-                    activeStartMs = activeStart
-                    activeEndMs = activeEnd
-                    setRange(originalDuration, op.startTimeMs ?: activeStart, op.endTimeMs ?: activeEnd)
+                    maxDurationMs = totalSequenceDuration
+                    activeStartMs = op.startTimeMs ?: 0L
+                    activeEndMs = op.endTimeMs ?: totalSequenceDuration
+                    customMsPerPixel = 1.0f / pixelsPerMs
+                    setRange(totalSequenceDuration, op.startTimeMs ?: 0L, op.endTimeMs ?: totalSequenceDuration)
                     onTrimChanged = { start, end ->
                         viewModel.updateOperation(op.copy(startTimeMs = start, endTimeMs = end))
+                    }
+                    onTrimAdjustingWithDelta = { start, end, deltaStart, deltaEnd ->
+                        if (deltaStart != 0L) {
+                            seekToGlobalPosition(start)
+                        } else if (deltaEnd != 0L) {
+                            seekToGlobalPosition(end)
+                        } else {
+                            seekToGlobalPosition(start)
+                        }
+                    }
+                    onDragStateChanged = { isDragging ->
+                        isTrackDragging = isDragging
                     }
                 }
                 audioTrackContainer.addView(trackView)
@@ -1672,6 +2035,93 @@ class VideoEditingActivity : AppCompatActivity() {
         } else {
             audioTrackContainer.visibility = View.GONE
         }
+
+        if (activeExtractionCount == 0 && isImportLoading) {
+            isImportLoading = false
+            loadingScreen.visibility = View.GONE
+        }
+    }
+
+    private fun showVideoSegmentTrimDialog(index: Int, item: com.tharunbirla.librecuts.models.EditOperation.MergeItem) {
+        if (isShowingPreview) dismissPreview()
+
+        val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.trim_bottom_sheet_dialog, null)
+        bottomSheet.setContentView(view)
+
+        val tvDurationDisplay = view.findViewById<TextView>(R.id.tvTrimDuration)
+        val trimTrackView = view.findViewById<com.tharunbirla.librecuts.customviews.TrackTrimView>(R.id.trimTrackView)
+        val recyclerView = view.findViewById<RecyclerView>(R.id.trimRecyclerView)
+        val btnDone = view.findViewById<Button>(R.id.btnDoneTrim)
+        val btnClose = view.findViewById<ImageButton>(R.id.btnCloseTrimSheet)
+
+        // Configure RecyclerView for 15 dynamic tiles
+        recyclerView.layoutManager = LinearLayoutManager(this, RecyclerView.HORIZONTAL, false)
+        val dialogRecyclerViewWidth = resources.displayMetrics.widthPixels - 40.dpToPx()
+        val dialogItemWidth = maxOf(1, dialogRecyclerViewWidth / 15)
+        val adapter = FrameAdapter(emptyList(), dialogItemWidth)
+        recyclerView.adapter = adapter
+
+        // Extract frames for the entire video clip
+        val job = extractFramesForSegment(item.uri, item.durationMs, adapter)
+        if (job != null) {
+            activeRenderJobs.add(job)
+        }
+
+        // Configure custom TrackTrimView as the premium Range Slider
+        trimTrackView.isMainVideoTrack = true
+        trimTrackView.isTrimEnabled = true
+        trimTrackView.trackColor = android.graphics.Color.TRANSPARENT
+        trimTrackView.maxDurationMs = item.durationMs
+        trimTrackView.customMsPerPixel = item.durationMs.toFloat() / dialogRecyclerViewWidth
+
+        trimTrackView.activeStartMs = item.trimStartMs
+        trimTrackView.activeEndMs = item.trimEndMs
+        trimTrackView.setRange(item.durationMs, item.trimStartMs, item.trimEndMs)
+
+        var currentStart = item.trimStartMs
+        var currentEnd = item.trimEndMs
+
+        fun updateTimeText(start: Long, end: Long) {
+            val duration = end - start
+            tvDurationDisplay.text = "${formatDuration(start.toInt())} - ${formatDuration(end.toInt())} (${formatDuration(duration.toInt())})"
+        }
+        updateTimeText(item.trimStartMs, item.trimEndMs)
+
+        trimTrackView.onTrimAdjustingWithDelta = { start, end, deltaL, deltaR ->
+            currentStart = start
+            currentEnd = end
+            updateTimeText(start, end)
+
+            val sequenceItems = getSequenceItems()
+            val clipStartGlobal = sequenceItems.take(index).sumOf { it.trimmedDurationMs }
+            if (deltaL != 0L) {
+                seekToGlobalPosition(clipStartGlobal + start)
+            } else if (deltaR != 0L) {
+                seekToGlobalPosition(clipStartGlobal + end)
+            }
+        }
+
+        trimTrackView.onTrimChanged = { start, end ->
+            currentStart = start
+            currentEnd = end
+            updateTimeText(start, end)
+        }
+
+        btnDone.setOnClickListener {
+            if (index == 0) {
+                viewModel.updateMainVideoTrim(currentStart, currentEnd)
+            } else {
+                viewModel.updateMergeItemTrim(index - 1, currentStart, currentEnd)
+            }
+            bottomSheet.dismiss()
+        }
+
+        btnClose.setOnClickListener {
+            bottomSheet.dismiss()
+        }
+
+        bottomSheet.show()
     }
 
     private fun setupCustomSeeker() {
@@ -1679,10 +2129,11 @@ class VideoEditingActivity : AppCompatActivity() {
             // Dismiss preview when user manually seeks
             if (isShowingPreview) dismissPreview()
 
-            val newSeekTime = (player.duration * seekPosition).toLong()
-            if (newSeekTime >= 0 && newSeekTime <= player.duration) {
-                player.seekTo(newSeekTime)
-                updateDurationDisplay(newSeekTime.toInt(), player.duration.toInt())
+            val totalDuration = getTotalSequenceDuration()
+            val newSeekTime = (totalDuration * seekPosition).toLong()
+            if (newSeekTime >= 0 && newSeekTime <= totalDuration) {
+                seekToGlobalPosition(newSeekTime)
+                updateDurationDisplay(newSeekTime.toInt(), totalDuration.toInt())
                 
                 textOverlayView?.currentPositionMs = newSeekTime
                 imageOverlayView?.currentPositionMs = newSeekTime
@@ -1692,81 +2143,78 @@ class VideoEditingActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupFrameRecyclerView() {
-        frameRecyclerView.layoutManager = LinearLayoutManager(this, RecyclerView.HORIZONTAL, false)
-        frameRecyclerView.adapter = FrameAdapter(emptyList())
+    private fun setupTrackInitializers() {
+        // Nothing here anymore since sequence track is dynamic
     }
 
     // Inside VideoEditingActivity
-    private var frameExtractionJob: kotlinx.coroutines.Job? = null
 
-    private fun extractVideoFrames() {
-        frameExtractionJob?.cancel()
+    private fun extractFramesForSegment(uri: Uri, durationMs: Long, adapter: FrameAdapter): kotlinx.coroutines.Job? {
+        if (durationMs <= 0) return null
+        
+        // Return cached if available
+        if (frameCache.containsKey(uri)) {
+            adapter.updateFrames(frameCache[uri]!!)
+            return null
+        }
 
-        // Ensure loading screen is visible at the start
-        loadingScreen.visibility = View.VISIBLE
+        activeExtractionCount++
+        if (isImportLoading) {
+            loadingScreen.visibility = View.VISIBLE
+        }
 
-        frameExtractionJob = lifecycleScope.launch(Dispatchers.IO) {
+        return lifecycleScope.launch(Dispatchers.IO) {
             val retriever = MediaMetadataRetriever()
             val tempFrames = mutableListOf<Bitmap>()
             try {
-                retriever.setDataSource(tempInputFile.absolutePath)
-                val durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-                val videoDurationMs = durationStr?.toLong() ?: 0L
+                val path = getFilePathFromUri(uri)
+                if (path != null) {
+                    retriever.setDataSource(path)
+                } else {
+                    retriever.setDataSource(this@VideoEditingActivity, uri)
+                }
 
-                if (videoDurationMs <= 0) return@launch
+                val frameCount = 15
+                val intervalUs = (durationMs * 1000) / frameCount
 
-                val frameCount = 10
-                val intervalUs = (videoDurationMs * 1000) / frameCount
-
-                // Process all frames in the background WITHOUT updating the UI partially
                 for (i in 0 until frameCount) {
                     if (!coroutineContext.isActive) break
-
                     val timeUs = i * intervalUs
-
-                    // Hardware-accelerated scaling
                     val bitmap = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) {
-                        retriever.getScaledFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST, 200, 150)
+                        retriever.getScaledFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 200, 150)
                     } else {
-                        retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST)
+                        retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
                     }
 
                     bitmap?.let {
                         val finalBitmap = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) it else processBitmap(it)
                         tempFrames.add(finalBitmap)
+                        withContext(Dispatchers.Main) {
+                            adapter.addFrame(finalBitmap)
+                        }
                     }
                 }
 
-                // ONLY update the UI once the loop is completely finished
                 withContext(Dispatchers.Main) {
-                    // FIX: Recycle OLD bitmaps before replacing to prevent memory leak
-                    extractedFrames.forEach { if (!it.isRecycled) it.recycle() }
-                    extractedFrames.clear()
-                    extractedFrames.addAll(tempFrames)
-                    frameRecyclerView.adapter = FrameAdapter(extractedFrames)
-
-                    isVideoFramesExtracted = true
-                    if (isVideoLoaded) {
-                        loadingScreen.visibility = View.GONE
-                    }
+                    frameCache[uri] = tempFrames
                 }
-
             } catch (e: Exception) {
-                Log.e(TAG, "Extraction error: ${e.message}")
-                // FIX: Recycle tempFrames on error — they won't reach the UI
-                isVideoFramesExtracted = true
-                tempFrames.forEach { if (!it.isRecycled) it.recycle() }
-                withContext(Dispatchers.Main) {
-                    if (isVideoLoaded) {
-                        loadingScreen.visibility = View.GONE
-                    }
+                if (e !is kotlinx.coroutines.CancellationException) {
+                    Log.e(TAG, "Extraction error for segment: ${e.message}")
                 }
             } finally {
                 retriever.release()
-                // FIX: If cancelled mid-extraction, recycle orphaned bitmaps
-                if (!coroutineContext.isActive) {
-                    tempFrames.forEach { if (!it.isRecycled) it.recycle() }
+                withContext(kotlinx.coroutines.NonCancellable) {
+                    withContext(Dispatchers.Main) {
+                        activeExtractionCount--
+                        if (activeExtractionCount <= 0) {
+                            activeExtractionCount = 0
+                            if (isImportLoading) {
+                                isImportLoading = false
+                                loadingScreen.visibility = View.GONE
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -1937,7 +2385,7 @@ class VideoEditingActivity : AppCompatActivity() {
 
                 // Show preview badge
                 try {
-                    findViewById<TextView>(R.id.tvPreviewBadge)?.visibility = View.VISIBLE
+                    tvPreviewBadge?.visibility = View.VISIBLE
                 } catch (_: Exception) {}
                 updateUIInteractionState()
             } else {
@@ -1962,7 +2410,7 @@ class VideoEditingActivity : AppCompatActivity() {
         }
 
         try {
-            findViewById<TextView>(R.id.tvPreviewBadge)?.visibility = View.GONE
+            tvPreviewBadge?.visibility = View.GONE
         } catch (_: Exception) {}
 
         previewFile?.delete()
@@ -1971,6 +2419,9 @@ class VideoEditingActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        if (::sequenceTrackContainer.isInitialized) {
+            pendingRenderRunnable?.let { sequenceTrackContainer.removeCallbacks(it) }
+        }
         frameExtractionJob?.cancel()
         previewJob?.cancel()
         extractedFrames.forEach { if (!it.isRecycled) it.recycle() }

@@ -103,8 +103,7 @@ class ImageOverlayView @JvmOverloads constructor(
             
             // Width and height of image in screen coordinates
             val imgW = op.relativeWidth * videoRect.width()
-            val imageAspect = if (bitmap.height > 0) bitmap.width.toFloat() / bitmap.height else 1.0f
-            val imgH = imgW / imageAspect
+            val imgH = op.relativeHeight * videoRect.height()
             
             // Center position on screen
             val centerX = videoRect.left + (op.relativeX * videoRect.width())

@@ -68,17 +68,30 @@ sealed class EditOperation : Serializable {
         fun hasCustomPosition(): Boolean = relativeX != null && relativeY != null
     }
     
+    data class MergeItem(
+        val uri: Uri,
+        val durationMs: Long,
+        val trimStartMs: Long = 0L,
+        val trimEndMs: Long = durationMs
+    ) : Serializable {
+        val trimmedDurationMs: Long
+            get() = trimEndMs - trimStartMs
+    }
+
     /**
      * Merge operation: Concatenates multiple videos with the current video.
      * Uses FFmpeg's concat demuxer for fast concatenation.
      */
     data class Merge(
-        val videoUris: List<Uri>,
+        val items: List<MergeItem>,
         val id: String = System.nanoTime().toString()
     ) : EditOperation() {
         init {
-            require(videoUris.isNotEmpty()) { "Must provide at least one video to merge" }
+            require(items.isNotEmpty()) { "Must provide at least one video to merge" }
         }
+
+        // Backward compatibility property
+        val videoUris: List<Uri> get() = items.map { it.uri }
     }
     
     /**
