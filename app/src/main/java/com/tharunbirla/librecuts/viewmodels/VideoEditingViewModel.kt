@@ -86,6 +86,34 @@ class VideoEditingViewModel : ViewModel() {
             }
         }
     }
+
+    fun updateMainVideoSpeed(speed: Float, proxyUri: Uri?) {
+        viewModelScope.launch {
+            _project.update { current ->
+                if (current == null) return@update null
+
+                val ops = current.operations.toMutableList()
+                
+                val speedIndex = ops.indexOfFirst { it is EditOperation.SpeedMain }
+                if (speedIndex != -1) {
+                    ops[speedIndex] = EditOperation.SpeedMain(speed, proxyUri)
+                } else {
+                    ops.add(EditOperation.SpeedMain(speed, proxyUri))
+                }
+
+                _undoStack.value = _undoStack.value + current
+                _redoStack.value = emptyList()
+                current.copy(operations = ops)
+            }
+            updateUiState { state ->
+                state.copy(
+                    pendingOperationCount = _project.value?.getOperationCount() ?: 0,
+                    canUndo = _undoStack.value.isNotEmpty(),
+                    canRedo = false
+                )
+            }
+        }
+    }
     fun addCropOperation(aspectRatio: String) = addOperation(EditOperation.Crop(aspectRatio))
 
     fun addTextOperation(
@@ -493,6 +521,7 @@ class VideoEditingViewModel : ViewModel() {
                                 is EditOperation.MuteSegment -> op.id == operationId
                                 is EditOperation.AddBackgroundAudio -> op.id == operationId
                                 is EditOperation.AddImageOverlay -> op.id == operationId
+                                is EditOperation.SpeedMain -> op.id == operationId
                             }
                         }
                     )
@@ -604,10 +633,14 @@ class VideoEditingViewModel : ViewModel() {
                         val rotatedImgLabel = "[rotated_img_$stageIndex]"
                         val nextLabel = "[v$stageIndex]"
 
+                        // Ensure image has an alpha channel so rotation doesn't add black corners for JPEGs
+                        val rgbaImgLabel = "[rgba_img_$stageIndex]"
+                        stages.add("[$imageInputIndex:v]format=rgba$rgbaImgLabel")
+                        
                         // Scale image relative to reference video dimensions
-                        stages.add("[$imageInputIndex:v]${currentLabel}scale2ref=w=main_w*${op.relativeWidth}:h=main_h*${op.relativeHeight}${scaledImgLabel}${refVidLabel}")
-                        // Rotate image (c=none preserves transparent background)
-                        stages.add("${scaledImgLabel}rotate=$radians:c=none${rotatedImgLabel}")
+                        stages.add("${rgbaImgLabel}${currentLabel}scale2ref=w=main_w*${op.relativeWidth}:h=main_h*${op.relativeHeight}${scaledImgLabel}${refVidLabel}")
+                        // Rotate image (c=none preserves transparent background, ow/oh prevent cropping)
+                        stages.add("${scaledImgLabel}rotate=$radians:c=none:ow='rotw($radians)':oh='roth($radians)'${rotatedImgLabel}")
                         // Overlay image on the reference video
                         val enablePart = buildEnableExpr(op.startTimeMs, op.endTimeMs)
                         stages.add("${refVidLabel}${rotatedImgLabel}overlay=x=(W*${op.relativeX})-(w/2):y=(H*${op.relativeY})-(h/2)${enablePart}${nextLabel}")
@@ -678,7 +711,18 @@ class VideoEditingViewModel : ViewModel() {
 
         // 1. Source Video Input (Index 0)
         var outputDuration: Double? = null
-        if (trimOp != null) {
+        val speedOp = operations.filterIsInstance<EditOperation.SpeedMain>().lastOrNull()
+        
+        if (speedOp?.proxyUri != null) {
+            val proxyPath = speedOp.proxyUri.path ?: speedOp.proxyUri.toString()
+            val baseDuration = if (trimOp != null) (trimOp.endMs - trimOp.startMs) else 0L // Cannot easily get sourceDurationMs here, but outputDuration is only needed if mergeOp == null
+            if (baseDuration > 0) {
+                outputDuration = baseDuration / speedOp.speed / 1000.0
+                cmd.append("-t $outputDuration -i \"$proxyPath\"")
+            } else {
+                cmd.append("-i \"$proxyPath\"")
+            }
+        } else if (trimOp != null) {
             val startSecs = trimOp.startMs / 1000.0
             val duration = (trimOp.endMs - trimOp.startMs) / 1000.0
             if (mergeOp == null) {
@@ -694,10 +738,16 @@ class VideoEditingViewModel : ViewModel() {
         val mergeVideoIndices = mutableListOf<Int>()
         if (mergeOp != null) {
             for (item in mergeOp.items) {
-                val videoPath = item.uri.path ?: item.uri.toString()
-                val startSecs = item.trimStartMs / 1000.0
-                val duration = (item.trimEndMs - item.trimStartMs) / 1000.0
-                cmd.append(" -ss $startSecs -t $duration -i \"$videoPath\"")
+                if (item.proxyUri != null) {
+                    val proxyPath = item.proxyUri.path ?: item.proxyUri.toString()
+                    val duration = item.trimmedDurationMs / 1000.0
+                    cmd.append(" -t $duration -i \"$proxyPath\"")
+                } else {
+                    val videoPath = item.uri.path ?: item.uri.toString()
+                    val startSecs = item.trimStartMs / 1000.0
+                    val duration = (item.trimEndMs - item.trimStartMs) / 1000.0
+                    cmd.append(" -ss $startSecs -t $duration -i \"$videoPath\"")
+                }
                 mergeVideoIndices.add(inputIndex)
                 inputIndex++
             }
@@ -762,7 +812,10 @@ class VideoEditingViewModel : ViewModel() {
             val durationsArray = DoubleArray(inputCount)
             
             hasAudioArray[0] = hasAudio
-            durationsArray[0] = if (trimOp != null) {
+            durationsArray[0] = if (speedOp?.proxyUri != null) {
+                val base = if (trimOp != null) (trimOp.endMs - trimOp.startMs) else sourceDurationMs
+                (base / speedOp.speed) / 1000.0
+            } else if (trimOp != null) {
                 (trimOp.endMs - trimOp.startMs) / 1000.0
             } else {
                 sourceDurationMs / 1000.0
@@ -780,7 +833,7 @@ class VideoEditingViewModel : ViewModel() {
                         r.release()
                     }
                 } catch (e: Exception) { true }
-                durationsArray[idx + 1] = (item.trimEndMs - item.trimStartMs) / 1000.0
+                durationsArray[idx + 1] = item.trimmedDurationMs / 1000.0
             }
 
             val mutedSegments = operations.filterIsInstance<EditOperation.MuteSegment>().map { it.index }

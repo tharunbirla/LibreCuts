@@ -150,6 +150,7 @@ class VideoEditingActivity : AppCompatActivity() {
     private var selectedVideoIndex: Int? = null
     private var videoEditingToolbar: View? = null
     private var audioEditingToolbar: View? = null
+    private var speedEditingToolbar: View? = null
     private var cropEditingToolbar: View? = null
 
     // Segmented preview state
@@ -546,9 +547,32 @@ class VideoEditingActivity : AppCompatActivity() {
                         }
                     }
                 }
+                toolbar.findViewById<ImageButton>(R.id.btnVideoSpeed)?.setBounceClickListener {
+                    selectedVideoIndex?.let { index ->
+                        val items = getSequenceItems()
+                        if (index >= 0 && index < items.size) {
+                            showSpeedEditingToolbar(index, items[index])
+                        }
+                    }
+                }
             }
         } catch (e: Exception) {
             Log.w(TAG, "Video editing toolbar not found: ${e.message}")
+            null
+        }
+
+        speedEditingToolbar = try {
+            findViewById<View>(R.id.speedEditingToolbar)?.also { toolbar ->
+                toolbar.findViewById<ImageButton>(R.id.btnCloseSpeedSheet)?.setBounceClickListener {
+                    hideSpeedEditingToolbar()
+                }
+                toolbar.findViewById<View>(R.id.speedBtn05)?.setBounceClickListener { applySpeedToSegment(0.5f) }
+                toolbar.findViewById<View>(R.id.speedBtn10)?.setBounceClickListener { applySpeedToSegment(1.0f) }
+                toolbar.findViewById<View>(R.id.speedBtn15)?.setBounceClickListener { applySpeedToSegment(1.5f) }
+                toolbar.findViewById<View>(R.id.speedBtn20)?.setBounceClickListener { applySpeedToSegment(2.0f) }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Speed editing toolbar not found: ${e.message}")
             null
         }
 
@@ -1118,6 +1142,122 @@ class VideoEditingActivity : AppCompatActivity() {
         cropEditingToolbar?.visibility = View.GONE
         editingControlsWrapper.visibility = View.VISIBLE
     }
+
+    private fun showSpeedEditingToolbar(index: Int, item: com.tharunbirla.librecuts.models.EditOperation.MergeItem) {
+        closeActiveEditingModes()
+        speedEditingToolbar?.visibility = View.VISIBLE
+        editingControlsWrapper.visibility = View.GONE
+        
+        updateSpeedUi(item.speed)
+        
+        if (::player.isInitialized && player.isPlaying) {
+            player.pause()
+        }
+    }
+
+    private fun hideSpeedEditingToolbar() {
+        speedEditingToolbar?.visibility = View.GONE
+        if (selectedVideoIndex != null) {
+            videoEditingToolbar?.visibility = View.VISIBLE
+        } else {
+            editingControlsWrapper.visibility = View.VISIBLE
+        }
+    }
+
+    private fun showLoading(message: String) {
+        val tvLoadingTitle = loadingScreen.findViewById<TextView>(R.id.tvLoadingTitle)
+        tvLoadingTitle?.text = message
+        loadingScreen.visibility = View.VISIBLE
+    }
+
+    private fun hideLoading() {
+        loadingScreen.visibility = View.GONE
+    }
+
+    private fun updateSpeedUi(speed: Float) {
+        val toolbar = speedEditingToolbar ?: return
+        val speeds = mapOf(
+            0.5f to Pair(R.id.bgSpeed05, R.id.txtSpeed05),
+            1.0f to Pair(R.id.bgSpeed10, R.id.txtSpeed10),
+            1.5f to Pair(R.id.bgSpeed15, R.id.txtSpeed15),
+            2.0f to Pair(R.id.bgSpeed20, R.id.txtSpeed20)
+        )
+        
+        speeds.forEach { (s, views) ->
+            val bg = toolbar.findViewById<View>(views.first)
+            val txt = toolbar.findViewById<TextView>(views.second)
+            if (speed == s) {
+                bg?.setBackgroundResource(R.drawable.bg_aspect_ratio_selected)
+                txt?.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.activeTool))
+            } else {
+                bg?.setBackgroundResource(R.drawable.bg_aspect_ratio_item)
+                txt?.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.toolTextInactive))
+            }
+        }
+    }
+
+    private fun applySpeedToSegment(speed: Float) {
+        val index = selectedVideoIndex ?: return
+        val items = getSequenceItems()
+        if (index < 0 || index >= items.size) return
+        
+        val item = items[index]
+        if (item.speed == speed) {
+            hideSpeedEditingToolbar()
+            return
+        }
+        
+        updateSpeedUi(speed)
+        
+        if (speed == 1.0f) {
+            // Reset to normal speed, no proxy needed
+            if (index == 0) {
+                viewModel.updateMainVideoSpeed(1.0f, null)
+            } else {
+                updateVideoSegment(index, item.copy(speed = 1.0f, proxyUri = null))
+            }
+            hideSpeedEditingToolbar()
+            return
+        }
+        
+        lifecycleScope.launch {
+            showLoading("Applying speed changes...")
+            val outputFileName = "proxy_speed_${System.currentTimeMillis()}.mp4"
+            val outputFilePath = java.io.File(cacheDir, outputFileName).absolutePath
+            
+            val result = ffmpegEngine.generateSpeedProxy(
+                sourceFilePath = getFilePathFromUri(item.uri) ?: "",
+                startMs = item.trimStartMs,
+                endMs = item.trimEndMs,
+                speed = speed,
+                outputFilePath = outputFilePath
+            )
+            
+            hideLoading()
+            
+            if (result is com.tharunbirla.librecuts.services.FFmpegRenderEngine.RenderResult.Success) {
+                val proxyUri = android.net.Uri.fromFile(java.io.File(result.outputPath))
+                if (index == 0) {
+                    viewModel.updateMainVideoSpeed(speed, proxyUri)
+                } else {
+                    updateVideoSegment(index, item.copy(speed = speed, proxyUri = proxyUri))
+                }
+                hideSpeedEditingToolbar()
+            } else {
+                android.widget.Toast.makeText(this@VideoEditingActivity, "Failed to apply speed", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    
+    private fun updateVideoSegment(index: Int, newItem: com.tharunbirla.librecuts.models.EditOperation.MergeItem) {
+        val project = viewModel.project.value ?: return
+        val currentMergeOp = project.operations.find { it is com.tharunbirla.librecuts.models.EditOperation.Merge } as? com.tharunbirla.librecuts.models.EditOperation.Merge ?: return
+        val updatedItems = currentMergeOp.items.toMutableList()
+        updatedItems[index - 1] = newItem
+        val newMergeOp = currentMergeOp.copy(items = updatedItems)
+        viewModel.updateOperation(newMergeOp)
+        viewModel.project.value?.let { renderTracks(it) }
+    }
     
     private fun updateCropUi(ratio: String) {
         val toolbar = cropEditingToolbar ?: return
@@ -1184,7 +1324,7 @@ class VideoEditingActivity : AppCompatActivity() {
 
     private fun extractAudioFromSegment(index: Int, item: com.tharunbirla.librecuts.models.EditOperation.MergeItem) {
         lifecycleScope.launch {
-            loadingScreen.visibility = View.VISIBLE
+            showLoading("Extracting audio...")
             val ffmpegEngine = com.tharunbirla.librecuts.services.FFmpegRenderEngine(this@VideoEditingActivity)
             
             // Generate a unique output file path
@@ -1196,7 +1336,7 @@ class VideoEditingActivity : AppCompatActivity() {
                 ffmpegEngine.extractAudio(sourceFilePath, outputFilePath)
             }
 
-            loadingScreen.visibility = View.GONE
+            hideLoading()
 
             if (result is com.tharunbirla.librecuts.services.FFmpegRenderEngine.RenderResult.Success) {
                 val sequenceItems = getSequenceItems()
@@ -1566,7 +1706,9 @@ class VideoEditingActivity : AppCompatActivity() {
                         // Reset UI components when video reaches the end
                         val btnPlayPause = findViewById<ImageButton>(R.id.btnPlayPause)
                         btnPlayPause.setImageResource(R.drawable.ic_play_24)
+                        isProgrammaticScroll = true
                         timelineHorizontalScroll.scrollTo((getTotalSequenceDuration() * pixelsPerMs).toInt(), 0)
+                        isProgrammaticScroll = false
 
                         // OPTIONAL: If you want the seeker to jump back to 0 immediately
                         // once it finishes, uncomment the next lines:
@@ -1689,7 +1831,10 @@ class VideoEditingActivity : AppCompatActivity() {
         val trimOp = viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.Trim>()?.lastOrNull()
         val sTrimStart = trimOp?.startMs ?: 0L
         val sTrimEnd = trimOp?.endMs ?: sourceDuration
-        items.add(com.tharunbirla.librecuts.models.EditOperation.MergeItem(sourceUri, sourceDuration, sTrimStart, sTrimEnd))
+        val speedOp = viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.SpeedMain>()?.lastOrNull()
+        val speed = speedOp?.speed ?: 1.0f
+        val proxyUri = speedOp?.proxyUri
+        items.add(com.tharunbirla.librecuts.models.EditOperation.MergeItem(sourceUri, sourceDuration, sTrimStart, sTrimEnd, speed, proxyUri))
         
         val mergeOp = viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.Merge>()?.firstOrNull()
         if (mergeOp != null) {
@@ -1883,11 +2028,20 @@ class VideoEditingActivity : AppCompatActivity() {
                 val vEnd = vGlobalMs + item.trimmedDurationMs
                 if (chunkStartMs >= vStart && chunkEndMs <= vEnd) {
                     val offsetInVideoMs = chunkStartMs - vStart
-                    val clipStartUs = (item.trimStartMs + offsetInVideoMs) * 1000L
+                    
+                    val clipStartUs: Long
+                    val videoUri: Uri
+                    if (item.proxyUri != null) {
+                        clipStartUs = offsetInVideoMs * 1000L
+                        videoUri = item.proxyUri
+                    } else {
+                        clipStartUs = (item.trimStartMs + offsetInVideoMs) * 1000L
+                        videoUri = item.uri
+                    }
                     val clipEndUs = clipStartUs + (chunkDurationMs * 1000L)
                     
                     val videoMediaItem = com.google.android.exoplayer2.MediaItem.Builder()
-                        .setUri(item.uri)
+                        .setUri(videoUri)
                         .build()
                     val baseVideoSource = mediaSourceFactory.createMediaSource(videoMediaItem)
                     

@@ -277,6 +277,31 @@ class FFmpegRenderEngine(private val context: Context) {
         return executeCommand(command)
     }
 
+    suspend fun generateSpeedProxy(
+        sourceFilePath: String,
+        startMs: Long,
+        endMs: Long,
+        speed: Float,
+        outputFilePath: String
+    ): RenderResult {
+        val startSecs = startMs / 1000.0
+        val durationSecs = (endMs - startMs) / 1000.0
+        
+        val safeSpeed = speed.coerceIn(0.25f, 4.0f)
+        val ptsMultiplier = 1.0f / safeSpeed
+        
+        val audioFilter = if (safeSpeed < 0.5f) {
+            "atempo=0.5,atempo=${safeSpeed * 2.0f}"
+        } else if (safeSpeed > 2.0f) {
+            "atempo=2.0,atempo=${safeSpeed / 2.0f}"
+        } else {
+            "atempo=$safeSpeed"
+        }
+        
+        val command = "-y -ss $startSecs -i \"$sourceFilePath\" -to $durationSecs -filter:v \"setpts=${ptsMultiplier}*PTS\" -filter:a \"$audioFilter\" \"$outputFilePath\""
+        return executeCommand(command)
+    }
+
     suspend fun cropVideo(
         sourceFilePath: String,
         aspectRatio: String,

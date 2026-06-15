@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@android:color/transparent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="24dp"
+        android:background="@drawable/bg_bottom_nav_floating"
+        android:paddingVertical="24dp"
+        android:elevation="12dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:paddingHorizontal="24dp">
+
+            <TextView
+                android:id="@+id/tvTitleSpeed"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:fontFamily="sans-serif-medium"
+                android:text="Video Speed"
+                android:textColor="@color/textColor"
+                android:textSize="18sp" />
+
+            <ImageButton
+                android:id="@+id/btnCloseSpeedSheet"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_alignParentEnd="true"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_close_24"
+                app:tint="@color/activeTool" />
+        </RelativeLayout>
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:overScrollMode="never"
+            android:scrollbars="none"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:layout_gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="24dp">
+
+                <!-- 0.5x -->
+                <LinearLayout
+                    android:id="@+id/speedBtn05"
+                    android:layout_width="72dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="12dp"
+                    android:gravity="center"
+                    android:orientation="vertical">
+                    <FrameLayout
+                        android:id="@+id/bgSpeed05"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:background="@drawable/bg_aspect_ratio_item">
+                        <TextView
+                            android:id="@+id/txtSpeed05"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:text="0.5x"
+                            android:textColor="@color/iconSecondary"
+                            android:fontFamily="sans-serif-medium"
+                            android:textSize="16sp" />
+                    </FrameLayout>
+                </LinearLayout>
+
+                <!-- 1.0x -->
+                <LinearLayout
+                    android:id="@+id/speedBtn10"
+                    android:layout_width="72dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="12dp"
+                    android:gravity="center"
+                    android:orientation="vertical">
+                    <FrameLayout
+                        android:id="@+id/bgSpeed10"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:background="@drawable/bg_aspect_ratio_item">
+                        <TextView
+                            android:id="@+id/txtSpeed10"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:text="1x"
+                            android:textColor="@color/iconSecondary"
+                            android:fontFamily="sans-serif-medium"
+                            android:textSize="16sp" />
+                    </FrameLayout>
+                </LinearLayout>
+
+                <!-- 1.5x -->
+                <LinearLayout
+                    android:id="@+id/speedBtn15"
+                    android:layout_width="72dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="12dp"
+                    android:gravity="center"
+                    android:orientation="vertical">
+                    <FrameLayout
+                        android:id="@+id/bgSpeed15"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:background="@drawable/bg_aspect_ratio_item">
+                        <TextView
+                            android:id="@+id/txtSpeed15"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:text="1.5x"
+                            android:textColor="@color/iconSecondary"
+                            android:fontFamily="sans-serif-medium"
+                            android:textSize="16sp" />
+                    </FrameLayout>
+                </LinearLayout>
+
+                <!-- 2.0x -->
+                <LinearLayout
+                    android:id="@+id/speedBtn20"
+                    android:layout_width="72dp"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical">
+                    <FrameLayout
+                        android:id="@+id/bgSpeed20"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:background="@drawable/bg_aspect_ratio_item">
+                        <TextView
+                            android:id="@+id/txtSpeed20"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:text="2x"
+                            android:textColor="@color/iconSecondary"
+                            android:fontFamily="sans-serif-medium"
+                            android:textSize="16sp" />
+                    </FrameLayout>
+                </LinearLayout>
+
+            </LinearLayout>
+        </HorizontalScrollView>
+    </LinearLayout>
+</LinearLayout>

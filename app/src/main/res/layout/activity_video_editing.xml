@@ -354,6 +354,14 @@
             android:layout_height="wrap_content"
             android:visibility="gone" />
 
+        <!-- Speed Editing Toolbar (inline mode, hidden by default) -->
+        <include
+            android:id="@+id/speedEditingToolbar"
+            layout="@layout/speed_editing_toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
+
         <LinearLayout
             android:id="@+id/editingControlsWrapper"
             android:layout_width="match_parent"

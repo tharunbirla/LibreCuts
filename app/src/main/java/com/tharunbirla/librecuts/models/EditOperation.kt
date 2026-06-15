@@ -26,6 +26,15 @@ sealed class EditOperation : Serializable {
     }
     
     /**
+     * Speed operation for the main video.
+     */
+    data class SpeedMain(
+        val speed: Float,
+        val proxyUri: Uri? = null,
+        val id: String = System.nanoTime().toString()
+    ) : EditOperation()
+    
+    /**
      * Crop operation: Crops video to a specified aspect ratio.
      * Supported aspects: "16:9", "9:16", "1:1"
      * Uses FFmpeg's crop filter with video re-encoding.
@@ -72,10 +81,12 @@ sealed class EditOperation : Serializable {
         val uri: Uri,
         val durationMs: Long,
         val trimStartMs: Long = 0L,
-        val trimEndMs: Long = durationMs
+        val trimEndMs: Long = durationMs,
+        val speed: Float = 1.0f,
+        val proxyUri: Uri? = null
     ) : Serializable {
         val trimmedDurationMs: Long
-            get() = trimEndMs - trimStartMs
+            get() = ((trimEndMs - trimStartMs) / speed).toLong()
     }
 
     /**
