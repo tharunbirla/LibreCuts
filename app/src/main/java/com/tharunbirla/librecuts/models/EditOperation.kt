@@ -120,6 +120,17 @@ sealed class EditOperation : Serializable {
         val index: Int,
         val id: String = System.nanoTime().toString()
     ) : EditOperation()
+
+    /**
+     * Transition operation: Adds a transition effect between two consecutive videos.
+     * index: The index of the first video in the sequence. (0 = base video, 1 = merge item 0, etc.)
+     */
+    data class Transition(
+        val index: Int,
+        val type: String,
+        val durationMs: Long = 1000L,
+        val id: String = System.nanoTime().toString()
+    ) : EditOperation()
     
     /**
      * Add background audio operation: Overlays an audio file over the video.
@@ -134,6 +145,8 @@ sealed class EditOperation : Serializable {
         val internalEndMs: Long = -1L,
         val startTimeMs: Long? = null,
         val endTimeMs: Long? = null,
+        val originalDurationMs: Long = 0L,
+        val extractedFromSegmentIndex: Int? = null,
         val id: String = System.nanoTime().toString()
     ) : EditOperation() {
         init {

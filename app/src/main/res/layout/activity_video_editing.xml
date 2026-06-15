@@ -257,13 +257,12 @@
                                 android:paddingBottom="16dp">
                                 
                                 <!-- Video Track Sequence Container -->
-                                <LinearLayout
+                                <FrameLayout
                                     android:id="@+id/sequenceTrackContainer"
                                     android:layout_width="wrap_content"
                                     android:layout_height="64dp"
-                                    android:layout_marginBottom="4dp"
-                                    android:orientation="horizontal">
-                                </LinearLayout>
+                                    android:layout_marginBottom="4dp">
+                                </FrameLayout>
 
                                 <!-- Text Track Container -->
                                 <LinearLayout

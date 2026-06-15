@@ -72,7 +72,7 @@ class VideoEditingActivity : AppCompatActivity() {
     private lateinit var player: ExoPlayer
     private lateinit var playerView: StyledPlayerView
     private lateinit var tvDuration: TextView
-    private lateinit var sequenceTrackContainer: LinearLayout
+    private lateinit var sequenceTrackContainer: FrameLayout
     private lateinit var textTrackContainer: LinearLayout
     private lateinit var imageTrackContainer: LinearLayout
     private lateinit var playerContainer: FrameLayout
@@ -158,6 +158,8 @@ class VideoEditingActivity : AppCompatActivity() {
     private var isShowingPreview = false
     private var isRenderingPreview = false
     private var previewFile: File? = null
+    
+    private var audioPreviewPlayer: android.media.MediaPlayer? = null
     
     private var isInitialFitDone = false
 
@@ -599,6 +601,77 @@ class VideoEditingActivity : AppCompatActivity() {
                         }
                     }
                 }
+
+                val trimTrack = toolbar.findViewById<com.tharunbirla.librecuts.customviews.TrackTrimView>(R.id.audioTrimTrack)
+                val tvTrimValue = toolbar.findViewById<TextView>(R.id.tvAudioTrimValues)
+                
+                trimTrack?.onTrimChanged = { startMs, endMs, _ ->
+                    tvTrimValue?.text = "${formatDuration(startMs.toInt())} - ${formatDuration(endMs.toInt())}"
+                    viewModel.selectedOperationId.value?.let { id ->
+                        val project = viewModel.project.value ?: return@let
+                        val op = project.operations.find { it is com.tharunbirla.librecuts.models.EditOperation.AddBackgroundAudio && it.id == id } as? com.tharunbirla.librecuts.models.EditOperation.AddBackgroundAudio
+                        if (op != null) {
+                            viewModel.updateOperation(op.copy(
+                                internalStartMs = startMs,
+                                internalEndMs = endMs
+                            ))
+                        }
+                    }
+                }
+
+                trimTrack?.onTrimAdjustingWithDelta = { startMs, endMs, _, _ ->
+                    tvTrimValue?.text = "${formatDuration(startMs.toInt())} - ${formatDuration(endMs.toInt())}"
+                }
+                
+                val btnAudioPreviewPlay = toolbar.findViewById<ImageButton>(R.id.btnAudioPreviewPlay)
+                btnAudioPreviewPlay?.setBounceClickListener {
+                    if (audioPreviewPlayer?.isPlaying == true) {
+                        audioPreviewPlayer?.stop()
+                        audioPreviewPlayer?.release()
+                        audioPreviewPlayer = null
+                        btnAudioPreviewPlay.setImageResource(R.drawable.ic_play_24)
+                        return@setBounceClickListener
+                    }
+
+                    viewModel.selectedOperationId.value?.let { id ->
+                        val project = viewModel.project.value ?: return@setBounceClickListener
+                        val op = project.operations.find { it is com.tharunbirla.librecuts.models.EditOperation.AddBackgroundAudio && it.id == id } as? com.tharunbirla.librecuts.models.EditOperation.AddBackgroundAudio
+                        if (op != null) {
+                            try {
+                                audioPreviewPlayer = android.media.MediaPlayer().apply {
+                                    setDataSource(this@VideoEditingActivity, op.audioUri)
+                                    prepare()
+                                    seekTo(op.internalStartMs.toInt())
+                                    start()
+                                    btnAudioPreviewPlay.setImageResource(R.drawable.ic_pause_24)
+                                    
+                                    val durationToPlay = if (op.internalEndMs > 0 && op.internalEndMs > op.internalStartMs) {
+                                        op.internalEndMs - op.internalStartMs
+                                    } else {
+                                        op.originalDurationMs - op.internalStartMs
+                                    }
+                                    
+                                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                        try {
+                                            if (audioPreviewPlayer === this && isPlaying) {
+                                                stop()
+                                                release()
+                                                if (audioPreviewPlayer === this) {
+                                                    audioPreviewPlayer = null
+                                                }
+                                                btnAudioPreviewPlay.setImageResource(R.drawable.ic_play_24)
+                                            }
+                                        } catch (e: Exception) {
+                                            // Player was already released or invalid state
+                                        }
+                                    }, durationToPlay)
+                                }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to preview audio segment", e)
+                            }
+                        }
+                    }
+                }
             }
         } catch (e: Exception) {
             Log.w(TAG, "Audio editing toolbar not found: ${e.message}")
@@ -821,7 +894,7 @@ class VideoEditingActivity : AppCompatActivity() {
                             enterImageEditingModeForEdit(op.rotationAngle)
                         }
                         is EditOperation.AddBackgroundAudio -> {
-                            enterAudioEditingMode(op.volume)
+                            enterAudioEditingMode(op)
                         }
                         else -> {}
                     }
@@ -1100,7 +1173,7 @@ class VideoEditingActivity : AppCompatActivity() {
     }
 
 
-    private fun enterAudioEditingMode(volume: Float) {
+    private fun enterAudioEditingMode(op: com.tharunbirla.librecuts.models.EditOperation.AddBackgroundAudio) {
         closeActiveEditingModes()
         selectedVideoIndex = null
         audioEditingToolbar?.visibility = View.VISIBLE
@@ -1108,8 +1181,33 @@ class VideoEditingActivity : AppCompatActivity() {
         audioEditingToolbar?.let { toolbar ->
             val slider = toolbar.findViewById<com.google.android.material.slider.Slider>(R.id.audioVolumeSlider)
             val tvValue = toolbar.findViewById<TextView>(R.id.tvAudioVolumeValue)
-            slider?.value = volume.coerceIn(0f, 1f)
-            tvValue?.text = "${(volume * 100).toInt()}%"
+            slider?.value = op.volume.coerceIn(0f, 1f)
+            tvValue?.text = "${(op.volume * 100).toInt()}%"
+
+            val trimTrack = toolbar.findViewById<com.tharunbirla.librecuts.customviews.TrackTrimView>(R.id.audioTrimTrack)
+            val tvTrimValue = toolbar.findViewById<TextView>(R.id.tvAudioTrimValues)
+            
+            val maxMs = getTotalSequenceDuration().coerceAtLeast(op.originalDurationMs)
+            if (op.originalDurationMs > 0) {
+                trimTrack?.isMainVideoTrack = false
+                trimTrack?.isAudioTrack = true
+                trimTrack?.trackColor = android.graphics.Color.TRANSPARENT
+                trimTrack?.maxDurationMs = op.originalDurationMs
+                val seqDuration = getTotalSequenceDuration()
+                trimTrack?.maxSelectionDurationMs = if (seqDuration > 0) seqDuration else null
+                
+                val trackWidth = resources.displayMetrics.widthPixels - 32.dpToPx()
+                trimTrack?.customMsPerPixel = op.originalDurationMs.toFloat() / trackWidth
+                
+                val endMs = if (op.internalEndMs > 0) op.internalEndMs else op.originalDurationMs
+                val initialEndMs = endMs.coerceAtMost(op.internalStartMs + seqDuration)
+                trimTrack?.setRange(op.originalDurationMs, op.internalStartMs, initialEndMs)
+                
+                tvTrimValue?.text = "${formatDuration(op.internalStartMs.toInt())} - ${formatDuration(endMs.toInt())}"
+            } else {
+                trimTrack?.setRange(maxMs, 0, maxMs)
+                tvTrimValue?.text = "Unknown duration"
+            }
         }
         if (::player.isInitialized && player.isPlaying) {
             player.pause()
@@ -1120,6 +1218,14 @@ class VideoEditingActivity : AppCompatActivity() {
         audioEditingToolbar?.visibility = View.GONE
         editingControlsWrapper.visibility = View.VISIBLE
         viewModel.selectOperation(null)
+        
+        if (audioPreviewPlayer?.isPlaying == true) {
+            audioPreviewPlayer?.stop()
+        }
+        audioPreviewPlayer?.release()
+        audioPreviewPlayer = null
+        
+        audioEditingToolbar?.findViewById<ImageButton>(R.id.btnAudioPreviewPlay)?.setImageResource(R.drawable.ic_play_24)
     }
 
     private fun enterCropEditingMode() {
@@ -1353,7 +1459,9 @@ class VideoEditingActivity : AppCompatActivity() {
                         internalStartMs = item.trimStartMs,
                         internalEndMs = item.trimEndMs,
                         startTimeMs = clipStartGlobal,
-                        endTimeMs = clipEndGlobal
+                        endTimeMs = clipEndGlobal,
+                        originalDurationMs = item.durationMs,
+                        extractedFromSegmentIndex = index
                     )
                 )
                 viewModel.addMuteSegmentOperation(index)
@@ -1421,7 +1529,7 @@ class VideoEditingActivity : AppCompatActivity() {
                         }
                         if (mergeItems.isNotEmpty()) {
                             isImportLoading = true
-                            loadingScreen.visibility = View.VISIBLE
+                            showLoading("Importing video...")
                             viewModel.addMergeOperation(mergeItems)
                             Toast.makeText(this@VideoEditingActivity, "${mergeItems.size} video(s) added to sequence", Toast.LENGTH_SHORT).show()
                         } else {
@@ -1453,7 +1561,8 @@ class VideoEditingActivity : AppCompatActivity() {
                                 internalStartMs = 0L,
                                 internalEndMs = realDurationMs,
                                 startTimeMs = 0L,
-                                endTimeMs = endGlobalMs
+                                endTimeMs = endGlobalMs,
+                                originalDurationMs = realDurationMs
                             )
                         )
                         Toast.makeText(this@VideoEditingActivity, "Audio track added", Toast.LENGTH_SHORT).show()
@@ -1698,7 +1807,7 @@ class VideoEditingActivity : AppCompatActivity() {
         if (videoUri != null) {
             player = ExoPlayer.Builder(this).build()
             playerView.player = player
-            loadingScreen.visibility = View.VISIBLE
+            showLoading("Loading...")
 
             player.addListener(object : Player.Listener {
                 override fun onPlaybackStateChanged(state: Int) {
@@ -2139,10 +2248,16 @@ class VideoEditingActivity : AppCompatActivity() {
 
         // Render Sequence Track
         sequenceTrackContainer.removeAllViews()
+        var accumulatedStartMs = 0L
+        val transitionViewsToLayout = mutableListOf<Pair<View, FrameLayout.LayoutParams>>()
+
         sequenceItems.forEachIndexed { index, item ->
             val segmentView = layoutInflater.inflate(R.layout.item_sequence_segment, sequenceTrackContainer, false) as FrameLayout
             val segmentWidth = (item.trimmedDurationMs * pixelsPerMs).toInt()
-            val params = LinearLayout.LayoutParams(segmentWidth, ViewGroup.LayoutParams.MATCH_PARENT)
+            val segmentLeft = (accumulatedStartMs * pixelsPerMs).toInt()
+            val params = FrameLayout.LayoutParams(segmentWidth, ViewGroup.LayoutParams.MATCH_PARENT).apply {
+                leftMargin = segmentLeft
+            }
             segmentView.layoutParams = params
 
             val rv = segmentView.findViewById<RecyclerView>(R.id.segmentFrameRecyclerView)
@@ -2228,7 +2343,37 @@ class VideoEditingActivity : AppCompatActivity() {
                 btnRight.visibility = View.GONE
             }
 
+            if (index > 0) {
+                val transitionView = layoutInflater.inflate(R.layout.item_transition_button, sequenceTrackContainer, false)
+                val btnTransition = transitionView.findViewById<ImageView>(R.id.btnTransition)
+                
+                // Highlight if a transition is selected
+                val transitionOp = project.operations.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.Transition>().find { it.index == index - 1 }
+                if (transitionOp != null && transitionOp.type != "none") {
+                    btnTransition.setImageResource(R.drawable.ic_check_24) // Or some infinite icon
+                    btnTransition.setColorFilter(android.graphics.Color.WHITE)
+                    transitionView.background = null
+                } else {
+                    btnTransition.setImageResource(R.drawable.ic_add_24)
+                }
+                
+                val transitionWidth = 24.dpToPx()
+                val transParams = FrameLayout.LayoutParams(transitionWidth, ViewGroup.LayoutParams.MATCH_PARENT).apply {
+                    leftMargin = segmentLeft - transitionWidth / 2
+                }
+                transitionViewsToLayout.add(Pair(transitionView, transParams))
+                transitionView.setOnClickListener {
+                    showTransitionDialog(index - 1)
+                }
+            }
+
             sequenceTrackContainer.addView(segmentView)
+            accumulatedStartMs += item.trimmedDurationMs
+        }
+
+        // Add transition buttons on top of segment views
+        for ((view, params) in transitionViewsToLayout) {
+            sequenceTrackContainer.addView(view, params)
         }
         
         if (activeRenderJobs.isNotEmpty()) {
@@ -2489,6 +2634,72 @@ class VideoEditingActivity : AppCompatActivity() {
 
         btnClose.setBounceClickListener {
             bottomSheet.dismiss()
+        }
+
+        bottomSheet.show()
+    }
+
+    private fun showTransitionDialog(transitionIndex: Int) {
+        val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.dialog_transitions, null)
+        bottomSheet.setContentView(view)
+
+        val transitionsList = view.findViewById<LinearLayout>(R.id.transitionsList)
+        val project = viewModel.project.value ?: return
+        val existingOp = project.operations.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.Transition>().find { it.index == transitionIndex }
+        
+        val transitions = listOf(
+            Pair("none", "None"),
+            Pair("fade", "Fade"),
+            Pair("dissolve", "Dissolve"),
+            Pair("wipeleft", "Wipe L"),
+            Pair("wiperight", "Wipe R"),
+            Pair("slideleft", "Slide L"),
+            Pair("slideright", "Slide R"),
+            Pair("smoothleft", "Smth L"),
+            Pair("smoothright", "Smth R"),
+            Pair("circlecrop", "Circle"),
+            Pair("distance", "Distance"),
+            Pair("pixelize", "Pixelize"),
+            Pair("hlslice", "H-Slice"),
+            Pair("vlslice", "V-Slice")
+        )
+
+        for ((type, name) in transitions) {
+            val itemView = layoutInflater.inflate(R.layout.item_transition_option, transitionsList, false)
+            val tvName = itemView.findViewById<TextView>(R.id.transitionName)
+            val tvShort = itemView.findViewById<TextView>(R.id.transitionShortName)
+            val bg = itemView.findViewById<FrameLayout>(R.id.transitionIconBg)
+
+            tvName.text = name
+            tvShort.text = name.substring(0, minOf(2, name.length)).uppercase()
+
+            val isSelected = (existingOp?.type == type) || (existingOp == null && type == "none")
+            if (isSelected) {
+                bg.setBackgroundResource(R.drawable.bg_aspect_ratio_selected)
+                tvShort.setTextColor(android.graphics.Color.WHITE)
+            } else {
+                bg.setBackgroundResource(R.drawable.bg_aspect_ratio_item)
+                tvShort.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.textColor))
+            }
+
+            itemView.setOnClickListener {
+                if (type == "none") {
+                    if (existingOp != null) {
+                        viewModel.removeOperation(existingOp.id)
+                    }
+                } else {
+                    if (existingOp != null) {
+                        viewModel.updateOperation(existingOp.copy(type = type))
+                    } else {
+                        viewModel.addTransitionOperation(transitionIndex, type)
+                    }
+                }
+                bottomSheet.dismiss()
+                viewModel.project.value?.let { renderTracks(it) }
+            }
+
+            transitionsList.addView(itemView)
         }
 
         bottomSheet.show()

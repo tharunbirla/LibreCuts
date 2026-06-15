@@ -198,6 +198,28 @@ class VideoEditingViewModel : ViewModel() {
         }
     }
 
+    fun addTransitionOperation(index: Int, type: String) {
+        viewModelScope.launch {
+            _project.update { current ->
+                if (current == null) return@update null
+                
+                val ops = current.operations.toMutableList()
+                ops.add(EditOperation.Transition(index, type))
+                
+                _undoStack.value = _undoStack.value + current
+                _redoStack.value = emptyList()
+                current.copy(operations = ops)
+            }
+            updateUiState { state ->
+                state.copy(
+                    pendingOperationCount = _project.value?.getOperationCount() ?: 0,
+                    canUndo = _undoStack.value.isNotEmpty(),
+                    canRedo = false
+                )
+            }
+        }
+    }
+
     fun splitVideoSegment(index: Int, localSplitTimeMs: Long, sourceUri: Uri, sourceDuration: Long) {
         viewModelScope.launch {
             _project.update { current ->
@@ -446,7 +468,11 @@ class VideoEditingViewModel : ViewModel() {
                 if (index != -1) {
                     _undoStack.value = _undoStack.value + current
                     _redoStack.value = emptyList()
+                    val opToRemove = ops[index]
                     ops.removeAt(index)
+                    if (opToRemove is EditOperation.AddBackgroundAudio && opToRemove.extractedFromSegmentIndex != null) {
+                        ops.removeAll { it is EditOperation.MuteSegment && it.index == opToRemove.extractedFromSegmentIndex }
+                    }
                     current.copy(operations = ops)
                 } else {
                     current
@@ -510,21 +536,38 @@ class VideoEditingViewModel : ViewModel() {
                 current?.let {
                     _undoStack.value = _undoStack.value + it
                     _redoStack.value = emptyList()
-                    it.copy(
-                        operations = it.operations.filterNot { op ->
-                            when (op) {
-                                is EditOperation.Trim -> op.id == operationId
-                                is EditOperation.Crop -> op.id == operationId
-                                is EditOperation.AddText -> op.id == operationId
-                                is EditOperation.Merge -> op.id == operationId
-                                is EditOperation.MuteAudio -> op.id == operationId
-                                is EditOperation.MuteSegment -> op.id == operationId
-                                is EditOperation.AddBackgroundAudio -> op.id == operationId
-                                is EditOperation.AddImageOverlay -> op.id == operationId
-                                is EditOperation.SpeedMain -> op.id == operationId
-                            }
+                    val opToRemove = it.operations.find { op -> 
+                        when(op) {
+                            is EditOperation.Trim -> op.id == operationId
+                            is EditOperation.Crop -> op.id == operationId
+                            is EditOperation.AddText -> op.id == operationId
+                            is EditOperation.Merge -> op.id == operationId
+                            is EditOperation.MuteAudio -> op.id == operationId
+                            is EditOperation.MuteSegment -> op.id == operationId
+                            is EditOperation.Transition -> op.id == operationId
+                            is EditOperation.AddBackgroundAudio -> op.id == operationId
+                            is EditOperation.AddImageOverlay -> op.id == operationId
+                            is EditOperation.SpeedMain -> op.id == operationId
                         }
-                    )
+                    }
+                    var newOps = it.operations.filterNot { op ->
+                        when (op) {
+                            is EditOperation.Trim -> op.id == operationId
+                            is EditOperation.Crop -> op.id == operationId
+                            is EditOperation.AddText -> op.id == operationId
+                            is EditOperation.Merge -> op.id == operationId
+                            is EditOperation.MuteAudio -> op.id == operationId
+                            is EditOperation.MuteSegment -> op.id == operationId
+                            is EditOperation.Transition -> op.id == operationId
+                            is EditOperation.AddBackgroundAudio -> op.id == operationId
+                            is EditOperation.AddImageOverlay -> op.id == operationId
+                            is EditOperation.SpeedMain -> op.id == operationId
+                        }
+                    }
+                    if (opToRemove is EditOperation.AddBackgroundAudio && opToRemove.extractedFromSegmentIndex != null) {
+                        newOps = newOps.filterNot { op -> op is EditOperation.MuteSegment && op.index == opToRemove.extractedFromSegmentIndex }
+                    }
+                    it.copy(operations = newOps)
                 }
             }
             updateUiState { state ->
@@ -843,33 +886,141 @@ class VideoEditingViewModel : ViewModel() {
                 }
             }
 
-            val normTarget = "scale=$mainWidth:$mainHeight:force_original_aspect_ratio=decrease,pad=$mainWidth:$mainHeight:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30"
+            // Normalize each clip to the same resolution, fps, pixel format.
+            // Using format=yuv420p ensures consistent formats for xfade and concat inputs.
+            val normTarget = "setpts=PTS-STARTPTS,scale=$mainWidth:$mainHeight:force_original_aspect_ratio=decrease,pad=$mainWidth:$mainHeight:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=30,format=yuv420p"
 
             for (i in 0 until inputCount) {
                 filterParts.add("[$i:v]${normTarget}[norm$i]")
                 if (hasAudioArray[i]) {
-                    filterParts.add("[$i:a]aformat=sample_rates=44100:channel_layouts=stereo[anorm$i]")
+                    filterParts.add("[$i:a]asetpts=PTS-STARTPTS,aformat=sample_rates=44100:channel_layouts=stereo[anorm$i]")
                 } else {
                     val d = durationsArray[i]
-                    filterParts.add("anullsrc=r=44100:cl=stereo:d=$d[anorm$i]")
+                    filterParts.add("anullsrc=r=44100:cl=stereo,atrim=duration=$d,asetpts=PTS-STARTPTS[anorm$i]")
                 }
             }
 
-            val concatInputs = (0 until inputCount).joinToString("") { "[norm$it][anorm$it]" }
-            filterParts.add("${concatInputs}concat=n=$inputCount:v=1:a=1[concatv][concata]")
+            // Build a list of per-gap transition info (gap i = between clip i and clip i+1)
+            // transitionOps[i] is the Transition op for gap i, or null if none.
+            val transitionOps = List(inputCount - 1) { gapIdx ->
+                operations.filterIsInstance<EditOperation.Transition>().find { it.index == gapIdx }
+            }
 
-            var currentVideoLabel = "[concatv]"
-            var currentAudioLabel = "[concata]"
+            // Chain xfade/acrossfade for transitions and concat for plain gaps.
+            // Represents a finalized stream ready to be used as xfade input
+            data class StreamInfo(val vLabel: String, val aLabel: String, val durationSec: Double)
 
-            outputDuration = durationsArray.sum()
+            val pendingClipIndices = mutableListOf(0) // start with clip 0
 
-            val (sourceVideoStages, finalVideoLabel) = buildVideoFilterStages(
+            var currentStream: StreamInfo? = null
+            var transitionLabelCounter = 0
+            var concatLabelCounter = 0
+
+            fun flushPendingGroup(clipIndices: List<Int>): StreamInfo {
+                return if (clipIndices.size == 1) {
+                    val i = clipIndices[0]
+                    StreamInfo("[norm$i]", "[anorm$i]", durationsArray[i])
+                } else {
+                    val vOut = "[ccat${concatLabelCounter}v]"
+                    val aOut = "[ccat${concatLabelCounter}a]"
+                    val inputs = clipIndices.joinToString("") { "[norm$it][anorm$it]" }
+                    // concat then normalize timestamps for proper xfade offsets
+                    filterParts.add("${inputs}concat=n=${clipIndices.size}:v=1:a=1${vOut}${aOut}")
+                    filterParts.add("${vOut}settb=1/30,setpts=N[norm${concatLabelCounter}v]")
+                    filterParts.add("${aOut}asetpts=PTS-STARTPTS[anorm${concatLabelCounter}a]")
+                    val totalDur = clipIndices.sumOf { durationsArray[it] }
+                    concatLabelCounter++
+                    // use the normalized labels for subsequent processing
+                    StreamInfo("[norm${concatLabelCounter - 1}v]", "[anorm${concatLabelCounter - 1}a]", totalDur)
+                }
+            }
+
+            for (gapIdx in 0 until inputCount - 1) {
+                val transOp = transitionOps[gapIdx]
+                if (transOp == null || transOp.type == "none") {
+                    // No transition at this gap — just accumulate the next clip
+                    pendingClipIndices.add(gapIdx + 1)
+                } else {
+                    // Flush the pending group into a stream, if any pending clips exist.
+                    // If none exist, it means the currentStream (previous transition output) is the base.
+                    val baseStream = if (pendingClipIndices.isEmpty()) {
+                        currentStream ?: throw IllegalStateException("Both pending clips and currentStream are empty")
+                    } else {
+                        val leftStream = flushPendingGroup(pendingClipIndices)
+                        pendingClipIndices.clear()
+                        if (currentStream == null) {
+                            leftStream
+                        } else {
+                            // Concat previous xfade output with the newly flushed left group
+                            val vOut = "[ccat${concatLabelCounter}v]"
+                            val aOut = "[ccat${concatLabelCounter}a]"
+                            filterParts.add("${currentStream.vLabel}${currentStream.aLabel}${leftStream.vLabel}${leftStream.aLabel}concat=n=2:v=1:a=1${vOut}${aOut}")
+                            filterParts.add("${vOut}settb=1/30,setpts=N[norm${concatLabelCounter}v]")
+                            filterParts.add("${aOut}asetpts=PTS-STARTPTS[anorm${concatLabelCounter}a]")
+                            concatLabelCounter++
+                            StreamInfo("[norm${concatLabelCounter - 1}v]", "[anorm${concatLabelCounter - 1}a]", currentStream.durationSec + leftStream.durationSec)
+                        }
+                    }
+
+                    val rawTransDuration = transOp.durationMs / 1000.0
+                    val transDuration = rawTransDuration.coerceAtMost(baseStream.durationSec).coerceAtMost(durationsArray[gapIdx + 1])
+                    val offset = (baseStream.durationSec - transDuration).coerceAtLeast(0.0)
+
+                    val xfvOut = "[xfv${transitionLabelCounter}]"
+                    val xfaOut = "[xfa${transitionLabelCounter}]"
+                    val nextVLabel = "[norm${gapIdx + 1}]"
+                    val nextALabel = "[anorm${gapIdx + 1}]"
+
+                    filterParts.add("${baseStream.vLabel}${nextVLabel}xfade=transition=${transOp.type}:duration=${transDuration}:offset=${offset}${xfvOut}")
+                    filterParts.add("${baseStream.aLabel}${nextALabel}acrossfade=d=${transDuration}:c1=tri:c2=tri${xfaOut}")
+
+                    val newDuration = offset + durationsArray[gapIdx + 1]
+                    currentStream = StreamInfo(xfvOut, xfaOut, newDuration)
+                    transitionLabelCounter++
+                    // Next clip (gapIdx+1) has already been consumed by xfade — don't add it to pending
+                }
+            }
+
+            // Flush any remaining pending clips
+            val remainingStream = if (pendingClipIndices.isNotEmpty()) flushPendingGroup(pendingClipIndices) else null
+
+            val finalStream: StreamInfo = when {
+                currentStream == null && remainingStream != null -> remainingStream
+                currentStream != null && remainingStream == null -> currentStream!!
+                currentStream != null && remainingStream != null -> {
+                    // Concat the last xfade output with remaining plain clips
+                    // FFmpeg concat requires interleaved [v0][a0][v1][a1] order
+                    val vOut = "[ccat${concatLabelCounter}v]"
+                    val aOut = "[ccat${concatLabelCounter}a]"
+                    // concat then normalize timestamps
+                    filterParts.add("${currentStream.vLabel}${currentStream.aLabel}${remainingStream.vLabel}${remainingStream.aLabel}concat=n=2:v=1:a=1${vOut}${aOut}")
+                    filterParts.add("${vOut}settb=1/30,setpts=N[norm${concatLabelCounter}v]")
+                    filterParts.add("${aOut}asetpts=PTS-STARTPTS[anorm${concatLabelCounter}a]")
+                    concatLabelCounter++
+                    StreamInfo("[norm${concatLabelCounter - 1}v]", "[anorm${concatLabelCounter - 1}a]", currentStream.durationSec + remainingStream.durationSec)
+                }
+                else -> StreamInfo("[norm0]", "[anorm0]", durationsArray[0]) // fallback single clip
+            }
+
+            var currentVLabel = finalStream.vLabel
+            var currentALabel = finalStream.aLabel
+            val accumulatedDuration = finalStream.durationSec
+
+            var currentVideoLabel = currentVLabel
+            var currentAudioLabel = currentALabel
+
+            outputDuration = accumulatedDuration
+
+
+            val (sourceVideoStages, tempVideoLabel) = buildVideoFilterStages(
                 operations = videoOps,
                 fontFilePath = fontFilePath,
                 inputLabel = currentVideoLabel,
                 imageInputIndices = imageInputIndices
             )
             filterParts.addAll(sourceVideoStages)
+            val finalVideoLabel = "[fmtv]"
+            filterParts.add("${tempVideoLabel}format=yuv420p$finalVideoLabel")
 
             if (audioMuted) {
                 filterParts.add("${currentAudioLabel}anullsink")
@@ -1041,10 +1192,16 @@ class VideoEditingViewModel : ViewModel() {
         val hasAudioFilters = finalAudioLabel != null
 
         if (hasVideoFilters || hasAudioFilters) {
+            var mappedVideoLabel = finalVideoLabel
+            if (hasVideoFilters) {
+                val fmtLabel = "[fmtv]"
+                filterComplexParts.add("${finalVideoLabel}format=yuv420p${fmtLabel}")
+                mappedVideoLabel = fmtLabel
+            }
             cmd.append(" -filter_complex \"${filterComplexParts.joinToString(";")}\"")
 
             if (hasVideoFilters) {
-                cmd.append(" -map \"$finalVideoLabel\"")
+                cmd.append(" -map \"$mappedVideoLabel\"")
             } else {
                 cmd.append(" -map 0:v")
             }

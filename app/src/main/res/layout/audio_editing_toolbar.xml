@@ -44,6 +44,57 @@
             android:fontFamily="sans-serif-medium" />
     </LinearLayout>
 
+    <!-- Audio Trim Row -->
+    <LinearLayout
+        android:id="@+id/audioTrimRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="8dp"
+        android:orientation="vertical"
+        android:background="@drawable/bg_bottom_nav_floating"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Audio Segment"
+                android:textColor="@color/textColor"
+                android:fontFamily="sans-serif-medium"/>
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1"/>
+            <TextView
+                android:id="@+id/tvAudioTrimValues"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0.0s - 0.0s"
+                android:textColor="@color/outline"
+                android:textSize="12sp"/>
+        </LinearLayout>
+
+        <com.tharunbirla.librecuts.customviews.TrackTrimView
+            android:id="@+id/audioTrimTrack"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp" />
+        
+        <ImageButton
+            android:id="@+id/btnAudioPreviewPlay"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center_horizontal"
+            android:src="@drawable/ic_play_24"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="@color/colorPrimary" />
+    </LinearLayout>
+
     <!-- Toolbar Row -->
     <LinearLayout
         android:layout_width="match_parent"

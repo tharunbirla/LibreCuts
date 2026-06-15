@@ -18,6 +18,7 @@ class TrackTrimView @JvmOverloads constructor(
 
     var videoDurationMs: Long = 0L
     var maxDurationMs: Long = 0L
+    var maxSelectionDurationMs: Long? = null
     var startTimeMs: Long = 0L
     var endTimeMs: Long = 0L
     var activeStartMs: Long = 0L
@@ -282,13 +283,23 @@ class TrackTrimView @JvmOverloads constructor(
                 when (dragTarget) {
                     DragTarget.LEFT -> {
                         val minStart = 0L
-                        val maxStart = endTimeMs - 100L
-                        startTimeMs = (startTimeMs + dtMs).coerceIn(minStart, maxStart.coerceAtLeast(minStart))
+                        var maxStart = endTimeMs - 100L
+                        if (maxSelectionDurationMs != null && endTimeMs - (startTimeMs + dtMs) > maxSelectionDurationMs!!) {
+                            // If user drags left making the window larger than max, limit it
+                            startTimeMs = endTimeMs - maxSelectionDurationMs!!
+                        } else {
+                            startTimeMs = (startTimeMs + dtMs).coerceIn(minStart, maxStart.coerceAtLeast(minStart))
+                        }
                     }
                     DragTarget.RIGHT -> {
                         val minEnd = startTimeMs + 100L
                         val limit = if (maxDurationMs > 0L) maxDurationMs else videoDurationMs
-                        endTimeMs = (endTimeMs + dtMs).coerceIn(minEnd, limit.coerceAtLeast(minEnd))
+                        if (maxSelectionDurationMs != null && (endTimeMs + dtMs) - startTimeMs > maxSelectionDurationMs!!) {
+                            // If user drags right making the window larger than max, limit it
+                            endTimeMs = startTimeMs + maxSelectionDurationMs!!
+                        } else {
+                            endTimeMs = (endTimeMs + dtMs).coerceIn(minEnd, limit.coerceAtLeast(minEnd))
+                        }
                     }
                     DragTarget.CENTER -> {
                         val duration = endTimeMs - startTimeMs
