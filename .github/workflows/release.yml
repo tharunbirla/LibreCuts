@@ -1,0 +1,57 @@
+name: Release APK
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Verify tag matches app versionName
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          app_version=$(sed -nE 's/.*versionName[[:space:]]*"([^"]+)".*/\1/p' app/build.gradle | head -1)
+          if [ -z "$app_version" ]; then
+            echo "Could not parse versionName from app/build.gradle" >&2
+            exit 1
+          fi
+          if [ "$tag_version" != "$app_version" ]; then
+            echo "Tag $GITHUB_REF_NAME (=> $tag_version) does not match app versionName ($app_version)" >&2
+            exit 1
+          fi
+          echo "Tag matches versionName: $app_version"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v3
+      - run: chmod +x gradlew && ./gradlew assembleRelease
+      - uses: r0adkll/sign-android-release@v1
+        id: sign
+        env:
+          BUILD_TOOLS_VERSION: '34.0.0'
+        with:
+          releaseDirectory: app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+      - name: Rename signed APKs
+        run: |
+          mkdir -p release-artifacts
+          for apk in app/build/outputs/apk/release/app-*-release-unsigned-signed.apk; do
+            [ -f "$apk" ] || continue
+            name=$(basename "$apk")
+            arch=$(printf '%s' "$name" | sed -E 's/^app-(.+)-release-unsigned-signed\.apk$/\1/')
+            cp "$apk" "release-artifacts/LibreCuts-${arch}.apk"
+          done
+          ls -lh release-artifacts/
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: release-artifacts/*.apk
