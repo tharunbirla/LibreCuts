@@ -998,7 +998,7 @@ class VideoEditingActivity : AppCompatActivity() {
             params.gravity = Gravity.NO_GRAVITY
             playerView.layoutParams = params
 
-            playerView.resizeMode = 0 // RESIZE_MODE_FIT
+            playerView.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT // RESIZE_MODE_FIT
 
             val overlays = listOf(textOverlayView, draggableTextOverlay, imageOverlayView, draggableImageOverlay)
             for (overlay in overlays) {
