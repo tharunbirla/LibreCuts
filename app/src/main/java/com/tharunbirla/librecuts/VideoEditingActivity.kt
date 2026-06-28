@@ -1183,7 +1183,7 @@ class VideoEditingActivity : AppCompatActivity() {
         audioEditingToolbar?.let { toolbar ->
             val slider = toolbar.findViewById<com.google.android.material.slider.Slider>(R.id.audioVolumeSlider)
             val tvValue = toolbar.findViewById<TextView>(R.id.tvAudioVolumeValue)
-            slider?.value = op.volume.coerceIn(0f, 1f)
+            slider?.value = op.volume.coerceIn(0f, 2f)
             tvValue?.text = "${(op.volume * 100).toInt()}%"
 
             val trimTrack = toolbar.findViewById<com.tharunbirla.librecuts.customviews.TrackTrimView>(R.id.audioTrimTrack)
@@ -1623,7 +1623,8 @@ class VideoEditingActivity : AppCompatActivity() {
                 var ffmpegCommand = viewModel.buildConsolidatedFFmpegCommand(
                     sourceFilePath = sourceFilePath,
                     outputFilePath = tempOutputPath,
-                    fontFilePath = fontFilePath          // was missing before — caused "No font filename provided"
+                    fontFilePath = fontFilePath,
+                    context = this@VideoEditingActivity  // needed to cache content:// URIs for audio/image
                 )
 
                 if (ffmpegCommand == null) {

@@ -5,6 +5,7 @@ import android.util.Log
 import com.antonkarpenko.ffmpegkit.FFmpegKit
 import com.antonkarpenko.ffmpegkit.FFmpegKitConfig
 import com.antonkarpenko.ffmpegkit.FFmpegSession
+import com.antonkarpenko.ffmpegkit.Level
 import com.antonkarpenko.ffmpegkit.ReturnCode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -46,6 +47,25 @@ class FFmpegRenderEngine(private val context: Context) {
             Log.d(TAG, "Font directory set to: $fontDir")
         } catch (e: Exception) {
             Log.w(TAG, "Failed to set font directory '$fontDir': ${e.message}")
+        }
+
+        // Register a global log callback so every FFmpeg stderr line hits logcat.
+        // Without this, getAllLogsAsString() often returns "" when a per-session log
+        // callback is also provided (antonkarpenko fork bypasses session log storage).
+        try {
+            FFmpegKitConfig.enableLogCallback { log ->
+                val msg = log.getMessage()?.trimEnd() ?: return@enableLogCallback
+                if (msg.isEmpty()) return@enableLogCallback
+                when (log.getLevel()) {
+                    Level.AV_LOG_ERROR, Level.AV_LOG_FATAL, Level.AV_LOG_PANIC, Level.AV_LOG_STDERR
+                        -> Log.e(TAG, "[ffmpeg] $msg")
+                    Level.AV_LOG_WARNING
+                        -> Log.w(TAG, "[ffmpeg] $msg")
+                    else -> Log.v(TAG, "[ffmpeg] $msg")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not register FFmpegKit global log callback: ${e.message}")
         }
     }
 
@@ -97,7 +117,9 @@ class FFmpegRenderEngine(private val context: Context) {
                 val session = FFmpegKit.execute(command)
                 activeSessions.add(session)
 
-                val returnCode = session.returnCode
+                // Use getReturnCode() — the protected field 'returnCode' is not accessible
+                // as a Kotlin property (only public Java getters auto-map as properties).
+                val returnCode = session.getReturnCode()
                 Log.d(TAG, "FFmpeg completed with return code: $returnCode")
 
                 if (ReturnCode.isSuccess(returnCode)) {
@@ -106,10 +128,13 @@ class FFmpegRenderEngine(private val context: Context) {
                         session = session
                     )
                 } else {
-                    // When FFmpeg fails
-                    val failLog = session.failStackTrace
-                        ?: session.allLogsAsString
-                        ?: "Unknown error"
+                    // When FFmpeg fails:
+                    // getFailStackTrace() is non-null only on Java exceptions, not FFmpeg process errors.
+                    // getAllLogsAsString() returns "" (empty, not null) when log callback is active
+                    // — use takeIf { isNotBlank() } so the ?: fallback actually fires.
+                    val failLog = session.getFailStackTrace()
+                        ?: session.getAllLogsAsString().takeIf { it.isNotBlank() }
+                        ?: "FFmpeg exited with code ${returnCode?.getValue()} (check logcat tag '$TAG' for [ffmpeg] lines)"
                     Log.e(TAG, "FFmpeg error: $failLog")
                     RenderResult.Failure(error = failLog, session = session)
                 }
@@ -200,13 +225,18 @@ class FFmpegRenderEngine(private val context: Context) {
                 val session = suspendCancellableCoroutine<FFmpegSession> { cont ->
                     val asyncSession = FFmpegKit.executeAsync(ffmpegCommand, { completeSession ->
                         cont.resume(completeSession)
-                    }, { log -> 
-                        // optional log
+                    }, { log ->
+                        // Forward every FFmpeg log line to logcat so we always see the real error.
+                        // (Providing this callback can bypass session log storage in some builds,
+                        //  so we must log here rather than relying on getAllLogsAsString() later.)
+                        val msg = log.message?.trimEnd() ?: return@executeAsync
+                        if (msg.isNotEmpty()) Log.d(TAG, "[ffmpeg] $msg")
                     }, { statistics ->
                         if (totalDurationSecs != null && totalDurationSecs > 0) {
-                            val timeInMilliseconds = statistics.time
-                            if (timeInMilliseconds > 0) {
-                                val progress = ((timeInMilliseconds / 1000.0) / totalDurationSecs * 100).toInt()
+                            // statistics.getTime() is in SECONDS (Double) in the antonkarpenko fork
+                            val timeSecs = statistics.getTime()
+                            if (timeSecs > 0) {
+                                val progress = (timeSecs / totalDurationSecs * 100).toInt()
                                 onProgress?.invoke(progress.coerceIn(0, 100))
                             }
                         }
@@ -221,8 +251,9 @@ class FFmpegRenderEngine(private val context: Context) {
                 
                 activeSessions.remove(session)
 
-                val returnCode = session.returnCode
-                Log.d(TAG, "FFmpeg completed with return code: $returnCode")
+                // Use getReturnCode() — see executeCommand() note above.
+                val returnCode = session.getReturnCode()
+                Log.d(TAG, "FFmpeg completed with return code: ${returnCode?.getValue()}")
 
                 if (ReturnCode.isSuccess(returnCode)) {
                     RenderResult.Success(
@@ -230,9 +261,9 @@ class FFmpegRenderEngine(private val context: Context) {
                         session = session
                     )
                 } else {
-                    val failLog = session.failStackTrace
-                        ?: session.allLogsAsString
-                        ?: "Unknown error"
+                    val failLog = session.getFailStackTrace()
+                        ?: session.getAllLogsAsString().takeIf { it.isNotBlank() }
+                        ?: "FFmpeg exited with code ${returnCode?.getValue()} (see logcat tag '$TAG' for [ffmpeg] lines)"
                     Log.e(TAG, "FFmpeg error: $failLog")
                     RenderResult.Failure(error = failLog, session = session)
                 }

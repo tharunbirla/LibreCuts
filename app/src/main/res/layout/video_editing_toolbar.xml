@@ -5,7 +5,6 @@
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="16dp"
     android:layout_marginBottom="24dp"
-    android:layout_marginTop="16dp"
     android:orientation="horizontal"
     android:gravity="center"
     android:background="@drawable/bg_bottom_nav_floating"

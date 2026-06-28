@@ -19,10 +19,10 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 
-enum class ExportQuality(val crf: Int, val preset: String, val label: String) {
-    HIGH(22, "veryfast", "High Quality"),
-    MEDIUM(28, "superfast", "Medium Quality"),
-    LOW(34, "ultrafast", "Low Quality")
+enum class ExportQuality(val bitrate: String, val label: String) {
+    HIGH("8M", "High Quality"),
+    MEDIUM("4M", "Medium Quality"),
+    LOW("2M", "Low Quality")
 }
 
 class VideoEditingViewModel : ViewModel() {
@@ -714,12 +714,13 @@ class VideoEditingViewModel : ViewModel() {
     fun buildConsolidatedFFmpegCommand(
         sourceFilePath: String,
         outputFilePath: String,
-        fontFilePath: String? = null
+        fontFilePath: String? = null,
+        context: Context? = null
     ): String? {
         val currentProject = _project.value ?: return null
 
         if (currentProject.operations.isEmpty()) {
-            return "-i \"$sourceFilePath\" -c copy \"$outputFilePath\""
+            return "-y -i \"$sourceFilePath\" -c copy \"$outputFilePath\""
         }
 
         val operations = currentProject.operations
@@ -749,21 +750,30 @@ class VideoEditingViewModel : ViewModel() {
         val imageOps = operations.filterIsInstance<EditOperation.AddImageOverlay>()
 
         // ── Unified Input Indexing ────────────────────────────────────────────
-        val cmd = StringBuilder()
+        val cmd = StringBuilder("-y") // Always overwrite output — prevents silent failure on retry
         var inputIndex = 0
+
+        /** Resolve a URI to a real filesystem path FFmpeg can read.
+         *  content:// URIs are copied to cacheDir; file:// or plain paths are used directly. */
+        fun resolveUriToPath(uri: android.net.Uri): String? {
+            if (uri.scheme == "content" && context != null) {
+                return copyContentUriToTempFile(context, uri)
+            }
+            return uri.path ?: uri.toString()
+        }
 
         // 1. Source Video Input (Index 0)
         var outputDuration: Double? = null
         val speedOp = operations.filterIsInstance<EditOperation.SpeedMain>().lastOrNull()
         
         if (speedOp?.proxyUri != null) {
-            val proxyPath = speedOp.proxyUri.path ?: speedOp.proxyUri.toString()
-            val baseDuration = if (trimOp != null) (trimOp.endMs - trimOp.startMs) else 0L // Cannot easily get sourceDurationMs here, but outputDuration is only needed if mergeOp == null
+            val proxyPath = resolveUriToPath(speedOp.proxyUri) ?: speedOp.proxyUri.toString()
+            val baseDuration = if (trimOp != null) (trimOp.endMs - trimOp.startMs) else 0L
             if (baseDuration > 0) {
                 outputDuration = baseDuration / speedOp.speed / 1000.0
-                cmd.append("-t $outputDuration -i \"$proxyPath\"")
+                cmd.append(" -t $outputDuration -i \"$proxyPath\"")
             } else {
-                cmd.append("-i \"$proxyPath\"")
+                cmd.append(" -i \"$proxyPath\"")
             }
         } else if (trimOp != null) {
             val startSecs = trimOp.startMs / 1000.0
@@ -771,9 +781,9 @@ class VideoEditingViewModel : ViewModel() {
             if (mergeOp == null) {
                 outputDuration = duration
             }
-            cmd.append("-ss $startSecs -t $duration -i \"$sourceFilePath\"")
+            cmd.append(" -ss $startSecs -t $duration -i \"$sourceFilePath\"")
         } else {
-            cmd.append("-i \"$sourceFilePath\"")
+            cmd.append(" -i \"$sourceFilePath\"")
         }
         inputIndex++
 
@@ -786,7 +796,7 @@ class VideoEditingViewModel : ViewModel() {
                     val duration = item.trimmedDurationMs / 1000.0
                     cmd.append(" -t $duration -i \"$proxyPath\"")
                 } else {
-                    val videoPath = item.uri.path ?: item.uri.toString()
+                    val videoPath = resolveUriToPath(item.uri) ?: item.uri.toString()
                     val startSecs = item.trimStartMs / 1000.0
                     val duration = (item.trimEndMs - item.trimStartMs) / 1000.0
                     cmd.append(" -ss $startSecs -t $duration -i \"$videoPath\"")
@@ -796,19 +806,27 @@ class VideoEditingViewModel : ViewModel() {
             }
         }
 
-        // 3. Audio Inputs
+        // 3. Audio Inputs  (content:// URIs must be cached to a real path)
         val audioInputIndices = mutableListOf<Pair<Int, EditOperation.AddBackgroundAudio>>()
         for (audioOp in audioOps) {
-            val audioPath = audioOp.audioUri.path ?: audioOp.audioUri.toString()
+            val audioPath = resolveUriToPath(audioOp.audioUri)
+            if (audioPath == null) {
+                Log.e(TAG, "Failed to resolve audio URI to path: ${audioOp.audioUri} — skipping track")
+                continue
+            }
             cmd.append(" -i \"$audioPath\"")
             audioInputIndices.add(Pair(inputIndex, audioOp))
             inputIndex++
         }
 
-        // 4. Image Overlay Inputs
+        // 4. Image Overlay Inputs  (content:// URIs must be cached to a real path)
         val imageInputIndices = mutableListOf<Pair<Int, EditOperation.AddImageOverlay>>()
         for (imageOp in imageOps) {
-            val imagePath = imageOp.imageUri.path ?: imageOp.imageUri.toString()
+            val imagePath = resolveUriToPath(imageOp.imageUri)
+            if (imagePath == null) {
+                Log.e(TAG, "Failed to resolve image URI to path: ${imageOp.imageUri} — skipping overlay")
+                continue
+            }
             cmd.append(" -i \"$imagePath\"")
             imageInputIndices.add(Pair(inputIndex, imageOp))
             inputIndex++
@@ -1054,7 +1072,7 @@ class VideoEditingViewModel : ViewModel() {
                     if (delayMs > 0) {
                         filters.add("adelay=$delayMs|$delayMs")
                     }
-                    if (audioOp.volume < 1.0f) {
+                    if (audioOp.volume != 1.0f) {
                         filters.add("volume=${audioOp.volume}")
                     }
 
@@ -1092,7 +1110,7 @@ class VideoEditingViewModel : ViewModel() {
             } else {
                 cmd.append(" -an")
             }
-            cmd.append(" -c:v libx264 -preset ${_exportQuality.value.preset} -crf ${_exportQuality.value.crf}")
+            cmd.append(" -c:v h264_mediacodec -b:v ${_exportQuality.value.bitrate}")
             if (!audioMuted) {
                 cmd.append(" -c:a aac")
             }
@@ -1155,7 +1173,7 @@ class VideoEditingViewModel : ViewModel() {
                     filters.add("adelay=$delayMs|$delayMs")
                 }
                 
-                if (audioOp.volume < 1.0f) {
+                if (audioOp.volume != 1.0f) {
                     filters.add("volume=${audioOp.volume}")
                 }
 
@@ -1218,7 +1236,7 @@ class VideoEditingViewModel : ViewModel() {
         }
 
         // Codecs
-        cmd.append(" -c:v libx264 -preset ${_exportQuality.value.preset} -crf ${_exportQuality.value.crf}")
+        cmd.append(" -c:v h264_mediacodec -b:v ${_exportQuality.value.bitrate}")
         if (!audioMuted) {
             cmd.append(" -c:a aac")
         }
@@ -1275,7 +1293,7 @@ class VideoEditingViewModel : ViewModel() {
         }
 
         // Fast preview settings
-        cmd.append(" -c:v libx264 -preset ultrafast -crf 35 -c:a aac")
+        cmd.append(" -c:v h264_mediacodec -b:v 1500k -c:a aac")
         if (outputDuration != null) {
             cmd.append(" -t $outputDuration")
         }

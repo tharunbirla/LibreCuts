@@ -150,7 +150,7 @@ sealed class EditOperation : Serializable {
         val id: String = System.nanoTime().toString()
     ) : EditOperation() {
         init {
-            require(volume in 0f..1f) { "Volume must be in 0.0..1.0" }
+            require(volume in 0f..2f) { "Volume must be in 0.0..2.0" }
             require(internalStartMs >= 0) { "Internal start time cannot be negative" }
         }
     }
