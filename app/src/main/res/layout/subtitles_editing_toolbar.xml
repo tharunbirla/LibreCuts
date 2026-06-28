@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@android:color/transparent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="24dp"
+        android:background="@drawable/bg_bottom_nav_floating"
+        android:paddingVertical="20dp"
+        android:paddingHorizontal="16dp"
+        android:elevation="12dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:fontFamily="sans-serif-medium"
+                android:text="Closed Captions / Subtitles"
+                android:textColor="@color/textColor"
+                android:textSize="18sp" />
+
+            <ImageButton
+                android:id="@+id/btnCloseSubtitlesSheet"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_alignParentEnd="true"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_close_24"
+                app:tint="@color/activeTool" />
+        </RelativeLayout>
+
+        <!-- No subtitles state -->
+        <LinearLayout
+            android:id="@+id/layoutNoSubtitles"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingVertical="16dp">
+
+            <Button
+                android:id="@+id/btnUploadSrt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Upload SRT / Subtitle File"
+                android:textAllCaps="false"
+                android:textColor="@color/onPrimaryContainer"
+                android:backgroundTint="@color/colorPrimary"
+                android:paddingHorizontal="24dp"
+                android:paddingVertical="12dp"
+                android:textSize="14sp"
+                android:fontFamily="sans-serif-medium"/>
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Supports standard SRT formatted files"
+                android:textColor="@color/outline"
+                android:textSize="12sp"/>
+        </LinearLayout>
+
+        <!-- Subtitles active state -->
+        <LinearLayout
+            android:id="@+id/layoutHasSubtitles"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:paddingVertical="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_bottom_nav"
+                android:padding="12dp"
+                android:layout_marginBottom="16dp">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_subtitles_24"
+                    app:tint="@color/colorPrimary" />
+
+                <TextView
+                    android:id="@+id/tvSubtitleFileName"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="12dp"
+                    android:text="subtitles.srt"
+                    android:textColor="@color/textColor"
+                    android:textSize="14sp"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:fontFamily="sans-serif-medium" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center">
+
+                <Button
+                    android:id="@+id/btnChangeSrt"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Change File"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:textAllCaps="false"
+                    android:textColor="@color/colorPrimary"
+                    app:strokeColor="@color/colorPrimary"
+                    android:layout_marginEnd="12dp"/>
+
+                <Button
+                    android:id="@+id/btnDeleteSrt"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Remove"
+                    android:backgroundTint="#F44336"
+                    android:textColor="@android:color/white"
+                    android:textAllCaps="false"/>
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

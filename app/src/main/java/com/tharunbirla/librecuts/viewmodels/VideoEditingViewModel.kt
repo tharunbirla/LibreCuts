@@ -548,6 +548,7 @@ class VideoEditingViewModel : ViewModel() {
                             is EditOperation.AddBackgroundAudio -> op.id == operationId
                             is EditOperation.AddImageOverlay -> op.id == operationId
                             is EditOperation.SpeedMain -> op.id == operationId
+                            is EditOperation.AddSubtitles -> op.id == operationId
                         }
                     }
                     var newOps = it.operations.filterNot { op ->
@@ -562,6 +563,7 @@ class VideoEditingViewModel : ViewModel() {
                             is EditOperation.AddBackgroundAudio -> op.id == operationId
                             is EditOperation.AddImageOverlay -> op.id == operationId
                             is EditOperation.SpeedMain -> op.id == operationId
+                            is EditOperation.AddSubtitles -> op.id == operationId
                         }
                     }
                     if (opToRemove is EditOperation.AddBackgroundAudio && opToRemove.extractedFromSegmentIndex != null) {
@@ -692,6 +694,35 @@ class VideoEditingViewModel : ViewModel() {
                         stageIndex++
                     }
                 }
+                is EditOperation.AddSubtitles -> {
+                    for (cue in op.cues) {
+                        val escapedText = cue.text
+                            .replace("\\", "\\\\")
+                            .replace("'", "\\'")
+                            .replace(":", "\\:")
+                            .replace("\n", "\n")
+                        
+                        val fontPart = if (!fontFilePath.isNullOrBlank()) {
+                            val escapedFont = fontFilePath
+                                .replace("\\", "\\\\")
+                                .replace("'", "\\'")
+                                .replace(":", "\\:")
+                            "fontfile='$escapedFont':"
+                        } else {
+                            ""
+                        }
+                        
+                        val startSec = cue.startTimeMs / 1000.0
+                        val endSec = cue.endTimeMs / 1000.0
+                        val enablePart = ":enable='between(t,$startSec,$endSec)'"
+                        val filterExpr = "drawtext=${fontPart}text='$escapedText':fontcolor=white:fontsize=22:x=(w-tw)/2:y=h-th-24$enablePart"
+                        
+                        val nextLabel = "[v$stageIndex]"
+                        stages.add("$currentLabel$filterExpr$nextLabel")
+                        currentLabel = nextLabel
+                        stageIndex++
+                    }
+                }
                 else -> {}
             }
         }
@@ -746,7 +777,7 @@ class VideoEditingViewModel : ViewModel() {
         val trimOp = operations.filterIsInstance<EditOperation.Trim>().lastOrNull()
         val audioOps = operations.filterIsInstance<EditOperation.AddBackgroundAudio>()
         val audioMuted = operations.any { it is EditOperation.MuteAudio }
-        val videoOps = nonMergeOps.filter { it is EditOperation.Crop || it is EditOperation.AddText || it is EditOperation.AddImageOverlay }
+        val videoOps = nonMergeOps.filter { it is EditOperation.Crop || it is EditOperation.AddText || it is EditOperation.AddImageOverlay || it is EditOperation.AddSubtitles }
         val imageOps = operations.filterIsInstance<EditOperation.AddImageOverlay>()
 
         // ── Unified Input Indexing ────────────────────────────────────────────
@@ -1268,11 +1299,11 @@ class VideoEditingViewModel : ViewModel() {
         val operations = currentProject.operations
             .filterNot { it is EditOperation.Merge } // Skip merge for preview
 
-        if (operations.none { it is EditOperation.Crop || it is EditOperation.AddText }) {
+        if (operations.none { it is EditOperation.Crop || it is EditOperation.AddText || it is EditOperation.AddSubtitles }) {
             return null // No visual operations to preview
         }
 
-        val videoOps = operations.filter { it is EditOperation.Crop || it is EditOperation.AddText }
+        val videoOps = operations.filter { it is EditOperation.Crop || it is EditOperation.AddText || it is EditOperation.AddSubtitles }
         val trimOp = operations.filterIsInstance<EditOperation.Trim>().lastOrNull()
 
         val cmd = StringBuilder()

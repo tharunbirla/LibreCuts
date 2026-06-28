@@ -40,8 +40,15 @@ class TextOverlayView @JvmOverloads constructor(
             invalidate()
         }
 
+    private var subtitleCues: List<com.tharunbirla.librecuts.models.SubtitleCue> = emptyList()
+
     fun setTextOperations(operations: List<EditOperation.AddText>) {
         this.textOperations = operations
+        invalidate()
+    }
+
+    fun setSubtitleCues(cues: List<com.tharunbirla.librecuts.models.SubtitleCue>) {
+        this.subtitleCues = cues
         invalidate()
     }
 
@@ -159,6 +166,32 @@ class TextOverlayView @JvmOverloads constructor(
             }
 
             canvas.drawText(textOp.text, x, y, paint)
+        }
+
+        // Render subtitles centered at bottom
+        val activeCue = subtitleCues.firstOrNull { currentPositionMs in it.startTimeMs..it.endTimeMs }
+        if (activeCue != null) {
+            paint.textSize = 22f * context.resources.displayMetrics.density * scale // Make subtitles nicely legible
+            paint.color = Color.WHITE
+            
+            val lines = activeCue.text.split("\n")
+            val textHeight = paint.descent() - paint.ascent()
+            
+            val rectW = videoRect.width()
+            val rectH = videoRect.height()
+            val rectL = videoRect.left
+            val rectT = videoRect.top
+            
+            // Draw subtitle lines from bottom up or top down
+            // Subtitle baseline of first line starts at: height - 32dp offset - (remaining lines * height)
+            var currentY = rectT + rectH - 24f * scale - (lines.size - 1) * textHeight
+            
+            for (line in lines) {
+                val textWidth = paint.measureText(line)
+                val x = rectL + (rectW - textWidth) / 2
+                canvas.drawText(line, x, currentY, paint)
+                currentY += textHeight
+            }
         }
     }
 }

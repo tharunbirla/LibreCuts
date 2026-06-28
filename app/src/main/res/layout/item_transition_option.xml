@@ -11,6 +11,13 @@
         android:layout_width="60dp"
         android:layout_height="60dp"
         android:background="@drawable/bg_aspect_ratio_item">
+
+        <ImageView
+            android:id="@+id/transitionPreviewImage"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:visibility="gone" />
         
         <TextView
             android:id="@+id/transitionShortName"

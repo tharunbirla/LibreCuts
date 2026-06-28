@@ -170,7 +170,22 @@ sealed class EditOperation : Serializable {
         val endTimeMs: Long? = null,
         val id: String = System.nanoTime().toString()
     ) : EditOperation()
+
+    data class AddSubtitles(
+        val subtitlesUri: Uri,
+        val srtContent: String,
+        val fileName: String,
+        val cues: List<SubtitleCue>,
+        val id: String = System.nanoTime().toString()
+    ) : EditOperation()
 }
+
+data class SubtitleCue(
+    val startTimeMs: Long,
+    val endTimeMs: Long,
+    val text: String
+) : java.io.Serializable
+
 
 /**
  * Enum for text positioning options in video overlays.

@@ -361,6 +361,14 @@
             android:layout_height="wrap_content"
             android:visibility="gone" />
 
+        <!-- Subtitles Editing Toolbar (inline mode, hidden by default) -->
+        <include
+            android:id="@+id/subtitlesEditingToolbar"
+            layout="@layout/subtitles_editing_toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
+
         <LinearLayout
             android:id="@+id/editingControlsWrapper"
             android:layout_width="match_parent"
@@ -439,6 +447,29 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:text="Audio"
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/toolTextInactive"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center">
+                <ImageButton
+                    android:id="@+id/btnSubtitles"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="@drawable/tool_button_inactive"
+                    android:src="@drawable/ic_subtitles_24"
+                    app:tint="@color/toolTextInactive" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Subtitles"
                     android:textSize="11sp"
                     android:fontFamily="sans-serif-medium"
                     android:textColor="@color/toolTextInactive"/>

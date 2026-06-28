@@ -154,6 +154,8 @@ class VideoEditingActivity : AppCompatActivity() {
     private var audioEditingToolbar: View? = null
     private var speedEditingToolbar: View? = null
     private var cropEditingToolbar: View? = null
+    private var subtitlesEditingToolbar: View? = null
+    private var isSubtitlesEditingActive = false
 
     // Segmented preview state
     private var previewJob: Job? = null
@@ -703,6 +705,26 @@ class VideoEditingActivity : AppCompatActivity() {
             null
         }
 
+        subtitlesEditingToolbar = try {
+            findViewById<View>(R.id.subtitlesEditingToolbar)?.also { toolbar ->
+                toolbar.findViewById<ImageButton>(R.id.btnCloseSubtitlesSheet)?.setBounceClickListener {
+                    exitSubtitlesEditingMode()
+                }
+                toolbar.findViewById<Button>(R.id.btnUploadSrt)?.setBounceClickListener {
+                    pickSrtFile()
+                }
+                toolbar.findViewById<Button>(R.id.btnChangeSrt)?.setBounceClickListener {
+                    pickSrtFile()
+                }
+                toolbar.findViewById<Button>(R.id.btnDeleteSrt)?.setBounceClickListener {
+                    removeSubtitles()
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Subtitles editing toolbar not found: ${e.message}")
+            null
+        }
+
         findViewById<ImageButton>(R.id.btnHome).setBounceClickListener {
             onBackPressedDispatcher.onBackPressed()
         }
@@ -742,6 +764,10 @@ class VideoEditingActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btnMerge).setBounceClickListener {
             setActiveToolButton(R.id.btnMerge)
             mergeAction()
+        }
+        findViewById<ImageButton>(R.id.btnSubtitles).setBounceClickListener {
+            setActiveToolButton(R.id.btnSubtitles)
+            subtitlesAction()
         }
 
         try {
@@ -816,7 +842,7 @@ class VideoEditingActivity : AppCompatActivity() {
 
     private fun setActiveToolButton(activeId: Int) {
         if (isShowingPreview) dismissPreview()
-        val toolIds = listOf(R.id.btnText, R.id.btnImageOverlay, R.id.btnAudio, R.id.btnCrop, R.id.btnMerge)
+        val toolIds = listOf(R.id.btnText, R.id.btnImageOverlay, R.id.btnAudio, R.id.btnCrop, R.id.btnMerge, R.id.btnSubtitles)
         for (id in toolIds) {
             val btn = findViewById<ImageButton>(id) ?: continue
             btn.setBackgroundResource(if (id == activeId) R.drawable.tool_button_active else R.drawable.tool_button_inactive)
@@ -928,6 +954,15 @@ class VideoEditingActivity : AppCompatActivity() {
                     imageOverlayView?.let { overlay ->
                         val imageOps = project.operations.filterIsInstance<EditOperation.AddImageOverlay>()
                         overlay.setImageOperations(imageOps)
+                    }
+
+                    textOverlayView?.let { overlay ->
+                        val subOp = project.operations.filterIsInstance<EditOperation.AddSubtitles>().firstOrNull()
+                        overlay.setSubtitleCues(subOp?.cues ?: emptyList())
+                    }
+
+                    if (isSubtitlesEditingActive) {
+                        updateSubtitlesUi()
                     }
 
                     val cropOps = project.operations.filterIsInstance<EditOperation.Crop>()
@@ -1042,11 +1077,15 @@ class VideoEditingActivity : AppCompatActivity() {
             draggableImageOverlay?.commitImage()
             isImageEditingActive = false
         }
+        if (isSubtitlesEditingActive) {
+            isSubtitlesEditingActive = false
+        }
         textEditingToolbar?.visibility = View.GONE
         imageEditingToolbar?.visibility = View.GONE
         videoEditingToolbar?.visibility = View.GONE
         audioEditingToolbar?.visibility = View.GONE
         cropEditingToolbar?.visibility = View.GONE
+        subtitlesEditingToolbar?.visibility = View.GONE
     }
 
     private fun enterTextEditingMode(isReEditing: Boolean = false) {
@@ -1078,6 +1117,69 @@ class VideoEditingActivity : AppCompatActivity() {
         findViewById<LinearLayout>(R.id.editingControlsWrapper)?.visibility = View.VISIBLE
         findViewById<View>(R.id.timelineContainer)?.visibility = View.VISIBLE
         findViewById<View>(R.id.timelineDivider)?.visibility = View.VISIBLE
+        setActiveToolButton(0)
+    }
+
+    private fun subtitlesAction() {
+        enterSubtitlesEditingMode()
+    }
+
+    private fun enterSubtitlesEditingMode() {
+        closeActiveEditingModes()
+        selectedVideoIndex = null
+        isSubtitlesEditingActive = true
+        subtitlesEditingToolbar?.visibility = View.VISIBLE
+        updateSubtitlesUi()
+        findViewById<LinearLayout>(R.id.editingControlsWrapper)?.visibility = View.GONE
+        findViewById<View>(R.id.timelineContainer)?.visibility = View.GONE
+        findViewById<View>(R.id.timelineDivider)?.visibility = View.GONE
+        if (::player.isInitialized && player.isPlaying) {
+            player.pause()
+        }
+    }
+
+    private fun exitSubtitlesEditingMode() {
+        isSubtitlesEditingActive = false
+        subtitlesEditingToolbar?.visibility = View.GONE
+        findViewById<LinearLayout>(R.id.editingControlsWrapper)?.visibility = View.VISIBLE
+        findViewById<View>(R.id.timelineContainer)?.visibility = View.VISIBLE
+        findViewById<View>(R.id.timelineDivider)?.visibility = View.VISIBLE
+        setActiveToolButton(0)
+    }
+
+    private fun updateSubtitlesUi() {
+        val toolbar = subtitlesEditingToolbar ?: return
+        val project = viewModel.project.value
+        val subOp = project?.operations?.find { it is EditOperation.AddSubtitles } as? EditOperation.AddSubtitles
+        val layoutNo = toolbar.findViewById<View>(R.id.layoutNoSubtitles)
+        val layoutHas = toolbar.findViewById<View>(R.id.layoutHasSubtitles)
+        val tvFileName = toolbar.findViewById<TextView>(R.id.tvSubtitleFileName)
+
+        if (subOp != null) {
+            layoutNo?.visibility = View.GONE
+            layoutHas?.visibility = View.VISIBLE
+            tvFileName?.text = subOp.fileName
+        } else {
+            layoutNo?.visibility = View.VISIBLE
+            layoutHas?.visibility = View.GONE
+        }
+    }
+
+    private fun pickSrtFile() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "*/*"
+            addCategory(Intent.CATEGORY_OPENABLE)
+        }
+        startActivityForResult(Intent.createChooser(intent, "Select SRT Subtitle File"), PICK_SRT_REQUEST)
+    }
+
+    private fun removeSubtitles() {
+        val project = viewModel.project.value ?: return
+        val subOp = project.operations.filterIsInstance<EditOperation.AddSubtitles>().firstOrNull() ?: return
+        viewModel.deleteOperation(subOp.id)
+        textOverlayView?.setSubtitleCues(emptyList())
+        Toast.makeText(this, "Subtitles removed", Toast.LENGTH_SHORT).show()
+        updateSubtitlesUi()
     }
 
     private fun imageOverlayAction() {
@@ -1156,6 +1258,7 @@ class VideoEditingActivity : AppCompatActivity() {
         isImageEditingActive = false
         imageEditingToolbar?.visibility = View.GONE
         findViewById<LinearLayout>(R.id.editingControlsWrapper)?.visibility = View.VISIBLE
+        setActiveToolButton(0)
     }
 
     private fun enterVideoEditingMode() {
@@ -1172,6 +1275,7 @@ class VideoEditingActivity : AppCompatActivity() {
     private fun exitVideoEditingMode() {
         videoEditingToolbar?.visibility = View.GONE
         editingControlsWrapper.visibility = View.VISIBLE
+        setActiveToolButton(0)
     }
 
 
@@ -1228,6 +1332,7 @@ class VideoEditingActivity : AppCompatActivity() {
         audioPreviewPlayer = null
         
         audioEditingToolbar?.findViewById<ImageButton>(R.id.btnAudioPreviewPlay)?.setImageResource(R.drawable.ic_play_24)
+        setActiveToolButton(0)
     }
 
     private fun enterCropEditingMode() {
@@ -1249,6 +1354,7 @@ class VideoEditingActivity : AppCompatActivity() {
     private fun exitCropEditingMode() {
         cropEditingToolbar?.visibility = View.GONE
         editingControlsWrapper.visibility = View.VISIBLE
+        setActiveToolButton(0)
     }
 
     private fun showSpeedEditingToolbar(index: Int, item: com.tharunbirla.librecuts.models.EditOperation.MergeItem) {
@@ -1574,6 +1680,72 @@ class VideoEditingActivity : AppCompatActivity() {
         } else if (requestCode == PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK) {
             data?.data?.let { imageUri ->
                 showImageOverlayConfig(imageUri)
+            }
+        } else if (requestCode == PICK_SRT_REQUEST && resultCode == Activity.RESULT_OK) {
+            data?.data?.let { srtUri ->
+                lifecycleScope.launch {
+                    val tempFile = withContext(Dispatchers.IO) { copyContentUriToTempFile(srtUri, "subtitles", ".srt") }
+                    if (tempFile != null) {
+                        val tempUri = Uri.fromFile(tempFile)
+                        val content = withContext(Dispatchers.IO) {
+                            try {
+                                val bytes = tempFile.readBytes()
+                                if (bytes.size >= 2 && bytes[0] == 0xFF.toByte() && bytes[1] == 0xFE.toByte()) {
+                                    String(bytes, 2, bytes.size - 2, kotlin.text.Charsets.UTF_16LE)
+                                } else if (bytes.size >= 2 && bytes[0] == 0xFE.toByte() && bytes[1] == 0xFF.toByte()) {
+                                    String(bytes, 2, bytes.size - 2, kotlin.text.Charsets.UTF_16BE)
+                                } else if (bytes.size >= 3 && bytes[0] == 0xEF.toByte() && bytes[1] == 0xBB.toByte() && bytes[2] == 0xBF.toByte()) {
+                                    String(bytes, 3, bytes.size - 3, kotlin.text.Charsets.UTF_8)
+                                } else {
+                                    String(bytes, kotlin.text.Charsets.UTF_8)
+                                }
+                            } catch (e: Exception) {
+                                ""
+                            }
+                        }
+                        val cues = withContext(Dispatchers.IO) {
+                            try {
+                                com.tharunbirla.librecuts.utils.SubtitleParser.parse(content)
+                            } catch (e: Exception) {
+                                emptyList()
+                            }
+                        }
+                        if (cues.isNotEmpty()) {
+                            // First remove any existing subtitles operations so we only have one subtitles track
+                            val project = viewModel.project.value
+                            project?.operations?.filterIsInstance<EditOperation.AddSubtitles>()?.forEach { op ->
+                                viewModel.deleteOperation(op.id)
+                            }
+                            
+                            val name = try {
+                                var displayName = "subtitles.srt"
+                                contentResolver.query(srtUri, null, null, null, null)?.use { cursor ->
+                                    val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                                    if (nameIndex != -1 && cursor.moveToFirst()) {
+                                        displayName = cursor.getString(nameIndex)
+                                    }
+                                }
+                                displayName
+                            } catch (e: Exception) {
+                                "subtitles.srt"
+                            }
+
+                            viewModel.addOperation(
+                                EditOperation.AddSubtitles(
+                                    subtitlesUri = tempUri,
+                                    srtContent = content,
+                                    fileName = name,
+                                    cues = cues
+                                )
+                            )
+                            Toast.makeText(this@VideoEditingActivity, "Subtitles added: ${cues.size} captions", Toast.LENGTH_SHORT).show()
+                            updateSubtitlesUi()
+                            textOverlayView?.setSubtitleCues(cues)
+                        } else {
+                            Toast.makeText(this@VideoEditingActivity, "Failed to parse subtitle file. Please ensure it is a valid SRT file.", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
             }
         }
     }
@@ -2665,7 +2837,7 @@ class VideoEditingActivity : AppCompatActivity() {
             Pair("distance", "Distance"),
             Pair("pixelize", "Pixelize"),
             Pair("hlslice", "H-Slice"),
-            Pair("vlslice", "V-Slice")
+            Pair("vuslice", "V-Slice")
         )
 
         for ((type, name) in transitions) {
@@ -2675,14 +2847,66 @@ class VideoEditingActivity : AppCompatActivity() {
             val bg = itemView.findViewById<FrameLayout>(R.id.transitionIconBg)
 
             tvName.text = name
-            tvShort.text = name.substring(0, minOf(2, name.length)).uppercase()
+            bg.clipToOutline = true
+
+            val ivPreview = itemView.findViewById<ImageView>(R.id.transitionPreviewImage)
+            val startDrawable = androidx.core.content.ContextCompat.getDrawable(this, R.drawable.trans_frame_start)
+            val endDrawable = androidx.core.content.ContextCompat.getDrawable(this, R.drawable.trans_frame_end)
+
+            if (startDrawable != null && endDrawable != null) {
+                if (type == "none") {
+                    ivPreview.setImageDrawable(startDrawable)
+                    ivPreview.visibility = View.VISIBLE
+                    tvShort.visibility = View.GONE
+                } else {
+                    val animation = android.graphics.drawable.AnimationDrawable().apply {
+                        isOneShot = false
+                    }
+                    val frame1Res = resources.getIdentifier("trans_preview_${type}_1", "drawable", packageName)
+                    val frame2Res = resources.getIdentifier("trans_preview_${type}_2", "drawable", packageName)
+                    val frame3Res = resources.getIdentifier("trans_preview_${type}_3", "drawable", packageName)
+
+                    if (frame1Res != 0 && frame2Res != 0 && frame3Res != 0) {
+                        val f1 = androidx.core.content.ContextCompat.getDrawable(this, frame1Res)
+                        val f2 = androidx.core.content.ContextCompat.getDrawable(this, frame2Res)
+                        val f3 = androidx.core.content.ContextCompat.getDrawable(this, frame3Res)
+
+                        if (f1 != null && f2 != null && f3 != null) {
+                            animation.addFrame(startDrawable, 600)
+                            animation.addFrame(f1, 100)
+                            animation.addFrame(f2, 100)
+                            animation.addFrame(f3, 100)
+                            animation.addFrame(endDrawable, 600)
+
+                            ivPreview.setImageDrawable(animation)
+                            ivPreview.visibility = View.VISIBLE
+                            tvShort.visibility = View.GONE
+                            ivPreview.post { animation.start() }
+                        } else {
+                            ivPreview.visibility = View.GONE
+                            tvShort.visibility = View.VISIBLE
+                            tvShort.text = name.substring(0, minOf(2, name.length)).uppercase()
+                        }
+                    } else {
+                        ivPreview.visibility = View.GONE
+                        tvShort.visibility = View.VISIBLE
+                        tvShort.text = name.substring(0, minOf(2, name.length)).uppercase()
+                    }
+                }
+            } else {
+                ivPreview.visibility = View.GONE
+                tvShort.visibility = View.VISIBLE
+                tvShort.text = name.substring(0, minOf(2, name.length)).uppercase()
+            }
 
             val isSelected = (existingOp?.type == type) || (existingOp == null && type == "none")
             if (isSelected) {
                 bg.setBackgroundResource(R.drawable.bg_aspect_ratio_selected)
+                bg.foreground = androidx.core.content.ContextCompat.getDrawable(this, R.drawable.bg_transition_border_selected)
                 tvShort.setTextColor(android.graphics.Color.WHITE)
             } else {
                 bg.setBackgroundResource(R.drawable.bg_aspect_ratio_item)
+                bg.foreground = null
                 tvShort.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.textColor))
             }
 
@@ -3105,5 +3329,6 @@ class VideoEditingActivity : AppCompatActivity() {
         private const val PICK_VIDEO_REQUEST = 1
         private const val PICK_AUDIO_REQUEST = 2
         private const val PICK_IMAGE_REQUEST = 3
+        private const val PICK_SRT_REQUEST = 4
     }
 }
