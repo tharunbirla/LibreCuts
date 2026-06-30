@@ -80,6 +80,8 @@ class VideoEditingActivity : AppCompatActivity() {
     private lateinit var playerContainer: FrameLayout
     private lateinit var audioTrackContainer: LinearLayout
     private lateinit var btnPlayPause: ImageButton
+    private lateinit var btnMoveLayerUp: ImageButton
+    private lateinit var btnMoveLayerDown: ImageButton
 
     private lateinit var timelineHorizontalScroll: android.widget.HorizontalScrollView
     private lateinit var timelineContainer: FrameLayout
@@ -249,6 +251,20 @@ class VideoEditingActivity : AppCompatActivity() {
                 }
             }
         }
+
+        btnMoveLayerUp = findViewById(R.id.btnMoveLayerUp)
+        btnMoveLayerDown = findViewById(R.id.btnMoveLayerDown)
+        btnMoveLayerUp.setBounceClickListener {
+            viewModel.selectedOperationId.value?.let { id ->
+                viewModel.moveOverlayOperation(id, moveUp = true)
+            }
+        }
+        btnMoveLayerDown.setBounceClickListener {
+            viewModel.selectedOperationId.value?.let { id ->
+                viewModel.moveOverlayOperation(id, moveUp = false)
+            }
+        }
+
         scaleDetector = android.view.ScaleGestureDetector(this, object : android.view.ScaleGestureDetector.SimpleOnScaleGestureListener() {
             override fun onScale(detector: android.view.ScaleGestureDetector): Boolean {
                 val scaleFactor = detector.scaleFactor
@@ -446,6 +462,7 @@ class VideoEditingActivity : AppCompatActivity() {
                     exitTextEditingMode()
                 }
 
+
                 val btnKeyboard = toolbar.findViewById<ImageButton>(R.id.btnTextKeyboardTab)
                 val btnPalette = toolbar.findViewById<ImageButton>(R.id.btnTextPaletteTab)
                 val colorContainer = toolbar.findViewById<View>(R.id.colorPickerContainer)
@@ -527,6 +544,7 @@ class VideoEditingActivity : AppCompatActivity() {
                     }
                     exitImageEditingMode()
                 }
+
                 val slider = toolbar.findViewById<Slider>(R.id.imageRotationSlider)
                 val tvValue = toolbar.findViewById<TextView>(R.id.tvImageRotationValue)
                 slider?.addOnChangeListener { _, value, _ ->
@@ -957,6 +975,7 @@ class VideoEditingActivity : AppCompatActivity() {
                 
                 // Re-render tracks so the selection highlight updates
                 viewModel.project.value?.let { renderTracks(it) }
+                updateLayerReorderButtons()
             }
         }
 
@@ -968,13 +987,12 @@ class VideoEditingActivity : AppCompatActivity() {
                     updateUIInteractionState()
 
                     textOverlayView?.let { overlay ->
-                        val textOps = project.operations.filterIsInstance<EditOperation.AddText>()
-                        overlay.setTextOperations(textOps)
+                        val overlayOps = project.operations.filter { it is EditOperation.AddText || it is EditOperation.AddImageOverlay }
+                        overlay.setOverlayOperations(overlayOps)
                     }
 
                     imageOverlayView?.let { overlay ->
-                        val imageOps = project.operations.filterIsInstance<EditOperation.AddImageOverlay>()
-                        overlay.setImageOperations(imageOps)
+                        overlay.setImageOperations(emptyList())
                     }
 
                     textOverlayView?.let { overlay ->
@@ -995,9 +1013,47 @@ class VideoEditingActivity : AppCompatActivity() {
                     }
                     
                     renderTracks(project)
+                    updateLayerReorderButtons()
                 }
             }
         }
+    }
+
+    private fun updateLayerReorderButtons() {
+        if (!::btnMoveLayerUp.isInitialized || !::btnMoveLayerDown.isInitialized) return
+        
+        val selectedId = viewModel.selectedOperationId.value
+        val project = viewModel.project.value
+        
+        if (selectedId == null || project == null) {
+            btnMoveLayerUp.visibility = View.GONE
+            btnMoveLayerDown.visibility = View.GONE
+            return
+        }
+        
+        val overlayOps = project.operations.filter {
+            it is EditOperation.AddText || it is EditOperation.AddImageOverlay
+        }
+        
+        val selectedIndex = overlayOps.indexOfFirst { op ->
+            when (op) {
+                is EditOperation.AddText -> op.id == selectedId
+                is EditOperation.AddImageOverlay -> op.id == selectedId
+                else -> false
+            }
+        }
+        
+        if (selectedIndex == -1) {
+            btnMoveLayerUp.visibility = View.GONE
+            btnMoveLayerDown.visibility = View.GONE
+            return
+        }
+        
+        val canMoveUp = selectedIndex < overlayOps.size - 1
+        val canMoveDown = selectedIndex > 0
+        
+        btnMoveLayerUp.visibility = if (canMoveUp) View.VISIBLE else View.GONE
+        btnMoveLayerDown.visibility = if (canMoveDown) View.VISIBLE else View.GONE
     }
 
     private fun applyCropPreview(aspectRatio: String) {
@@ -2599,116 +2655,105 @@ class VideoEditingActivity : AppCompatActivity() {
             // Keep track if needed but don't block
         }
 
-        // Text tracks
+        // Combined Text and Image tracks (Overlays) in Z-order stack
         textTrackContainer.removeAllViews()
-        val textOps = project.operations.filterIsInstance<EditOperation.AddText>()
-        if (textOps.isNotEmpty()) {
+        imageTrackContainer.removeAllViews()
+        imageTrackContainer.visibility = View.GONE
+
+        val overlayOps = project.operations.filter { it is EditOperation.AddText || it is EditOperation.AddImageOverlay }
+        if (overlayOps.isNotEmpty()) {
             textTrackContainer.visibility = View.VISIBLE
-            for (op in textOps) {
+            // Reverse so that the top-most overlay is visually at the top of the timeline track stack
+            for (op in overlayOps.reversed()) {
+                val opId = when (op) {
+                    is EditOperation.AddText -> op.id
+                    is EditOperation.AddImageOverlay -> op.id
+                    else -> ""
+                }
                 val trackView = com.tharunbirla.librecuts.customviews.TrackTrimView(this).apply {
                     layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 48.dpToPx()).apply {
                         topMargin = 4.dpToPx()
                     }
-                    trackColor = android.graphics.Color.parseColor("#E91E63") // Pink for text
-                    trackLabel = op.text
-                    isSelectedTrack = (op.id == viewModel.selectedOperationId.value)
-                    trackIcon = androidx.core.content.ContextCompat.getDrawable(this@VideoEditingActivity, R.drawable.ic_text_24)
+                    isSelectedTrack = (opId == viewModel.selectedOperationId.value)
+                    maxDurationMs = totalSequenceDuration
+                    customMsPerPixel = 1.0f / pixelsPerMs
+                    
                     onTrackClicked = {
-                        if (viewModel.selectedOperationId.value == op.id) {
+                        if (viewModel.selectedOperationId.value == opId) {
                             viewModel.selectOperation(null)
                         } else {
-                            viewModel.selectOperation(op.id)
+                            viewModel.selectOperation(opId)
                         }
                     }
-                    maxDurationMs = totalSequenceDuration
-                    activeStartMs = op.startTimeMs ?: 0L
-                    activeEndMs = op.endTimeMs ?: totalSequenceDuration
-                    customMsPerPixel = 1.0f / pixelsPerMs
-                    setRange(totalSequenceDuration, op.startTimeMs ?: 0L, op.endTimeMs ?: totalSequenceDuration)
-                    onTrimChanged = { start, end, _ ->
-                        viewModel.updateOperation(op.copy(startTimeMs = start, endTimeMs = end))
-                    }
-                    onTrimAdjustingWithDelta = { start, end, deltaStart, deltaEnd ->
-                        if (deltaStart != 0L) {
-                            seekToGlobalPosition(start)
-                        } else if (deltaEnd != 0L) {
-                            seekToGlobalPosition(end)
-                        } else {
-                            seekToGlobalPosition(start)
-                        }
-                    }
+                    
                     onDragStateChanged = { isDragging ->
                         isTrackDragging = isDragging
+                    }
+                }
+
+                if (op is EditOperation.AddText) {
+                    trackView.apply {
+                        trackColor = android.graphics.Color.parseColor("#E91E63") // Pink for text
+                        trackLabel = op.text
+                        trackIcon = androidx.core.content.ContextCompat.getDrawable(this@VideoEditingActivity, R.drawable.ic_text_24)
+                        activeStartMs = op.startTimeMs ?: 0L
+                        activeEndMs = op.endTimeMs ?: totalSequenceDuration
+                        setRange(totalSequenceDuration, op.startTimeMs ?: 0L, op.endTimeMs ?: totalSequenceDuration)
+                        onTrimChanged = { start, end, _ ->
+                            viewModel.updateOperation(op.copy(startTimeMs = start, endTimeMs = end))
+                        }
+                        onTrimAdjustingWithDelta = { start, end, deltaStart, deltaEnd ->
+                            if (deltaStart != 0L) {
+                                seekToGlobalPosition(start)
+                            } else if (deltaEnd != 0L) {
+                                seekToGlobalPosition(end)
+                            } else {
+                                seekToGlobalPosition(start)
+                            }
+                        }
+                    }
+                } else if (op is EditOperation.AddImageOverlay) {
+                    trackView.apply {
+                        trackColor = android.graphics.Color.parseColor("#FF9800") // Orange for image
+                        trackLabel = op.imageUri.lastPathSegment ?: "Image Overlay"
+                        trackIcon = androidx.core.content.ContextCompat.getDrawable(this@VideoEditingActivity, R.drawable.ic_image_24)
+                        activeStartMs = op.startTimeMs ?: 0L
+                        activeEndMs = op.endTimeMs ?: totalSequenceDuration
+                        setRange(totalSequenceDuration, op.startTimeMs ?: 0L, op.endTimeMs ?: totalSequenceDuration)
+                        onTrimChanged = { start, end, _ ->
+                            viewModel.updateOperation(op.copy(startTimeMs = start, endTimeMs = end))
+                        }
+                        onTrimAdjustingWithDelta = { start, end, deltaStart, deltaEnd ->
+                            if (deltaStart != 0L) {
+                                seekToGlobalPosition(start)
+                            } else if (deltaEnd != 0L) {
+                                seekToGlobalPosition(end)
+                            } else {
+                                seekToGlobalPosition(start)
+                            }
+                        }
+                        
+                        val viewRef = this
+                        val imageJob = lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                            val path = getFilePathFromUri(op.imageUri)
+                            if (path != null) {
+                                try {
+                                    val options = android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 }
+                                    val bitmap = android.graphics.BitmapFactory.decodeFile(path, options)
+                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                        viewRef.trackThumbnail = bitmap
+                                        viewRef.invalidate()
+                                    }
+                                } catch (e: Exception) {}
+                            }
+                        }
+                        activeRenderJobs.add(imageJob)
                     }
                 }
                 textTrackContainer.addView(trackView)
             }
         } else {
             textTrackContainer.visibility = View.GONE
-        }
-
-        // Image tracks
-        imageTrackContainer.removeAllViews()
-        val imageOps = project.operations.filterIsInstance<EditOperation.AddImageOverlay>()
-        if (imageOps.isNotEmpty()) {
-            imageTrackContainer.visibility = View.VISIBLE
-            for (op in imageOps) {
-                val trackView = com.tharunbirla.librecuts.customviews.TrackTrimView(this).apply {
-                    layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 48.dpToPx()).apply {
-                        topMargin = 4.dpToPx()
-                    }
-                    trackColor = android.graphics.Color.parseColor("#FF9800") // Orange for image
-                    trackLabel = op.imageUri.lastPathSegment ?: "Image Overlay"
-                    isSelectedTrack = (op.id == viewModel.selectedOperationId.value)
-                    trackIcon = androidx.core.content.ContextCompat.getDrawable(this@VideoEditingActivity, R.drawable.ic_image_24)
-                    onTrackClicked = {
-                        if (viewModel.selectedOperationId.value == op.id) {
-                            viewModel.selectOperation(null)
-                        } else {
-                            viewModel.selectOperation(op.id)
-                        }
-                    }
-                    maxDurationMs = totalSequenceDuration
-                    activeStartMs = op.startTimeMs ?: 0L
-                    activeEndMs = op.endTimeMs ?: totalSequenceDuration
-                    customMsPerPixel = 1.0f / pixelsPerMs
-                    setRange(totalSequenceDuration, op.startTimeMs ?: 0L, op.endTimeMs ?: totalSequenceDuration)
-                    onTrimChanged = { start, end, _ ->
-                        viewModel.updateOperation(op.copy(startTimeMs = start, endTimeMs = end))
-                    }
-                    onTrimAdjustingWithDelta = { start, end, deltaStart, deltaEnd ->
-                        if (deltaStart != 0L) {
-                            seekToGlobalPosition(start)
-                        } else if (deltaEnd != 0L) {
-                            seekToGlobalPosition(end)
-                        } else {
-                            seekToGlobalPosition(start)
-                        }
-                    }
-                    onDragStateChanged = { isDragging ->
-                        isTrackDragging = isDragging
-                    }
-                    
-                    val viewRef = this
-                    val imageJob = lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                        val path = getFilePathFromUri(op.imageUri)
-                        if (path != null) {
-                            try {
-                                val options = android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 }
-                                val bitmap = android.graphics.BitmapFactory.decodeFile(path, options)
-                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                    viewRef.trackThumbnail = bitmap
-                                    viewRef.invalidate()
-                                }
-                            } catch (e: Exception) {}
-                        }
-                    }
-                    activeRenderJobs.add(imageJob)
-                }
-                imageTrackContainer.addView(trackView)
-            }
-        } else {
-            imageTrackContainer.visibility = View.GONE
         }
 
         // Audio tracks

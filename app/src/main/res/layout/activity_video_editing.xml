@@ -199,23 +199,64 @@
                 android:paddingHorizontal="16dp"
                 android:layout_marginBottom="4dp">
 
+                <LinearLayout
+                    android:layout_width="88dp"
+                    android:layout_height="40dp"
+                    android:orientation="horizontal"
+                    android:gravity="start|center_vertical">
+
+                    <ImageButton
+                        android:id="@+id/btnMoveLayerUp"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_arrow_up_24"
+                        android:visibility="gone"
+                        app:tint="@color/colorOnSecondary" />
+
+                    <ImageButton
+                        android:id="@+id/btnMoveLayerDown"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_marginStart="8dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_arrow_down_24"
+                        android:visibility="gone"
+                        app:tint="@color/colorOnSecondary" />
+                </LinearLayout>
+
+                <Space
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+
                 <ImageButton
                     android:id="@+id/btnPlayPause"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:layout_weight="1"
                     android:background="@android:color/transparent"
                     android:src="@drawable/ic_play_24"
                     app:tint="@color/colorOnSecondary" />
 
+                <Space
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
 
-                <ImageButton
-                    android:id="@+id/btnMute"
-                    android:layout_width="40dp"
+                <LinearLayout
+                    android:layout_width="88dp"
                     android:layout_height="40dp"
-                    android:background="@android:color/transparent"
-                    android:src="@drawable/ic_volume_up_24"
-                    app:tint="@color/colorOnSecondary" />
+                    android:orientation="horizontal"
+                    android:gravity="end|center_vertical">
+
+                    <ImageButton
+                        android:id="@+id/btnMute"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@android:color/transparent"
+                        android:src="@drawable/ic_volume_up_24"
+                        app:tint="@color/colorOnSecondary" />
+                </LinearLayout>
             </LinearLayout>
 
             <FrameLayout
@@ -470,7 +511,7 @@
                     android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:background="@drawable/tool_button_inactive"
-                    android:src="@drawable/ic_subtitles_24"
+                    android:src="@drawable/ic_closed_caption_24"
                     app:tint="@color/toolTextInactive" />
                 <TextView
                     android:layout_width="wrap_content"

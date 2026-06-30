@@ -2,15 +2,19 @@ package com.tharunbirla.librecuts.customviews
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.DashPathEffect
 import android.graphics.Paint
+import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.ScaleGestureDetector
 import android.view.View
 import com.tharunbirla.librecuts.models.EditOperation
 import com.tharunbirla.librecuts.models.TextPosition
+import java.io.File
 
 /**
  * TextOverlayView renders text overlays on top of the video player.
@@ -69,7 +73,37 @@ class TextOverlayView @JvmOverloads constructor(
         }
     })
 
-    private var textOperations: List<EditOperation.AddText> = emptyList()
+    private var overlayOperations: List<EditOperation> = emptyList()
+    private val bitmapCache = mutableMapOf<String, Bitmap>()
+
+    private fun loadBitmapFromUri(uri: android.net.Uri): Bitmap? {
+        val cacheKey = uri.toString()
+        if (bitmapCache.containsKey(cacheKey)) {
+            return bitmapCache[cacheKey]
+        }
+        try {
+            val bitmap = if (uri.scheme == "content") {
+                context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                    BitmapFactory.decodeStream(inputStream)
+                }
+            } else {
+                val path = uri.path
+                if (path != null && File(path).exists()) {
+                    BitmapFactory.decodeFile(path)
+                } else {
+                    null
+                }
+            }
+            if (bitmap != null) {
+                bitmapCache[cacheKey] = bitmap
+                return bitmap
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return null
+    }
+
     private var videoWidth = 0
     private var videoHeight = 0
     var currentPositionMs: Long = 0L
@@ -86,7 +120,12 @@ class TextOverlayView @JvmOverloads constructor(
     private var subtitleCues: List<com.tharunbirla.librecuts.models.SubtitleCue> = emptyList()
 
     fun setTextOperations(operations: List<EditOperation.AddText>) {
-        this.textOperations = operations
+        this.overlayOperations = operations
+        invalidate()
+    }
+
+    fun setOverlayOperations(operations: List<EditOperation>) {
+        this.overlayOperations = operations
         invalidate()
     }
 
@@ -129,86 +168,118 @@ class TextOverlayView @JvmOverloads constructor(
         val videoRect = getVideoRect()
         val scale = if (videoHeight > 0) videoRect.height() / videoHeight.toFloat() else 1f
 
-        for (textOp in textOperations) {
-            if (textOp.id == hiddenOperationId) continue
-            val start = textOp.startTimeMs ?: 0L
-            val end = textOp.endTimeMs ?: Long.MAX_VALUE
-            if (currentPositionMs < start || currentPositionMs > end) continue
+        for (op in overlayOperations) {
+            if (op is EditOperation.AddText) {
+                if (op.id == hiddenOperationId) continue
+                val start = op.startTimeMs ?: 0L
+                val end = op.endTimeMs ?: Long.MAX_VALUE
+                if (currentPositionMs < start || currentPositionMs > end) continue
 
-            paint.textSize = textOp.fontSize * scale
-            try {
-                paint.color = Color.parseColor(textOp.color)
-            } catch (e: Exception) {
-                paint.color = Color.WHITE
-            }
+                paint.textSize = op.fontSize * scale
+                try {
+                    paint.color = Color.parseColor(op.color)
+                } catch (e: Exception) {
+                    paint.color = Color.WHITE
+                }
 
-            val x: Float
-            val y: Float
+                val x: Float
+                val y: Float
 
-            val textWidth = paint.measureText(textOp.text)
-            val textHeight = paint.descent() - paint.ascent()
+                val textWidth = paint.measureText(op.text)
+                val textHeight = paint.descent() - paint.ascent()
 
-            if (textOp.hasCustomPosition()) {
-                // WYSIWYG drag-and-drop coordinates (fractional 0.0–1.0) relative to text center
-                val centerX = videoRect.left + (textOp.relativeX!! * videoRect.width())
-                val centerY = videoRect.top + (textOp.relativeY!! * videoRect.height())
-                x = centerX - (textWidth / 2f)
-                y = centerY - ((paint.ascent() + paint.descent()) / 2f)
-            } else {
-                val rectW = videoRect.width()
-                val rectH = videoRect.height()
-                val rectL = videoRect.left
-                val rectT = videoRect.top
+                if (op.hasCustomPosition()) {
+                    // WYSIWYG drag-and-drop coordinates (fractional 0.0–1.0) relative to text center
+                    val centerX = videoRect.left + (op.relativeX!! * videoRect.width())
+                    val centerY = videoRect.top + (op.relativeY!! * videoRect.height())
+                    x = centerX - (textWidth / 2f)
+                    y = centerY - ((paint.ascent() + paint.descent()) / 2f)
+                } else {
+                    val rectW = videoRect.width()
+                    val rectH = videoRect.height()
+                    val rectL = videoRect.left
+                    val rectT = videoRect.top
 
-                when (textOp.position) {
-                    TextPosition.TOP_LEFT -> {
-                        x = rectL + 16f
-                        y = rectT + 32f - paint.ascent()
-                    }
-                    TextPosition.TOP_CENTER -> {
-                        x = rectL + (rectW - textWidth) / 2
-                        y = rectT + 32f - paint.ascent()
-                    }
-                    TextPosition.TOP_RIGHT -> {
-                        x = rectL + rectW - textWidth - 16f
-                        y = rectT + 32f - paint.ascent()
-                    }
-                    TextPosition.CENTER_LEFT -> {
-                        x = rectL + 16f
-                        y = rectT + rectH / 2 - textHeight / 2 - paint.ascent()
-                    }
-                    TextPosition.CENTER -> {
-                        x = rectL + (rectW - textWidth) / 2
-                        y = rectT + rectH / 2 - textHeight / 2 - paint.ascent()
-                    }
-                    TextPosition.CENTER_RIGHT -> {
-                        x = rectL + rectW - textWidth - 16f
-                        y = rectT + rectH / 2 - textHeight / 2 - paint.ascent()
-                    }
-                    TextPosition.BOTTOM_LEFT -> {
-                        x = rectL + 16f
-                        y = rectT + rectH - 16f - paint.descent()
-                    }
-                    TextPosition.BOTTOM_CENTER -> {
-                        x = rectL + (rectW - textWidth) / 2
-                        y = rectT + rectH - 16f - paint.descent()
-                    }
-                    TextPosition.BOTTOM_RIGHT -> {
-                        x = rectL + rectW - textWidth - 16f
-                        y = rectT + rectH - 16f - paint.descent()
-                    }
-                    TextPosition.CENTER_BOTTOM -> {
-                        x = rectL + (rectW - textWidth) / 2
-                        y = rectT + rectH - 16f - paint.descent()
-                    }
-                    TextPosition.CENTER_TOP -> {
-                        x = rectL + (rectW - textWidth) / 2
-                        y = rectT + 32f - paint.ascent()
+                    when (op.position) {
+                        TextPosition.TOP_LEFT -> {
+                            x = rectL + 16f
+                            y = rectT + 32f - paint.ascent()
+                        }
+                        TextPosition.TOP_CENTER -> {
+                            x = rectL + (rectW - textWidth) / 2
+                            y = rectT + 32f - paint.ascent()
+                        }
+                        TextPosition.TOP_RIGHT -> {
+                            x = rectL + rectW - textWidth - 16f
+                            y = rectT + 32f - paint.ascent()
+                        }
+                        TextPosition.CENTER_LEFT -> {
+                            x = rectL + 16f
+                            y = rectT + rectH / 2 - textHeight / 2 - paint.ascent()
+                        }
+                        TextPosition.CENTER -> {
+                            x = rectL + (rectW - textWidth) / 2
+                            y = rectT + rectH / 2 - textHeight / 2 - paint.ascent()
+                        }
+                        TextPosition.CENTER_RIGHT -> {
+                            x = rectL + rectW - textWidth - 16f
+                            y = rectT + rectH / 2 - textHeight / 2 - paint.ascent()
+                        }
+                        TextPosition.BOTTOM_LEFT -> {
+                            x = rectL + 16f
+                            y = rectT + rectH - 16f - paint.descent()
+                        }
+                        TextPosition.BOTTOM_CENTER -> {
+                            x = rectL + (rectW - textWidth) / 2
+                            y = rectT + rectH - 16f - paint.descent()
+                        }
+                        TextPosition.BOTTOM_RIGHT -> {
+                            x = rectL + rectW - textWidth - 16f
+                            y = rectT + rectH - 16f - paint.descent()
+                        }
+                        TextPosition.CENTER_BOTTOM -> {
+                            x = rectL + (rectW - textWidth) / 2
+                            y = rectT + rectH - 16f - paint.descent()
+                        }
+                        TextPosition.CENTER_TOP -> {
+                            x = rectL + (rectW - textWidth) / 2
+                            y = rectT + 32f - paint.ascent()
+                        }
                     }
                 }
-            }
 
-            canvas.drawText(textOp.text, x, y, paint)
+                canvas.drawText(op.text, x, y, paint)
+            } else if (op is EditOperation.AddImageOverlay) {
+                if (op.id == hiddenOperationId) continue
+                val start = op.startTimeMs ?: 0L
+                val end = op.endTimeMs ?: Long.MAX_VALUE
+                if (currentPositionMs < start || currentPositionMs > end) continue
+
+                val bitmap = loadBitmapFromUri(op.imageUri) ?: continue
+
+                // Width and height of image in screen coordinates
+                val imgW = op.relativeWidth * videoRect.width()
+                val imgH = op.relativeHeight * videoRect.height()
+
+                // Center position on screen
+                val centerX = videoRect.left + (op.relativeX * videoRect.width())
+                val centerY = videoRect.top + (op.relativeY * videoRect.height())
+
+                // Rect where image will be drawn
+                val dstRect = RectF(
+                    centerX - imgW / 2f,
+                    centerY - imgH / 2f,
+                    centerX + imgW / 2f,
+                    centerY + imgH / 2f
+                )
+
+                // Draw with rotation
+                canvas.save()
+                canvas.rotate(op.rotationAngle, centerX, centerY)
+                val imgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+                canvas.drawBitmap(bitmap, null, dstRect, imgPaint)
+                canvas.restore()
+            }
         }
 
         // Render subtitles centered at bottom or custom positioned

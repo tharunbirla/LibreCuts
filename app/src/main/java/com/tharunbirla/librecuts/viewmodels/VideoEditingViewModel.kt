@@ -446,6 +446,46 @@ class VideoEditingViewModel : ViewModel() {
         }
     }
 
+    fun moveOverlayOperation(id: String, moveUp: Boolean) {
+        viewModelScope.launch {
+            _project.update { current ->
+                if (current == null) return@update null
+                
+                val ops = current.operations.toMutableList()
+                val targetIndex = ops.indexOfFirst {
+                    (it is EditOperation.AddText && it.id == id) ||
+                    (it is EditOperation.AddImageOverlay && it.id == id)
+                }
+                
+                if (targetIndex == -1) return@update current
+                
+                val overlayIndices = ops.indices.filter { idx ->
+                    val op = ops[idx]
+                    op is EditOperation.AddText || op is EditOperation.AddImageOverlay
+                }
+                
+                val relativeIdx = overlayIndices.indexOf(targetIndex)
+                if (relativeIdx == -1) return@update current
+                
+                val swapWithRelativeIdx = if (moveUp) relativeIdx + 1 else relativeIdx - 1
+                if (swapWithRelativeIdx in overlayIndices.indices) {
+                    val swapWithRealIdx = overlayIndices[swapWithRelativeIdx]
+                    
+                    _undoStack.value = _undoStack.value + current
+                    _redoStack.value = emptyList()
+                    
+                    val temp = ops[targetIndex]
+                    ops[targetIndex] = ops[swapWithRealIdx]
+                    ops[swapWithRealIdx] = temp
+                    
+                    current.copy(operations = ops)
+                } else {
+                    current
+                }
+            }
+        }
+    }
+
     fun selectOperation(id: String?) {
         _selectedOperationId.value = id
     }

@@ -27,7 +27,7 @@
                 android:layout_height="wrap_content"
                 android:layout_centerInParent="true"
                 android:fontFamily="sans-serif-medium"
-                android:text="Closed Captions / Subtitles"
+                android:text="Subtitles"
                 android:textColor="@color/textColor"
                 android:textSize="18sp" />
 
@@ -54,7 +54,7 @@
                 android:id="@+id/btnUploadSrt"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Upload SRT / Subtitle File"
+                android:text="Upload Subtitle File"
                 android:textAllCaps="false"
                 android:textColor="@color/onPrimaryContainer"
                 android:backgroundTint="@color/colorPrimary"
@@ -93,7 +93,7 @@
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:src="@drawable/ic_subtitles_24"
+                    android:src="@drawable/ic_closed_caption_24"
                     app:tint="@color/colorPrimary" />
 
                 <TextView
