@@ -14,6 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Verify tag matches app versionName
+        if: github.ref_type == 'tag'
         run: |
           tag_version="${GITHUB_REF_NAME#v}"
           app_version=$(sed -nE 's/.*versionName[[:space:]]*"([^"]+)".*/\1/p' app/build.gradle | head -1)
@@ -53,5 +54,6 @@ jobs:
           done
           ls -lh release-artifacts/
       - uses: softprops/action-gh-release@v3
+        if: github.ref_type == 'tag'
         with:
           files: release-artifacts/*.apk

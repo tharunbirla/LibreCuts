@@ -28,6 +28,7 @@ render.experimental.xml
 
 # VS Code
 *.code-workspace
+.claude/
 
 # Keystore files
 *.jks
