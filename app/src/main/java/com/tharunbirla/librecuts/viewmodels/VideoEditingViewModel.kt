@@ -319,6 +319,52 @@ class VideoEditingViewModel : ViewModel() {
         }
     }
 
+    fun updateSequenceOrder(orderedItems: List<EditOperation.MergeItem>) {
+        viewModelScope.launch {
+            _project.update { current ->
+                if (current == null) return@update null
+                val otherOps = current.operations.filterNot {
+                    it is EditOperation.Trim || it is EditOperation.SpeedMain || it is EditOperation.Merge
+                }
+                
+                val newOps = mutableListOf<EditOperation>()
+                val mainItem = orderedItems[0]
+                newOps.add(EditOperation.Trim(mainItem.trimStartMs, mainItem.trimEndMs))
+                newOps.add(EditOperation.SpeedMain(mainItem.speed, mainItem.proxyUri))
+                
+                if (orderedItems.size > 1) {
+                    newOps.add(EditOperation.Merge(orderedItems.subList(1, orderedItems.size)))
+                }
+                newOps.addAll(otherOps)
+                
+                _undoStack.value = _undoStack.value + current
+                _redoStack.value = emptyList()
+                current.copy(
+                    sourceUri = mainItem.uri,
+                    sourceName = mainItem.uri.lastPathSegment ?: "video.mp4",
+                    operations = newOps
+                )
+            }
+            updateUiState { state ->
+                state.copy(
+                    pendingOperationCount = _project.value?.getOperationCount() ?: 0,
+                    canUndo = _undoStack.value.isNotEmpty(),
+                    canRedo = false
+                )
+            }
+        }
+    }
+
+    fun reorderSequenceItem(sequenceItems: List<EditOperation.MergeItem>, fromIndex: Int, toIndex: Int) {
+        val mutableItems = sequenceItems.toMutableList()
+        if (fromIndex < 0 || fromIndex >= mutableItems.size || toIndex < 0 || toIndex >= mutableItems.size) return
+        val temp = mutableItems[fromIndex]
+        mutableItems[fromIndex] = mutableItems[toIndex]
+        mutableItems[toIndex] = temp
+        updateSequenceOrder(mutableItems)
+    }
+
+
     /** Remove one clip from the merge list by index. Removes the entire Merge op if list becomes empty. */
     fun removeMergeVideo(index: Int) {
         viewModelScope.launch {

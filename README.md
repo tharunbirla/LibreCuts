@@ -20,7 +20,7 @@
     <img src="src/images/badges/badge_obtainium.png" height="96" alt="Get it on Obtainium" />
   </a>
   <a href="https://discord.gg/gwr3nE7YW">
-    <img src="src/images/badges/badge_discord.png" height="96" alt="Join Discord" />
+    <img src="src/images/badges/badge_discord.png" height="66" alt="Join Discord" />
   </a>
 </div>
 
@@ -78,9 +78,11 @@ LibreCuts is built with passion and provided to the community for free. If this 
 
 <div align="center">
   <br/>
-  <a href="https://github.com/sponsors/tharunbirla">
-    <img src="https://img.shields.io/badge/_Sponsor_This_Project-FF3366?style=for-the-badge&logo=github&logoColor=white" alt="Sponsor tharunbirla" />
-  </a>
+  <a href="https://github.com/sponsors/tharunbirla"><img src="https://img.shields.io/badge/sponsor-30363D?style=for-the-badge&logo=GitHub-Sponsors&logoColor=%23EA4AAA" alt="GitHub Sponsors" /></a>
+  &nbsp;&nbsp;
+  <a href="https://www.patreon.com/tharunbirla"><img src="https://img.shields.io/badge/Patreon-F96854?style=for-the-badge&logo=patreon&logoColor=white" alt="Patreon" /></a>
+  &nbsp;&nbsp;
+  <a href="https://ko-fi.com/tharunbirla"><img src="https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Ko-Fi" /></a>
   <br/>
   <br/>
 </div>

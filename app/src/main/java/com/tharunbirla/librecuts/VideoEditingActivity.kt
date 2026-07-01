@@ -131,6 +131,17 @@ class VideoEditingActivity : AppCompatActivity() {
     private var originalMainVideoDurationMs: Long = 0L
     private val frameCache = mutableMapOf<Uri, List<Bitmap>>()
 
+    // Drag-to-rearrange clips state
+    private var isDraggingSegment = false
+    private var draggedIndex = -1
+    private var draggedView: View? = null
+    private var initialTouchX = 0f
+    private var segmentViews = mutableListOf<View>()
+    private var originalLefts = mutableListOf<Int>()
+    private var currentDragOrder = listOf<Int>()
+    private var activeSegmentViews = mutableListOf<View>()
+
+
     // ── FONT: cached absolute path to Roboto-Regular.ttf in cacheDir ──────────
     // Populated in onCreate via ffmpegEngine.copyFontToCache().
     // Passed to buildConsolidatedFFmpegCommand() so drawtext can find the font.
@@ -281,7 +292,7 @@ class VideoEditingActivity : AppCompatActivity() {
 
                 viewModel.project.value?.let { renderTracks(it) }
 
-                val currentPos = if (::player.isInitialized) player.currentPosition else 0L
+                val currentPos = getGlobalPosition()
                 isProgrammaticScroll = true
                 timelineHorizontalScroll.scrollTo((currentPos * pixelsPerMs).toInt(), 0)
                 isProgrammaticScroll = false
@@ -984,6 +995,22 @@ class VideoEditingActivity : AppCompatActivity() {
             viewModel.project.collect { project ->
                 if (project != null) {
                     Log.d(TAG, "Project updated with ${project.getOperationCount()} operations")
+
+                    if (project.sourceUri.scheme == "file") {
+                        val projectSourcePath = project.sourceUri.path
+                        if (projectSourcePath != null && (!::tempInputFile.isInitialized || tempInputFile.absolutePath != projectSourcePath)) {
+                            tempInputFile = File(projectSourcePath)
+                            videoFileName = tempInputFile.name
+                            try {
+                                val r = android.media.MediaMetadataRetriever()
+                                r.setDataSource(tempInputFile.absolutePath)
+                                originalMainVideoDurationMs = r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong() ?: 0L
+                                r.release()
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error getting original duration: ${e.message}")
+                            }
+                        }
+                    }
 
                     updateUIInteractionState()
 
@@ -2389,9 +2416,115 @@ class VideoEditingActivity : AppCompatActivity() {
         sequenceTrackContainer.post(runnable)
     }
 
+    private fun startDragSession(view: View, index: Int, rawX: Float) {
+        if (isDraggingSegment) return
+        isDraggingSegment = true
+        draggedIndex = index
+        draggedView = view
+        initialTouchX = rawX
+
+        timelineHorizontalScroll.requestDisallowInterceptTouchEvent(true)
+        view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+
+        view.animate()
+            .scaleX(1.05f)
+            .scaleY(1.05f)
+            .alpha(0.8f)
+            .setDuration(100)
+            .start()
+        view.elevation = 20f * resources.displayMetrics.density
+
+        segmentViews = activeSegmentViews.toMutableList()
+        originalLefts.clear()
+        for (i in 0 until segmentViews.size) {
+            val lp = segmentViews[i].layoutParams as FrameLayout.LayoutParams
+            originalLefts.add(lp.leftMargin)
+        }
+        currentDragOrder = (0 until segmentViews.size).toList()
+    }
+
+    private fun updateDragPosition(rawX: Float) {
+        val draggedView = draggedView ?: return
+        val dx = rawX - initialTouchX
+        draggedView.translationX = dx
+
+        val draggedCenter = originalLefts[draggedIndex] + draggedView.width / 2f + dx
+        val centers = List(segmentViews.size) { i ->
+            if (i == draggedIndex) {
+                draggedCenter
+            } else {
+                originalLefts[i] + segmentViews[i].width / 2f
+            }
+        }
+
+        val newOrder = (0 until segmentViews.size).sortedBy { centers[it] }
+        if (newOrder != currentDragOrder) {
+            currentDragOrder = newOrder
+            var currentLeft = 0f
+            for (index in newOrder) {
+                val view = segmentViews[index]
+                if (index == draggedIndex) {
+                    currentLeft += view.width
+                } else {
+                    val targetTranslationX = currentLeft - originalLefts[index]
+                    view.animate()
+                        .translationX(targetTranslationX)
+                        .setDuration(150)
+                        .start()
+                    currentLeft += view.width
+                }
+            }
+        }
+    }
+
+    private fun endDragSession() {
+        if (!isDraggingSegment) return
+        isDraggingSegment = false
+        val draggedView = draggedView ?: return
+
+        timelineHorizontalScroll.requestDisallowInterceptTouchEvent(false)
+
+        var targetLeft = 0f
+        for (index in currentDragOrder) {
+            if (index == draggedIndex) {
+                break
+            }
+            targetLeft += segmentViews[index].width
+        }
+        val targetTranslationX = targetLeft - originalLefts[draggedIndex]
+
+        draggedView.animate()
+            .scaleX(1.0f)
+            .scaleY(1.0f)
+            .alpha(1.0f)
+            .translationX(targetTranslationX)
+            .setDuration(150)
+            .withEndAction {
+                draggedView.elevation = 0f
+                val sequenceItems = getSequenceItems()
+                val finalItems = currentDragOrder.map { sequenceItems[it] }
+
+                for (view in segmentViews) {
+                    view.translationX = 0f
+                }
+
+                val originalOrder = (0 until segmentViews.size).toList()
+                if (currentDragOrder != originalOrder) {
+                    viewModel.updateSequenceOrder(finalItems)
+                } else {
+                    viewModel.project.value?.let { renderTracks(it) }
+                }
+
+                this.draggedView = null
+                draggedIndex = -1
+            }
+            .start()
+    }
+
     private fun performRenderTracks(project: VideoProject) {
         activeRenderJobs.forEach { it.cancel() }
         activeRenderJobs.clear()
+        activeSegmentViews.clear()
 
         val sequenceItems = getSequenceItems()
 
@@ -2557,6 +2690,7 @@ class VideoEditingActivity : AppCompatActivity() {
                 leftMargin = segmentLeft
             }
             segmentView.layoutParams = params
+            activeSegmentViews.add(segmentView)
 
             val rv = segmentView.findViewById<RecyclerView>(R.id.segmentFrameRecyclerView)
             val lm = LinearLayoutManager(this, RecyclerView.HORIZONTAL, false)
@@ -2621,24 +2755,45 @@ class VideoEditingActivity : AppCompatActivity() {
                 }
                 viewModel.project.value?.let { renderTracks(it) }
             }
-            segmentView.setOnLongClickListener {
-                showVideoSegmentTrimDialog(index, item)
-                true
+
+            var lastTouchRawX = 0f
+            val gestureDetector = android.view.GestureDetector(this, object : android.view.GestureDetector.SimpleOnGestureListener() {
+                override fun onLongPress(e: android.view.MotionEvent) {
+                    startDragSession(segmentView, index, lastTouchRawX)
+                }
+            })
+
+            val touchListener = View.OnTouchListener { v, event ->
+                lastTouchRawX = event.rawX
+                gestureDetector.onTouchEvent(event)
+                if (isDraggingSegment && draggedView != null) {
+                    if (event.action == android.view.MotionEvent.ACTION_MOVE) {
+                        updateDragPosition(event.rawX)
+                    } else if (event.action == android.view.MotionEvent.ACTION_UP || event.action == android.view.MotionEvent.ACTION_CANCEL) {
+                        endDragSession()
+                    }
+                    true
+                } else {
+                    false
+                }
             }
+            
+            segmentView.setOnTouchListener(touchListener)
+            trackTrimView.setOnTouchListener(touchListener)
             
             val btnLeft = segmentView.findViewById<ImageButton>(R.id.btnMoveLeft)
             val btnRight = segmentView.findViewById<ImageButton>(R.id.btnMoveRight)
             
-            if (index > 0) { // Merged items
-                btnLeft.visibility = View.VISIBLE
-                btnRight.visibility = if (index < sequenceItems.size - 1) View.VISIBLE else View.GONE
-                
-                btnLeft.setBounceClickListener { viewModel.reorderMergeVideo(index - 1, moveForward = true) }
-                btnRight.setBounceClickListener { viewModel.reorderMergeVideo(index - 1, moveForward = false) }
-            } else {
-                // Source video cannot be reordered from here
+            if (index == 0) {
                 btnLeft.visibility = View.GONE
-                btnRight.visibility = View.GONE
+                btnRight.visibility = if (sequenceItems.size > 1) View.VISIBLE else View.GONE
+                btnRight.setBounceClickListener { viewModel.reorderSequenceItem(sequenceItems, 0, 1) }
+            } else {
+                btnLeft.visibility = View.VISIBLE
+                btnLeft.setBounceClickListener { viewModel.reorderSequenceItem(sequenceItems, index, index - 1) }
+                
+                btnRight.visibility = if (index < sequenceItems.size - 1) View.VISIBLE else View.GONE
+                btnRight.setBounceClickListener { viewModel.reorderSequenceItem(sequenceItems, index, index + 1) }
             }
 
             if (index > 0) {
