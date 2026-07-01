@@ -30,6 +30,16 @@
 
 ---
 
+## ✊ Keep Android Open
+
+[![Keep Android Open](https://img.shields.io/badge/Keep-Android_Open-brightgreen?style=for-the-badge&logo=android)](https://keepandroidopen.org/)
+
+Google's mandatory developer verification policy goes into effect in **September 2026** (in just a few months). This mandate requires all independent developers to submit government ID and centrally register with Google, threatening user privacy, sideloading freedom, and the distribution of free and open-source software (FOSS) on Android. 
+
+Help resist this gatekeeping and support the movement at [keepandroidopen.org](https://keepandroidopen.org/).
+
+---
+
 ## 🚀 Features
 
 - **Trim** - Remove unwanted parts from the beginning or end of a video clip with a real-time timeline control.
