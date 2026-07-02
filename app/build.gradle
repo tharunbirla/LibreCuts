@@ -20,7 +20,7 @@ android {
         applicationId "com.tharunbirla.librecuts"
         minSdk 26
         targetSdk 34
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode').toInteger() : 3
+        versionCode 3
         versionName "1.0-beta2"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
