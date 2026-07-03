@@ -700,6 +700,14 @@ class VideoEditingActivity : AppCompatActivity() {
                         }
                     }
                 }
+                toolbar.findViewById<ImageButton>(R.id.btnVideoReverse)?.setBounceClickListener {
+                    selectedVideoIndex?.let { index ->
+                        val items = getSequenceItems()
+                        if (index >= 0 && index < items.size) {
+                            reverseVideoSegment(index, items[index])
+                        }
+                    }
+                }
             }
         } catch (e: Exception) {
             Log.w(TAG, "Video editing toolbar not found: ${e.message}")
@@ -906,10 +914,7 @@ class VideoEditingActivity : AppCompatActivity() {
             setActiveToolButton(R.id.btnCrop)
             cropAction()
         }
-        findViewById<ImageButton>(R.id.btnMerge).setBounceClickListener {
-            setActiveToolButton(R.id.btnMerge)
-            mergeAction()
-        }
+
         findViewById<ImageButton>(R.id.btnSubtitles).setBounceClickListener {
             setActiveToolButton(R.id.btnSubtitles)
             subtitlesAction()
@@ -987,7 +992,7 @@ class VideoEditingActivity : AppCompatActivity() {
 
     private fun setActiveToolButton(activeId: Int) {
         if (isShowingPreview) dismissPreview()
-        val toolIds = listOf(R.id.btnText, R.id.btnImageOverlay, R.id.btnAudio, R.id.btnCrop, R.id.btnMerge, R.id.btnSubtitles)
+        val toolIds = listOf(R.id.btnText, R.id.btnImageOverlay, R.id.btnAudio, R.id.btnCrop, R.id.btnSubtitles)
         for (id in toolIds) {
             val btn = findViewById<ImageButton>(id) ?: continue
             btn.setBackgroundResource(if (id == activeId) R.drawable.tool_button_active else R.drawable.tool_button_inactive)
@@ -1798,21 +1803,48 @@ class VideoEditingActivity : AppCompatActivity() {
         updateSpeedUi(speed)
         
         if (speed == 1.0f) {
-            // Reset to normal speed, no proxy needed
-            if (index == 0) {
-                viewModel.updateMainVideoSpeed(1.0f, null)
+            // Reset to normal speed, but preserve reverse if it is reversed!
+            if (item.isReversed) {
+                lifecycleScope.launch {
+                    showLoading("Resetting speed...")
+                    val outputFileName = "proxy_reverse_${System.currentTimeMillis()}.mp4"
+                    val outputFilePath = java.io.File(cacheDir, outputFileName).absolutePath
+                    val result = ffmpegEngine.reverseVideo(
+                        sourceFilePath = getFilePathFromUri(item.uri) ?: "",
+                        startMs = item.trimStartMs,
+                        endMs = item.trimEndMs,
+                        outputFilePath = outputFilePath
+                    )
+                    hideLoading()
+                    if (result is com.tharunbirla.librecuts.services.FFmpegRenderEngine.RenderResult.Success) {
+                        val proxyUri = android.net.Uri.fromFile(java.io.File(result.outputPath))
+                        if (index == 0) {
+                            viewModel.updateMainVideoSpeed(1.0f, null)
+                            viewModel.updateMainVideoReverse(isReversed = true, proxyUri = proxyUri)
+                        } else {
+                            updateVideoSegment(index, item.copy(speed = 1.0f, proxyUri = proxyUri, isReversed = true))
+                        }
+                        hideSpeedEditingToolbar()
+                    } else {
+                        android.widget.Toast.makeText(this@VideoEditingActivity, "Failed to apply speed reset", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
             } else {
-                updateVideoSegment(index, item.copy(speed = 1.0f, proxyUri = null))
+                if (index == 0) {
+                    viewModel.updateMainVideoSpeed(1.0f, null)
+                } else {
+                    updateVideoSegment(index, item.copy(speed = 1.0f, proxyUri = null))
+                }
+                hideSpeedEditingToolbar()
             }
-            hideSpeedEditingToolbar()
             return
         }
-        
+
         lifecycleScope.launch {
             showLoading("Applying speed changes...")
             val outputFileName = "proxy_speed_${System.currentTimeMillis()}.mp4"
             val outputFilePath = java.io.File(cacheDir, outputFileName).absolutePath
-            
+
             val result = ffmpegEngine.generateSpeedProxy(
                 sourceFilePath = getFilePathFromUri(item.uri) ?: "",
                 startMs = item.trimStartMs,
@@ -1820,22 +1852,143 @@ class VideoEditingActivity : AppCompatActivity() {
                 speed = speed,
                 outputFilePath = outputFilePath
             )
-            
-            hideLoading()
-            
+
             if (result is com.tharunbirla.librecuts.services.FFmpegRenderEngine.RenderResult.Success) {
-                val proxyUri = android.net.Uri.fromFile(java.io.File(result.outputPath))
-                if (index == 0) {
-                    viewModel.updateMainVideoSpeed(speed, proxyUri)
+                if (item.isReversed) {
+                    showLoading("Reversing speed-adjusted video...")
+                    val reverseFileName = "proxy_reverse_${System.currentTimeMillis()}.mp4"
+                    val reverseFilePath = java.io.File(cacheDir, reverseFileName).absolutePath
+                    val speedProxyPath = result.outputPath
+
+                    val durationMs = ((item.trimEndMs - item.trimStartMs) / speed).toLong()
+                    val reverseResult = ffmpegEngine.reverseVideo(
+                        sourceFilePath = speedProxyPath,
+                        startMs = 0L,
+                        endMs = durationMs,
+                        outputFilePath = reverseFilePath
+                    )
+
+                    hideLoading()
+
+                    if (reverseResult is com.tharunbirla.librecuts.services.FFmpegRenderEngine.RenderResult.Success) {
+                        val finalProxyUri = android.net.Uri.fromFile(java.io.File(reverseResult.outputPath))
+                        if (index == 0) {
+                            viewModel.updateMainVideoSpeed(speed, null)
+                            viewModel.updateMainVideoReverse(isReversed = true, proxyUri = finalProxyUri)
+                        } else {
+                            updateVideoSegment(index, item.copy(speed = speed, proxyUri = finalProxyUri, isReversed = true))
+                        }
+                        hideSpeedEditingToolbar()
+                    } else {
+                        android.widget.Toast.makeText(this@VideoEditingActivity, "Failed to reverse speed proxy", android.widget.Toast.LENGTH_SHORT).show()
+                    }
                 } else {
-                    updateVideoSegment(index, item.copy(speed = speed, proxyUri = proxyUri))
+                    hideLoading()
+                    val proxyUri = android.net.Uri.fromFile(java.io.File(result.outputPath))
+                    if (index == 0) {
+                        viewModel.updateMainVideoSpeed(speed, proxyUri)
+                    } else {
+                        updateVideoSegment(index, item.copy(speed = speed, proxyUri = proxyUri))
+                    }
+                    hideSpeedEditingToolbar()
                 }
-                hideSpeedEditingToolbar()
             } else {
+                hideLoading()
                 android.widget.Toast.makeText(this@VideoEditingActivity, "Failed to apply speed", android.widget.Toast.LENGTH_SHORT).show()
             }
         }
     }
+
+    private fun reverseVideoSegment(index: Int, item: com.tharunbirla.librecuts.models.EditOperation.MergeItem) {
+        if (item.isReversed) {
+            // Un-reverse the clip
+            if (index == 0) {
+                if (item.speed == 1.0f) {
+                    viewModel.updateMainVideoReverse(isReversed = false, proxyUri = null)
+                } else {
+                    regenerateSpeedProxyForUnreverse(index, item)
+                }
+            } else {
+                if (item.speed == 1.0f) {
+                    updateVideoSegment(index, item.copy(isReversed = false, proxyUri = null))
+                } else {
+                    regenerateSpeedProxyForUnreverse(index, item)
+                }
+            }
+            return
+        }
+
+        lifecycleScope.launch {
+            showLoading("Reversing video...")
+            val outputFileName = "proxy_reverse_${System.currentTimeMillis()}.mp4"
+            val outputFilePath = java.io.File(cacheDir, outputFileName).absolutePath
+
+            val sourceFilePath: String
+            val startMs: Long
+            val endMs: Long
+
+            if (item.proxyUri != null) {
+                sourceFilePath = getFilePathFromUri(item.proxyUri) ?: ""
+                startMs = 0L
+                endMs = item.trimmedDurationMs
+            } else {
+                sourceFilePath = getFilePathFromUri(item.uri) ?: ""
+                startMs = item.trimStartMs
+                endMs = item.trimEndMs
+            }
+
+            val result = ffmpegEngine.reverseVideo(
+                sourceFilePath = sourceFilePath,
+                startMs = startMs,
+                endMs = endMs,
+                outputFilePath = outputFilePath
+            )
+
+            hideLoading()
+
+            if (result is com.tharunbirla.librecuts.services.FFmpegRenderEngine.RenderResult.Success) {
+                val reversedProxyUri = android.net.Uri.fromFile(java.io.File(result.outputPath))
+                if (index == 0) {
+                    viewModel.updateMainVideoReverse(isReversed = true, proxyUri = reversedProxyUri)
+                } else {
+                    updateVideoSegment(index, item.copy(isReversed = true, proxyUri = reversedProxyUri))
+                }
+            } else {
+                android.widget.Toast.makeText(this@VideoEditingActivity, "Failed to reverse video", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun regenerateSpeedProxyForUnreverse(index: Int, item: com.tharunbirla.librecuts.models.EditOperation.MergeItem) {
+        lifecycleScope.launch {
+            showLoading("Restoring forward video...")
+            val outputFileName = "proxy_speed_${System.currentTimeMillis()}.mp4"
+            val outputFilePath = java.io.File(cacheDir, outputFileName).absolutePath
+
+            val result = ffmpegEngine.generateSpeedProxy(
+                sourceFilePath = getFilePathFromUri(item.uri) ?: "",
+                startMs = item.trimStartMs,
+                endMs = item.trimEndMs,
+                speed = item.speed,
+                outputFilePath = outputFilePath
+            )
+
+            hideLoading()
+
+            if (result is com.tharunbirla.librecuts.services.FFmpegRenderEngine.RenderResult.Success) {
+                val proxyUri = android.net.Uri.fromFile(java.io.File(result.outputPath))
+                if (index == 0) {
+                    viewModel.updateMainVideoSpeed(item.speed, proxyUri)
+                    viewModel.updateMainVideoReverse(isReversed = false, proxyUri = null)
+                } else {
+                    updateVideoSegment(index, item.copy(isReversed = false, speed = item.speed, proxyUri = proxyUri))
+                }
+            } else {
+                android.widget.Toast.makeText(this@VideoEditingActivity, "Failed to restore video speed proxy", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    
     
     private fun updateVideoSegment(index: Int, newItem: com.tharunbirla.librecuts.models.EditOperation.MergeItem) {
         val project = viewModel.project.value ?: return
@@ -2491,8 +2644,10 @@ class VideoEditingActivity : AppCompatActivity() {
         val sTrimEnd = trimOp?.endMs ?: sourceDuration
         val speedOp = viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.SpeedMain>()?.lastOrNull()
         val speed = speedOp?.speed ?: 1.0f
-        val proxyUri = speedOp?.proxyUri
-        items.add(com.tharunbirla.librecuts.models.EditOperation.MergeItem(sourceUri, sourceDuration, sTrimStart, sTrimEnd, speed, proxyUri))
+        val reverseOp = viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.ReverseMain>()?.lastOrNull()
+        val isReversed = reverseOp?.isReversed ?: false
+        val proxyUri = reverseOp?.proxyUri ?: speedOp?.proxyUri
+        items.add(com.tharunbirla.librecuts.models.EditOperation.MergeItem(sourceUri, sourceDuration, sTrimStart, sTrimEnd, speed, proxyUri, isReversed))
         
         val mergeOp = viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.Merge>()?.firstOrNull()
         if (mergeOp != null) {

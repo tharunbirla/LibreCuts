@@ -333,6 +333,18 @@ class FFmpegRenderEngine(private val context: Context) {
         return executeCommand(command)
     }
 
+    suspend fun reverseVideo(
+        sourceFilePath: String,
+        startMs: Long,
+        endMs: Long,
+        outputFilePath: String
+    ): RenderResult {
+        val startSecs = startMs / 1000.0
+        val durationSecs = (endMs - startMs) / 1000.0
+        val command = "-y -ss $startSecs -i \"$sourceFilePath\" -to $durationSecs -filter:v \"reverse\" -filter:a \"areverse\" -c:v h264_mediacodec -c:a aac \"$outputFilePath\""
+        return executeCommand(command)
+    }
+
     suspend fun cropVideo(
         sourceFilePath: String,
         aspectRatio: String,

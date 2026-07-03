@@ -35,6 +35,15 @@ sealed class EditOperation : Serializable {
     ) : EditOperation()
     
     /**
+     * Reverse operation for the main video.
+     */
+    data class ReverseMain(
+        val isReversed: Boolean,
+        val proxyUri: Uri? = null,
+        val id: String = System.nanoTime().toString()
+    ) : EditOperation()
+    
+    /**
      * Crop operation: Crops video to a specified aspect ratio.
      * Supported aspects: "16:9", "9:16", "1:1"
      * Uses FFmpeg's crop filter with video re-encoding.
@@ -83,7 +92,8 @@ sealed class EditOperation : Serializable {
         val trimStartMs: Long = 0L,
         val trimEndMs: Long = durationMs,
         val speed: Float = 1.0f,
-        val proxyUri: Uri? = null
+        val proxyUri: Uri? = null,
+        val isReversed: Boolean = false
     ) : Serializable {
         val trimmedDurationMs: Long
             get() = ((trimEndMs - trimStartMs) / speed).toLong()

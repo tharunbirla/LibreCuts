@@ -114,6 +114,34 @@ class VideoEditingViewModel : ViewModel() {
             }
         }
     }
+
+    fun updateMainVideoReverse(isReversed: Boolean, proxyUri: Uri?) {
+        viewModelScope.launch {
+            _project.update { current ->
+                if (current == null) return@update null
+
+                val ops = current.operations.toMutableList()
+                val reverseIndex = ops.indexOfFirst { it is EditOperation.ReverseMain }
+                if (reverseIndex != -1) {
+                    ops[reverseIndex] = EditOperation.ReverseMain(isReversed, proxyUri)
+                } else {
+                    ops.add(EditOperation.ReverseMain(isReversed, proxyUri))
+                }
+
+                _undoStack.value = _undoStack.value + current
+                _redoStack.value = emptyList()
+                current.copy(operations = ops)
+            }
+            updateUiState { state ->
+                state.copy(
+                    pendingOperationCount = _project.value?.getOperationCount() ?: 0,
+                    canUndo = _undoStack.value.isNotEmpty(),
+                    canRedo = false
+                )
+            }
+        }
+    }
+
     fun addCropOperation(aspectRatio: String) = addOperation(EditOperation.Crop(aspectRatio))
 
     fun addTextOperation(
@@ -324,13 +352,14 @@ class VideoEditingViewModel : ViewModel() {
             _project.update { current ->
                 if (current == null) return@update null
                 val otherOps = current.operations.filterNot {
-                    it is EditOperation.Trim || it is EditOperation.SpeedMain || it is EditOperation.Merge
+                    it is EditOperation.Trim || it is EditOperation.SpeedMain || it is EditOperation.ReverseMain || it is EditOperation.Merge
                 }
                 
                 val newOps = mutableListOf<EditOperation>()
                 val mainItem = orderedItems[0]
                 newOps.add(EditOperation.Trim(mainItem.trimStartMs, mainItem.trimEndMs))
                 newOps.add(EditOperation.SpeedMain(mainItem.speed, mainItem.proxyUri))
+                newOps.add(EditOperation.ReverseMain(mainItem.isReversed, if (mainItem.isReversed) mainItem.proxyUri else null))
                 
                 if (orderedItems.size > 1) {
                     newOps.add(EditOperation.Merge(orderedItems.subList(1, orderedItems.size)))
@@ -629,6 +658,7 @@ class VideoEditingViewModel : ViewModel() {
                             is EditOperation.AddBackgroundAudio -> op.id == operationId
                             is EditOperation.AddImageOverlay -> op.id == operationId
                             is EditOperation.SpeedMain -> op.id == operationId
+                            is EditOperation.ReverseMain -> op.id == operationId
                             is EditOperation.AddSubtitles -> op.id == operationId
                         }
                     }
@@ -892,13 +922,16 @@ class VideoEditingViewModel : ViewModel() {
 
         // 1. Source Video Input (Index 0)
         var outputDuration: Double? = null
+        val reverseOp = operations.filterIsInstance<EditOperation.ReverseMain>().lastOrNull()
         val speedOp = operations.filterIsInstance<EditOperation.SpeedMain>().lastOrNull()
+        val finalProxyUri = reverseOp?.proxyUri ?: speedOp?.proxyUri
         
-        if (speedOp?.proxyUri != null) {
-            val proxyPath = resolveUriToPath(speedOp.proxyUri) ?: speedOp.proxyUri.toString()
+        if (finalProxyUri != null) {
+            val proxyPath = resolveUriToPath(finalProxyUri) ?: finalProxyUri.toString()
             val baseDuration = if (trimOp != null) (trimOp.endMs - trimOp.startMs) else 0L
             if (baseDuration > 0) {
-                outputDuration = baseDuration / speedOp.speed / 1000.0
+                val speed = speedOp?.speed ?: 1.0f
+                outputDuration = baseDuration / speed / 1000.0
                 cmd.append(" -t $outputDuration -i \"$proxyPath\"")
             } else {
                 cmd.append(" -i \"$proxyPath\"")
