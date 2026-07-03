@@ -76,10 +76,20 @@ class DraggableTextOverlayView @JvmOverloads constructor(
 
     fun getTextColor(): String = currentColorString
 
-    // ── Drag tracking ─────────────────────────────────────────────────────────
+    // ── Snap & Drag tracking ──────────────────────────────────────────────────
+    var isSnappingEnabled = true
+    private var showVerticalGuideline = false
+    private var showHorizontalGuideline = false
     private var isDragging = false
     private var dragOffsetX = 0f
     private var dragOffsetY = 0f
+
+    private val guidelinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#FF2A6D")
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+        pathEffect = DashPathEffect(floatArrayOf(15f, 10f), 0f)
+    }
 
     // ── UI components ─────────────────────────────────────────────────────────
     private val editText: EditText = EditText(context).apply {
@@ -340,8 +350,33 @@ class DraggableTextOverlayView @JvmOverloads constructor(
                     val constrainedCenterX = centerX.coerceIn(videoRect.left, videoRect.right)
                     val constrainedCenterY = centerY.coerceIn(videoRect.top, videoRect.bottom)
 
-                    editText.x = constrainedCenterX - editText.width / 2f
-                    editText.y = constrainedCenterY - editText.height / 2f
+                    val videoCenterX = videoRect.centerX()
+                    val videoCenterY = videoRect.centerY()
+                    val threshold = 16f
+
+                    var snappedX = constrainedCenterX
+                    var snappedY = constrainedCenterY
+
+                    if (isSnappingEnabled) {
+                        if (Math.abs(constrainedCenterX - videoCenterX) < threshold) {
+                            snappedX = videoCenterX
+                            showVerticalGuideline = true
+                        } else {
+                            showVerticalGuideline = false
+                        }
+                        if (Math.abs(constrainedCenterY - videoCenterY) < threshold) {
+                            snappedY = videoCenterY
+                            showHorizontalGuideline = true
+                        } else {
+                            showHorizontalGuideline = false
+                        }
+                    } else {
+                        showVerticalGuideline = false
+                        showHorizontalGuideline = false
+                    }
+
+                    editText.x = snappedX - editText.width / 2f
+                    editText.y = snappedY - editText.height / 2f
                     invalidate()
                     return true
                 }
@@ -349,6 +384,8 @@ class DraggableTextOverlayView @JvmOverloads constructor(
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if (isDragging) {
                     isDragging = false
+                    showVerticalGuideline = false
+                    showHorizontalGuideline = false
                     updateRelativePosition()
                     return true
                 }
@@ -363,6 +400,14 @@ class DraggableTextOverlayView @JvmOverloads constructor(
         super.dispatchDraw(canvas)
 
         if (isEditingActive && editText.text.isNotEmpty()) {
+            val videoRect = getVideoRect()
+            if (showVerticalGuideline) {
+                canvas.drawLine(videoRect.centerX(), videoRect.top, videoRect.centerX(), videoRect.bottom, guidelinePaint)
+            }
+            if (showHorizontalGuideline) {
+                canvas.drawLine(videoRect.left, videoRect.centerY(), videoRect.right, videoRect.centerY(), guidelinePaint)
+            }
+
             // Draw selection border around the EditText
             selectionRect.set(
                 editText.x - 4f,

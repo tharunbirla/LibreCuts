@@ -395,9 +395,6 @@ class VideoEditingViewModel : ViewModel() {
         addOperation(EditOperation.MuteAudio())
     }
 
-    fun addMuteSegmentOperation(index: Int) {
-        addOperation(EditOperation.MuteSegment(index))
-    }
 
     fun addBackgroundAudioOperation(
         audioUri: Uri,
@@ -557,9 +554,7 @@ class VideoEditingViewModel : ViewModel() {
                     _redoStack.value = emptyList()
                     val opToRemove = ops[index]
                     ops.removeAt(index)
-                    if (opToRemove is EditOperation.AddBackgroundAudio && opToRemove.extractedFromSegmentIndex != null) {
-                        ops.removeAll { it is EditOperation.MuteSegment && it.index == opToRemove.extractedFromSegmentIndex }
-                    }
+
                     current.copy(operations = ops)
                 } else {
                     current
@@ -623,21 +618,6 @@ class VideoEditingViewModel : ViewModel() {
                 current?.let {
                     _undoStack.value = _undoStack.value + it
                     _redoStack.value = emptyList()
-                    val opToRemove = it.operations.find { op -> 
-                        when(op) {
-                            is EditOperation.Trim -> op.id == operationId
-                            is EditOperation.Crop -> op.id == operationId
-                            is EditOperation.AddText -> op.id == operationId
-                            is EditOperation.Merge -> op.id == operationId
-                            is EditOperation.MuteAudio -> op.id == operationId
-                            is EditOperation.MuteSegment -> op.id == operationId
-                            is EditOperation.Transition -> op.id == operationId
-                            is EditOperation.AddBackgroundAudio -> op.id == operationId
-                            is EditOperation.AddImageOverlay -> op.id == operationId
-                            is EditOperation.SpeedMain -> op.id == operationId
-                            is EditOperation.AddSubtitles -> op.id == operationId
-                        }
-                    }
                     var newOps = it.operations.filterNot { op ->
                         when (op) {
                             is EditOperation.Trim -> op.id == operationId
@@ -645,16 +625,12 @@ class VideoEditingViewModel : ViewModel() {
                             is EditOperation.AddText -> op.id == operationId
                             is EditOperation.Merge -> op.id == operationId
                             is EditOperation.MuteAudio -> op.id == operationId
-                            is EditOperation.MuteSegment -> op.id == operationId
                             is EditOperation.Transition -> op.id == operationId
                             is EditOperation.AddBackgroundAudio -> op.id == operationId
                             is EditOperation.AddImageOverlay -> op.id == operationId
                             is EditOperation.SpeedMain -> op.id == operationId
                             is EditOperation.AddSubtitles -> op.id == operationId
                         }
-                    }
-                    if (opToRemove is EditOperation.AddBackgroundAudio && opToRemove.extractedFromSegmentIndex != null) {
-                        newOps = newOps.filterNot { op -> op is EditOperation.MuteSegment && op.index == opToRemove.extractedFromSegmentIndex }
                     }
                     it.copy(operations = newOps)
                 }
@@ -1049,12 +1025,6 @@ class VideoEditingViewModel : ViewModel() {
                 durationsArray[idx + 1] = item.trimmedDurationMs / 1000.0
             }
 
-            val mutedSegments = operations.filterIsInstance<EditOperation.MuteSegment>().map { it.index }
-            for (i in 0 until inputCount) {
-                if (mutedSegments.contains(i)) {
-                    hasAudioArray[i] = false
-                }
-            }
 
             // Normalize each clip to the same resolution, fps, pixel format.
             // Using format=yuv420p ensures consistent formats for xfade and concat inputs.
@@ -1338,7 +1308,7 @@ class VideoEditingViewModel : ViewModel() {
             }
 
             // Mix original audio with all background tracks
-            val mainVideoMuted = operations.any { it is EditOperation.MuteSegment && it.index == 0 }
+            val mainVideoMuted = false
             if (hasAudio && !mainVideoMuted && !audioInputIndices.any { it.second.removeOriginalAudio }) {
                 val allInputs = "[0:a]" + mixInputLabels.joinToString("")
                 val totalInputs = 1 + mixInputLabels.size

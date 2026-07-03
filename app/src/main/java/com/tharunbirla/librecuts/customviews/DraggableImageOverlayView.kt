@@ -38,10 +38,20 @@ class DraggableImageOverlayView @JvmOverloads constructor(
     private var imageAspectRatio = 1.0f
     private var imageUri: Uri? = null
 
-    // ── Drag tracking ─────────────────────────────────────────────────────────
+    // ── Snap & Drag tracking ──────────────────────────────────────────────────
+    var isSnappingEnabled = true
+    private var showVerticalGuideline = false
+    private var showHorizontalGuideline = false
     private var isDragging = false
     private var dragOffsetX = 0f
     private var dragOffsetY = 0f
+
+    private val guidelinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#FF2A6D")
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+        pathEffect = android.graphics.DashPathEffect(floatArrayOf(15f, 10f), 0f)
+    }
 
     // ── UI components ─────────────────────────────────────────────────────────
     private val imageView: ImageView = AppCompatImageView(context).apply {
@@ -275,8 +285,33 @@ class DraggableImageOverlayView @JvmOverloads constructor(
                     val constrainedCenterX = centerX.coerceIn(videoRect.left, videoRect.right)
                     val constrainedCenterY = centerY.coerceIn(videoRect.top, videoRect.bottom)
 
-                    imageView.x = constrainedCenterX - imageView.width / 2f
-                    imageView.y = constrainedCenterY - imageView.height / 2f
+                    val videoCenterX = videoRect.centerX()
+                    val videoCenterY = videoRect.centerY()
+                    val threshold = 16f
+
+                    var snappedX = constrainedCenterX
+                    var snappedY = constrainedCenterY
+
+                    if (isSnappingEnabled) {
+                        if (Math.abs(constrainedCenterX - videoCenterX) < threshold) {
+                            snappedX = videoCenterX
+                            showVerticalGuideline = true
+                        } else {
+                            showVerticalGuideline = false
+                        }
+                        if (Math.abs(constrainedCenterY - videoCenterY) < threshold) {
+                            snappedY = videoCenterY
+                            showHorizontalGuideline = true
+                        } else {
+                            showHorizontalGuideline = false
+                        }
+                    } else {
+                        showVerticalGuideline = false
+                        showHorizontalGuideline = false
+                    }
+
+                    imageView.x = snappedX - imageView.width / 2f
+                    imageView.y = snappedY - imageView.height / 2f
                     invalidate()
                     return true
                 }
@@ -284,6 +319,8 @@ class DraggableImageOverlayView @JvmOverloads constructor(
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if (isDragging) {
                     isDragging = false
+                    showVerticalGuideline = false
+                    showHorizontalGuideline = false
                     updateRelativePosition()
                     return true
                 }
@@ -298,6 +335,14 @@ class DraggableImageOverlayView @JvmOverloads constructor(
         super.dispatchDraw(canvas)
 
         if (isEditingActive && imageUri != null) {
+            val videoRect = getVideoRect()
+            if (showVerticalGuideline) {
+                canvas.drawLine(videoRect.centerX(), videoRect.top, videoRect.centerX(), videoRect.bottom, guidelinePaint)
+            }
+            if (showHorizontalGuideline) {
+                canvas.drawLine(videoRect.left, videoRect.centerY(), videoRect.right, videoRect.centerY(), guidelinePaint)
+            }
+
             // Draw selection bounds correctly around rotated image
             canvas.save()
             canvas.rotate(rotationAngle, imageView.x + imageView.width / 2f, imageView.y + imageView.height / 2f)

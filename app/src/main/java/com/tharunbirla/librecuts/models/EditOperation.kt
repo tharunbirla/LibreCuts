@@ -113,13 +113,6 @@ sealed class EditOperation : Serializable {
         val id: String = System.nanoTime().toString()
     ) : EditOperation()
 
-    /**
-     * Mute segment operation: Mutes a specific video segment.
-     */
-    data class MuteSegment(
-        val index: Int,
-        val id: String = System.nanoTime().toString()
-    ) : EditOperation()
 
     /**
      * Transition operation: Adds a transition effect between two consecutive videos.

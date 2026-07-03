@@ -89,6 +89,7 @@ class VideoEditingActivity : AppCompatActivity() {
     private var isTrackDragging = false
     private var isProgrammaticScroll = false
     private var pixelsPerMs: Float = 0.3f
+    private var lastSnappedTargetMs: Long = -1L
     private enum class ZoomMode { FIT, MEDIUM, PRECISION }
     private var currentZoomMode = ZoomMode.MEDIUM
     private lateinit var scaleDetector: android.view.ScaleGestureDetector
@@ -160,6 +161,7 @@ class VideoEditingActivity : AppCompatActivity() {
     private var imageOverlayView: ImageOverlayView? = null
     private var imageEditingToolbar: View? = null
     private var isImageEditingActive = false
+    private var isMagnetEnabled = true
 
     // Video layer selection state
     private var selectedVideoIndex: Int? = null
@@ -264,6 +266,21 @@ class VideoEditingActivity : AppCompatActivity() {
             }
         }
 
+        val btnMagnet = findViewById<ImageButton>(R.id.btnMagnet)
+        btnMagnet.setImageResource(if (isMagnetEnabled) R.drawable.ic_magnet_24 else R.drawable.ic_magnet_off_24)
+        btnMagnet.setBounceClickListener {
+            isMagnetEnabled = !isMagnetEnabled
+            if (isMagnetEnabled) {
+                btnMagnet.setImageResource(R.drawable.ic_magnet_24)
+                Toast.makeText(this, "Snapping enabled", Toast.LENGTH_SHORT).show()
+            } else {
+                btnMagnet.setImageResource(R.drawable.ic_magnet_off_24)
+                Toast.makeText(this, "Snapping disabled", Toast.LENGTH_SHORT).show()
+            }
+            draggableTextOverlay?.isSnappingEnabled = isMagnetEnabled
+            draggableImageOverlay?.isSnappingEnabled = isMagnetEnabled
+        }
+
         btnMoveLayerUp = findViewById(R.id.btnMoveLayerUp)
         btnMoveLayerDown = findViewById(R.id.btnMoveLayerDown)
         btnMoveLayerUp.setBounceClickListener {
@@ -363,7 +380,40 @@ class VideoEditingActivity : AppCompatActivity() {
 
         timelineHorizontalScroll.setOnScrollChangeListener { _, scrollX, _, _, _ ->
             if (!isProgrammaticScroll) {
-                val targetMs = (scrollX / pixelsPerMs).toLong()
+                var targetMs = (scrollX / pixelsPerMs).toLong()
+
+                if (isMagnetEnabled) {
+                    val snapTargets = getSnapTargetsMs()
+                    val thresholdPx = 10f
+                    val thresholdMs = (thresholdPx / pixelsPerMs).toLong()
+
+                    var snapped = false
+                    for (target in snapTargets) {
+                        if (Math.abs(targetMs - target) <= thresholdMs) {
+                            targetMs = target
+                            snapped = true
+                            if (lastSnappedTargetMs != target) {
+                                timelineHorizontalScroll.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                                lastSnappedTargetMs = target
+                            }
+                            if (!isUserScrollingTimeline) {
+                                val snappedScrollX = (targetMs * pixelsPerMs).toInt()
+                                if (scrollX != snappedScrollX) {
+                                    isProgrammaticScroll = true
+                                    timelineHorizontalScroll.scrollTo(snappedScrollX, 0)
+                                    isProgrammaticScroll = false
+                                }
+                            }
+                            break
+                        }
+                    }
+                    if (!snapped) {
+                        lastSnappedTargetMs = -1L
+                    }
+                } else {
+                    lastSnappedTargetMs = -1L
+                }
+
                 seekToGlobalPosition(targetMs)
             }
         }
@@ -386,6 +436,25 @@ class VideoEditingActivity : AppCompatActivity() {
                     }
                     android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
                         isUserScrollingTimeline = false
+                        if (isMagnetEnabled) {
+                            val scrollX = timelineHorizontalScroll.scrollX
+                            val targetMs = (scrollX / pixelsPerMs).toLong()
+                            val snapTargets = getSnapTargetsMs()
+                            val thresholdPx = 10f
+                            val thresholdMs = (thresholdPx / pixelsPerMs).toLong()
+                            for (target in snapTargets) {
+                                if (Math.abs(targetMs - target) <= thresholdMs) {
+                                    val snappedScrollX = (target * pixelsPerMs).toInt()
+                                    if (scrollX != snappedScrollX) {
+                                        isProgrammaticScroll = true
+                                        timelineHorizontalScroll.scrollTo(snappedScrollX, 0)
+                                        isProgrammaticScroll = false
+                                        seekToGlobalPosition(target)
+                                    }
+                                    break
+                                }
+                            }
+                        }
                     }
                 }
                 false
@@ -421,9 +490,9 @@ class VideoEditingActivity : AppCompatActivity() {
             null
         }
 
-        // Inline text editing components
         draggableTextOverlay = try {
             findViewById<DraggableTextOverlayView>(R.id.draggableTextOverlay)?.also { overlay ->
+                overlay.isSnappingEnabled = isMagnetEnabled
                 overlay.onTextCommitted = { text, fontSize, relX, relY, color ->
                     val selectedId = viewModel.selectedOperationId.value
                     if (selectedId != null) {
@@ -473,6 +542,9 @@ class VideoEditingActivity : AppCompatActivity() {
                     }
                     exitTextEditingMode()
                 }
+                toolbar.findViewById<View>(R.id.btnTextDuplicate)?.setBounceClickListener {
+                    duplicateSelectedOverlay()
+                }
 
 
                 val btnKeyboard = toolbar.findViewById<ImageButton>(R.id.btnTextKeyboardTab)
@@ -507,6 +579,7 @@ class VideoEditingActivity : AppCompatActivity() {
 
         draggableImageOverlay = try {
             findViewById<DraggableImageOverlayView>(R.id.draggableImageOverlay)?.also { overlay ->
+                overlay.isSnappingEnabled = isMagnetEnabled
                 overlay.onImageCommitted = { uri, relX, relY, relW, relH, rotationAngle ->
                     val selectedId = viewModel.selectedOperationId.value
                     if (selectedId != null) {
@@ -556,6 +629,9 @@ class VideoEditingActivity : AppCompatActivity() {
                     }
                     exitImageEditingMode()
                 }
+                toolbar.findViewById<View>(R.id.btnImageDuplicate)?.setBounceClickListener {
+                    duplicateSelectedOverlay()
+                }
 
                 val slider = toolbar.findViewById<Slider>(R.id.imageRotationSlider)
                 val tvValue = toolbar.findViewById<TextView>(R.id.tvImageRotationValue)
@@ -597,6 +673,10 @@ class VideoEditingActivity : AppCompatActivity() {
                             extractAudioFromSegment(index, items[index])
                         }
                     }
+                }
+
+                toolbar.findViewById<ImageButton>(R.id.btnVideoFreezeFrame)?.setBounceClickListener {
+                    freezeFrameAtCurrentPosition()
                 }
                 toolbar.findViewById<ImageButton>(R.id.btnVideoSpeed)?.setBounceClickListener {
                     selectedVideoIndex?.let { index ->
@@ -1226,6 +1306,51 @@ class VideoEditingActivity : AppCompatActivity() {
         setActiveToolButton(0)
     }
 
+    private fun duplicateSelectedOverlay() {
+        val selectedId = viewModel.selectedOperationId.value ?: return
+        val currentProject = viewModel.project.value ?: return
+        val op = currentProject.operations.find {
+            when (it) {
+                is EditOperation.AddText -> it.id == selectedId
+                is EditOperation.AddImageOverlay -> it.id == selectedId
+                else -> false
+            }
+        } ?: return
+
+        val newOp = when (op) {
+            is EditOperation.AddText -> {
+                val newX = ((op.relativeX ?: 0.5f) + 0.05f).coerceIn(0f, 1f)
+                val newY = ((op.relativeY ?: 0.5f) + 0.05f).coerceIn(0f, 1f)
+                op.copy(
+                    id = System.nanoTime().toString(),
+                    relativeX = newX,
+                    relativeY = newY
+                )
+            }
+            is EditOperation.AddImageOverlay -> {
+                val newX = (op.relativeX + 0.05f).coerceIn(0f, 1f)
+                val newY = (op.relativeY + 0.05f).coerceIn(0f, 1f)
+                op.copy(
+                    id = System.nanoTime().toString(),
+                    relativeX = newX,
+                    relativeY = newY
+                )
+            }
+            else -> null
+        }
+
+        val newOpId = when (newOp) {
+            is EditOperation.AddText -> newOp.id
+            is EditOperation.AddImageOverlay -> newOp.id
+            else -> null
+        }
+
+        if (newOp != null && newOpId != null) {
+            viewModel.addOperation(newOp)
+            viewModel.selectOperation(newOpId)
+        }
+    }
+
     private fun subtitlesAction() {
         enterSubtitlesEditingMode()
     }
@@ -1397,6 +1522,113 @@ class VideoEditingActivity : AppCompatActivity() {
         videoEditingToolbar?.findViewById<View>(R.id.btnVideoDeleteContainer)?.visibility = if (selectedVideoIndex != null && selectedVideoIndex!! > 0) View.VISIBLE else View.GONE
         if (::player.isInitialized && player.isPlaying) {
             player.pause()
+        }
+    }
+
+    private fun freezeFrameAtCurrentPosition() {
+        val index = selectedVideoIndex ?: return
+        val sequenceItems = getSequenceItems()
+        if (index < 0 || index >= sequenceItems.size) return
+        val item = sequenceItems[index]
+
+        showLoading("Creating freeze frame...")
+        isImportLoading = true
+
+        val globalPos = getGlobalPosition()
+
+        lifecycleScope.launch {
+            val resultUri = withContext(Dispatchers.IO) {
+                var bitmap: android.graphics.Bitmap? = null
+                val retriever = android.media.MediaMetadataRetriever()
+                try {
+                    retriever.setDataSource(this@VideoEditingActivity, item.uri)
+                    
+                    var globalStartMs = 0L
+                    for (i in 0 until index) {
+                        globalStartMs += sequenceItems[i].trimmedDurationMs
+                    }
+                    val relativePosMs = globalPos - globalStartMs
+                    val sourceTimeMs = item.trimStartMs + (relativePosMs * item.speed).toLong()
+                    val coercedSourceTimeMs = sourceTimeMs.coerceIn(item.trimStartMs, item.trimEndMs)
+
+                    bitmap = retriever.getFrameAtTime(coercedSourceTimeMs * 1000L, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to retrieve frame: ${e.message}", e)
+                } finally {
+                    try {
+                        retriever.release()
+                    } catch (e: Exception) {}
+                }
+
+                if (bitmap == null) return@withContext null
+
+                val pngFile = File(cacheDir, "freeze_${System.nanoTime()}.png")
+                try {
+                    java.io.FileOutputStream(pngFile).use { out ->
+                        bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to save temp PNG: ${e.message}", e)
+                    return@withContext null
+                }
+
+                val mp4File = File(cacheDir, "freeze_vid_${System.nanoTime()}.mp4")
+                val cmd = "-y -loop 1 -i \"${pngFile.absolutePath}\" -c:v h264_mediacodec -t 3 -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" \"${mp4File.absolutePath}\""
+                val renderResult = ffmpegEngine.executeCommand(cmd)
+
+                try {
+                    pngFile.delete()
+                } catch (e: Exception) {}
+
+                if (renderResult is com.tharunbirla.librecuts.services.FFmpegRenderEngine.RenderResult.Success) {
+                    Uri.fromFile(mp4File)
+                } else {
+                    Log.e(TAG, "FFmpeg failed to create freeze frame video")
+                    null
+                }
+            }
+
+            isImportLoading = false
+            loadingScreen.visibility = View.GONE
+
+            if (resultUri != null) {
+                val freezeFrameItem = com.tharunbirla.librecuts.models.EditOperation.MergeItem(resultUri, 3000L)
+                val newItems = mutableListOf<com.tharunbirla.librecuts.models.EditOperation.MergeItem>()
+                
+                var globalStartMs = 0L
+                for (i in 0 until index) {
+                    globalStartMs += sequenceItems[i].trimmedDurationMs
+                }
+                val relativePosMs = globalPos - globalStartMs
+                
+                for (i in 0 until sequenceItems.size) {
+                    if (i == index) {
+                        val splitSourceMs = item.trimStartMs + (relativePosMs * item.speed).toLong()
+                        if (splitSourceMs > item.trimStartMs && splitSourceMs < item.trimEndMs) {
+                            val itemA = item.copy(trimEndMs = splitSourceMs)
+                            val itemB = item.copy(trimStartMs = splitSourceMs)
+                            newItems.add(itemA)
+                            newItems.add(freezeFrameItem)
+                            newItems.add(itemB)
+                        } else if (splitSourceMs <= item.trimStartMs) {
+                            newItems.add(freezeFrameItem)
+                            newItems.add(item)
+                        } else {
+                            newItems.add(item)
+                            newItems.add(freezeFrameItem)
+                        }
+                    } else {
+                        newItems.add(sequenceItems[i])
+                    }
+                }
+                
+                selectedVideoIndex = null
+                exitVideoEditingMode()
+                viewModel.updateSequenceOrder(newItems)
+                Toast.makeText(this@VideoEditingActivity, "Freeze frame added to sequence", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(this@VideoEditingActivity, "Failed to create freeze frame", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -1700,7 +1932,6 @@ class VideoEditingActivity : AppCompatActivity() {
                         extractedFromSegmentIndex = index
                     )
                 )
-                viewModel.addMuteSegmentOperation(index)
                 Toast.makeText(this@VideoEditingActivity, "Audio extracted to new layer", Toast.LENGTH_SHORT).show()
             } else if (result is com.tharunbirla.librecuts.services.FFmpegRenderEngine.RenderResult.Failure) {
                 Toast.makeText(this@VideoEditingActivity, "Failed to extract audio", Toast.LENGTH_SHORT).show()
@@ -2563,7 +2794,7 @@ class VideoEditingActivity : AppCompatActivity() {
             
             var videoSourceForChunk: com.google.android.exoplayer2.source.MediaSource? = null
             var vGlobalMs = 0L
-            for (item in sequenceItems) {
+            for ((index, item) in sequenceItems.withIndex()) {
                 val vStart = vGlobalMs
                 val vEnd = vGlobalMs + item.trimmedDurationMs
                 if (chunkStartMs >= vStart && chunkEndMs <= vEnd) {
@@ -2585,9 +2816,11 @@ class VideoEditingActivity : AppCompatActivity() {
                         .build()
                     val baseVideoSource = mediaSourceFactory.createMediaSource(videoMediaItem)
                     
-                    videoSourceForChunk = com.google.android.exoplayer2.source.ClippingMediaSource(
+                    val clippedSource = com.google.android.exoplayer2.source.ClippingMediaSource(
                         baseVideoSource, clipStartUs, clipEndUs, true, false, true
                     )
+                    
+                    videoSourceForChunk = clippedSource
                     break
                 }
                 vGlobalMs += item.trimmedDurationMs
@@ -3591,6 +3824,39 @@ class VideoEditingActivity : AppCompatActivity() {
             .show()
     }
 
+    private fun getSnapTargetsMs(): List<Long> {
+        val targets = mutableSetOf<Long>()
+        targets.add(0L)
+
+        // 1. Clip segment boundaries
+        var cumulative = 0L
+        for (duration in chunkDurationsMs) {
+            cumulative += duration
+            targets.add(cumulative)
+        }
+
+        // 2. Operations boundaries
+        viewModel.project.value?.operations?.forEach { op ->
+            when (op) {
+                is EditOperation.AddBackgroundAudio -> {
+                    op.startTimeMs?.let { targets.add(it) }
+                    op.endTimeMs?.let { targets.add(it) }
+                }
+                is EditOperation.AddText -> {
+                    op.startTimeMs?.let { targets.add(it) }
+                    op.endTimeMs?.let { targets.add(it) }
+                }
+                is EditOperation.AddImageOverlay -> {
+                    op.startTimeMs?.let { targets.add(it) }
+                    op.endTimeMs?.let { targets.add(it) }
+                }
+                else -> {}
+            }
+        }
+
+        return targets.toList().sorted()
+    }
+
     companion object {
         private const val TAG = "VideoEditingActivity"
         private const val PICK_VIDEO_REQUEST = 1
@@ -3599,3 +3865,5 @@ class VideoEditingActivity : AppCompatActivity() {
         private const val PICK_SRT_REQUEST = 4
     }
 }
+
+

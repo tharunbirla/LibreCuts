@@ -250,6 +250,14 @@
                     android:gravity="end|center_vertical">
 
                     <ImageButton
+                        android:id="@+id/btnMagnet"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@android:color/transparent"
+                        android:src="@drawable/ic_magnet_24"
+                        app:tint="@color/colorOnSecondary" />
+
+                    <ImageButton
                         android:id="@+id/btnMute"
                         android:layout_width="40dp"
                         android:layout_height="40dp"
