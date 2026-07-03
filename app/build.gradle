@@ -20,7 +20,7 @@ android {
         applicationId "com.tharunbirla.librecuts"
         minSdk 26
         targetSdk 34
-        versionCode 3
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode').toInteger() : 3
         versionName "1.0-beta2"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -66,10 +66,20 @@ android {
             universalApk false
         }
     }
+
+    applicationVariants.all { variant ->
+        def abiCodes = ['armeabi-v7a': 0, 'arm64-v8a': 1, 'x86_64': 2]
+
+        variant.outputs.each { output ->
+            def abi = output.getFilter(com.android.build.OutputFile.ABI)
+            if (abi != null && abiCodes.containsKey(abi)) {
+                output.versionCodeOverride = variant.versionCode + abiCodes.get(abi)
+            }
+        }
+    }
 }
 
 dependencies {
-
     implementation 'com.google.android.exoplayer:exoplayer-core:2.19.1'
     implementation 'com.google.android.exoplayer:exoplayer-ui:2.19.1'
     implementation("com.arthenica:smart-exception-java:0.2.1")
