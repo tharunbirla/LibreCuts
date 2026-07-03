@@ -502,6 +502,7 @@ class VideoEditingViewModel : ViewModel() {
                         it is EditOperation.AddText && updatedOp is EditOperation.AddText -> it.id == updatedOp.id
                         it is EditOperation.AddImageOverlay && updatedOp is EditOperation.AddImageOverlay -> it.id == updatedOp.id
                         it is EditOperation.AddBackgroundAudio && updatedOp is EditOperation.AddBackgroundAudio -> it.id == updatedOp.id
+                        it is EditOperation.Merge && updatedOp is EditOperation.Merge -> it.id == updatedOp.id
                         else -> false
                     }
                 }
