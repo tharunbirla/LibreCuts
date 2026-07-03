@@ -84,6 +84,8 @@ class VideoEditingActivity : AppCompatActivity() {
     private lateinit var btnMoveLayerDown: ImageButton
 
     private lateinit var timelineHorizontalScroll: android.widget.HorizontalScrollView
+    private lateinit var timelineVerticalScroll: android.widget.ScrollView
+    private lateinit var btnTimelineAdd: View
     private lateinit var timelineContainer: FrameLayout
     private var isUserScrollingTimeline = false
     private var isTrackDragging = false
@@ -372,10 +374,21 @@ class VideoEditingActivity : AppCompatActivity() {
         btnPlayPause = findViewById(R.id.btnPlayPause)
         timelineHorizontalScroll = findViewById(R.id.timelineHorizontalScroll)
         timelineContainer = findViewById(R.id.timelineContainer)
+        timelineVerticalScroll = findViewById(R.id.timelineVerticalScroll)
+        btnTimelineAdd = findViewById(R.id.btnTimelineAdd)
+
+        btnTimelineAdd.setBounceClickListener {
+            openFilePickerMerge()
+        }
 
         timelineContainer.post {
             val halfWidth = timelineContainer.width / 2
             timelineHorizontalScroll.setPadding(halfWidth, 0, halfWidth, 0)
+            updateTimelineAddButtonPosition()
+        }
+
+        timelineVerticalScroll.setOnScrollChangeListener { _, _, _, _, _ ->
+            updateTimelineAddButtonPosition()
         }
 
         timelineHorizontalScroll.setOnScrollChangeListener { _, scrollX, _, _, _ ->
@@ -416,6 +429,7 @@ class VideoEditingActivity : AppCompatActivity() {
 
                 seekToGlobalPosition(targetMs)
             }
+            updateTimelineAddButtonPosition()
         }
 
         timelineHorizontalScroll.setOnTouchListener { _, event ->
@@ -2760,7 +2774,10 @@ class VideoEditingActivity : AppCompatActivity() {
         val sequenceItems = getSequenceItems()
 
         val totalSequenceDuration = getTotalSequenceDuration()
-        if (totalSequenceDuration <= 0L) return
+        if (totalSequenceDuration <= 0L) {
+            updateTimelineAddButtonPosition()
+            return
+        }
 
         val mediaSourceFactory = com.google.android.exoplayer2.source.DefaultMediaSourceFactory(this)
         
@@ -3229,6 +3246,61 @@ class VideoEditingActivity : AppCompatActivity() {
         if (activeExtractionCount == 0 && isImportLoading) {
             isImportLoading = false
             loadingScreen.visibility = View.GONE
+        }
+        updateTimelineAddButtonPosition()
+    }
+
+    private fun updateTimelineAddButtonPosition() {
+        if (!::btnTimelineAdd.isInitialized) return
+        val rulerView = findViewById<View>(R.id.timeRulerView) ?: return
+        val seqTrack = findViewById<View>(R.id.sequenceTrackContainer) ?: return
+        val vScroll = findViewById<android.widget.ScrollView>(R.id.timelineVerticalScroll) ?: return
+
+        val timelineWidth = timelineHorizontalScroll.width
+        if (timelineWidth <= 0) return
+
+        val halfWidth = timelineWidth / 2
+        val totalDurationMs = getSequenceItems().sumOf { it.trimmedDurationMs }
+        val totalTrackWidthPx = halfWidth + (totalDurationMs * pixelsPerMs).toInt()
+
+        val scrollX = timelineHorizontalScroll.scrollX
+
+        // Position the button 8dp to the right of the end of the last clip
+        val snapX = totalTrackWidthPx - scrollX + 8.dpToPx()
+
+        val btnWidth = btnTimelineAdd.width.takeIf { it > 0 } ?: 36.dpToPx()
+        val rightMargin = 16.dpToPx()
+        val maxBtnX = timelineWidth - btnWidth - rightMargin
+
+        // The button floats at the right end of the screen, unless the end of the last clip scrolls into view,
+        // in which case it snaps to the end of the clip (snapX).
+        val btnX = Math.min(snapX.toFloat(), maxBtnX.toFloat())
+
+        // If the button is scrolled off-screen to the left, hide it
+        if (btnX + btnWidth < 0) {
+            btnTimelineAdd.visibility = View.GONE
+        } else {
+            btnTimelineAdd.visibility = View.VISIBLE
+            btnTimelineAdd.translationX = btnX
+        }
+
+        // Vertically center on the main video track (sequenceTrackContainer)
+        // Taking into account the timeRulerView and vertical scroll of the tracks
+        val rulerHeight = rulerView.height.takeIf { it > 0 } ?: 28.dpToPx()
+        val seqTrackTop = seqTrack.top
+        val seqTrackHeight = seqTrack.height.takeIf { it > 0 } ?: 64.dpToPx()
+        val btnHeight = btnTimelineAdd.height.takeIf { it > 0 } ?: 36.dpToPx()
+
+        val btnY = rulerHeight + seqTrackTop - vScroll.scrollY + (seqTrackHeight - btnHeight) / 2
+
+        // Check if the button is within the visible bounds of the timeline container
+        val visibleTop = rulerHeight
+        val visibleBottom = timelineContainer.height
+        val btnCenterY = btnY + btnHeight / 2
+        if (btnCenterY < visibleTop || btnCenterY > visibleBottom) {
+            btnTimelineAdd.visibility = View.GONE
+        } else {
+            btnTimelineAdd.translationY = btnY.toFloat()
         }
     }
 
