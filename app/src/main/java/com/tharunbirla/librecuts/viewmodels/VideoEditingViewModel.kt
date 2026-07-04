@@ -470,7 +470,8 @@ class VideoEditingViewModel : ViewModel() {
         relativeHeight: Float,
         rotationAngle: Float,
         startTimeMs: Long? = null,
-        endTimeMs: Long? = null
+        endTimeMs: Long? = null,
+        fileDurationMs: Long? = null
     ) {
         addOperation(
             EditOperation.AddImageOverlay(
@@ -481,7 +482,8 @@ class VideoEditingViewModel : ViewModel() {
                 relativeHeight = relativeHeight,
                 rotationAngle = rotationAngle,
                 startTimeMs = startTimeMs,
-                endTimeMs = endTimeMs
+                endTimeMs = endTimeMs,
+                fileDurationMs = fileDurationMs
             )
         )
     }
@@ -812,15 +814,26 @@ class VideoEditingViewModel : ViewModel() {
                         val rotatedImgLabel = "[rotated_img_$stageIndex]"
                         val nextLabel = "[v$stageIndex]"
 
-                        // Ensure image has an alpha channel so rotation doesn't add black corners for JPEGs
-                        val rgbaImgLabel = "[rgba_img_$stageIndex]"
-                        stages.add("[$imageInputIndex:v]format=rgba$rgbaImgLabel")
-                        
-                        // Scale image relative to reference video dimensions
-                        stages.add("${rgbaImgLabel}${currentLabel}scale2ref=w=main_w*${op.relativeWidth}:h=main_h*${op.relativeHeight}${scaledImgLabel}${refVidLabel}")
-                        // Rotate image (c=none preserves transparent background, ow/oh prevent cropping)
+                        val path = op.imageUri.path
+                        val isVideo = path != null && (path.endsWith(".mp4", ignoreCase = true) ||
+                                                       path.endsWith(".mkv", ignoreCase = true) ||
+                                                       path.endsWith(".mov", ignoreCase = true) ||
+                                                       path.endsWith(".3gp", ignoreCase = true))
+
+                        if (isVideo) {
+                            val startSec = (op.startTimeMs ?: 0L) / 1000.0
+                            val ptsLabel = "[pts_$stageIndex]"
+                            stages.add("[$imageInputIndex:v]setpts=PTS-STARTPTS+${startSec}/TB,format=rgba$ptsLabel")
+                            stages.add("${ptsLabel}${currentLabel}scale2ref=w=main_w*${op.relativeWidth}:h=main_h*${op.relativeHeight}${scaledImgLabel}${refVidLabel}")
+                        } else {
+                            val rgbaImgLabel = "[rgba_img_$stageIndex]"
+                            stages.add("[$imageInputIndex:v]format=rgba$rgbaImgLabel")
+                            stages.add("${rgbaImgLabel}${currentLabel}scale2ref=w=main_w*${op.relativeWidth}:h=main_h*${op.relativeHeight}${scaledImgLabel}${refVidLabel}")
+                        }
+
+                        // Rotate image/video overlay (c=none preserves transparent background, ow/oh prevent cropping)
                         stages.add("${scaledImgLabel}rotate=$radians:c=none:ow='rotw($radians)':oh='roth($radians)'${rotatedImgLabel}")
-                        // Overlay image on the reference video
+                        // Overlay image/video on the reference video
                         val enablePart = buildEnableExpr(op.startTimeMs, op.endTimeMs)
                         stages.add("${refVidLabel}${rotatedImgLabel}overlay=x=(W*${op.relativeX})-(w/2):y=(H*${op.relativeY})-(h/2)${enablePart}${nextLabel}")
 
@@ -1015,7 +1028,12 @@ class VideoEditingViewModel : ViewModel() {
                 Log.e(TAG, "Failed to resolve image URI to path: ${imageOp.imageUri} — skipping overlay")
                 continue
             }
-            cmd.append(" -i \"$imagePath\"")
+            val isGif = imagePath.endsWith(".gif", ignoreCase = true)
+            if (isGif) {
+                cmd.append(" -ignore_loop 0 -i \"$imagePath\"")
+            } else {
+                cmd.append(" -i \"$imagePath\"")
+            }
             imageInputIndices.add(Pair(inputIndex, imageOp))
             inputIndex++
         }

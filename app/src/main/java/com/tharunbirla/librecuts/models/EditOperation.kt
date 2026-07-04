@@ -175,7 +175,8 @@ sealed class EditOperation : Serializable {
         val rotationAngle: Float,
         val startTimeMs: Long? = null,
         val endTimeMs: Long? = null,
-        val id: String = System.nanoTime().toString()
+        val id: String = System.nanoTime().toString(),
+        val fileDurationMs: Long? = null
     ) : EditOperation()
 
     data class AddSubtitles(

@@ -606,7 +606,9 @@ class VideoEditingActivity : AppCompatActivity() {
                         }
                     } else {
                         val start = getGlobalPosition()
-                        val end = minOf(start + 3000L, getTotalSequenceDuration())
+                        val fileDuration = getOverlayFileDurationMs(uri)
+                        val duration = fileDuration ?: 3000L
+                        val end = minOf(start + duration, getTotalSequenceDuration())
                         viewModel.addImageOverlayOperation(
                             imageUri = uri,
                             relativeX = relX,
@@ -615,7 +617,8 @@ class VideoEditingActivity : AppCompatActivity() {
                             relativeHeight = relH,
                             rotationAngle = rotationAngle,
                             startTimeMs = start,
-                            endTimeMs = end
+                            endTimeMs = end,
+                            fileDurationMs = fileDuration
                         )
                     }
                     viewModel.selectOperation(null)
@@ -1204,12 +1207,13 @@ class VideoEditingActivity : AppCompatActivity() {
                     updateUIInteractionState()
 
                     textOverlayView?.let { overlay ->
-                        val overlayOps = project.operations.filter { it is EditOperation.AddText || it is EditOperation.AddImageOverlay }
+                        val overlayOps = project.operations.filter { it is EditOperation.AddText }
                         overlay.setOverlayOperations(overlayOps)
                     }
 
                     imageOverlayView?.let { overlay ->
-                        overlay.setImageOperations(emptyList())
+                        val overlayOps = project.operations.filterIsInstance<EditOperation.AddImageOverlay>()
+                        overlay.setImageOperations(overlayOps)
                     }
 
                     textOverlayView?.let { overlay ->
@@ -1630,31 +1634,109 @@ class VideoEditingActivity : AppCompatActivity() {
 
     private fun openImagePicker() {
         val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-            type = "image/*"
+            type = "*/*"
+            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "video/*"))
             addCategory(Intent.CATEGORY_OPENABLE)
         }
-        startActivityForResult(Intent.createChooser(intent, "Select Image"), PICK_IMAGE_REQUEST)
+        startActivityForResult(Intent.createChooser(intent, "Select Image, GIF, or Video Overlay"), PICK_IMAGE_REQUEST)
     }
 
     private fun showImageOverlayConfig(imageUri: Uri) {
         lifecycleScope.launch {
+            val extension = getExtensionFromUri(imageUri) ?: ".png"
             val tempImageFile = withContext(Dispatchers.IO) {
-                copyContentUriToTempFile(imageUri, "overlay_image", ".png")
+                copyContentUriToTempFile(imageUri, "overlay_image", extension)
             }
             if (tempImageFile == null) {
-                Toast.makeText(this@VideoEditingActivity, "Failed to load image", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@VideoEditingActivity, "Failed to load overlay file", Toast.LENGTH_SHORT).show()
                 return@launch
             }
             val localUri = Uri.fromFile(tempImageFile)
             
-            val options = BitmapFactory.Options().apply {
-                inJustDecodeBounds = true
+            val isVideo = extension.equals(".mp4", ignoreCase = true) ||
+                          extension.equals(".mkv", ignoreCase = true) ||
+                          extension.equals(".mov", ignoreCase = true) ||
+                          extension.equals(".3gp", ignoreCase = true)
+            
+            val aspect = if (isVideo) {
+                withContext(Dispatchers.IO) {
+                    try {
+                        val retriever = android.media.MediaMetadataRetriever()
+                        retriever.setDataSource(tempImageFile.absolutePath)
+                        val wStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
+                        val hStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
+                        val rStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
+                        val w = wStr?.toIntOrNull() ?: 1
+                        val h = hStr?.toIntOrNull() ?: 1
+                        val r = rStr?.toIntOrNull() ?: 0
+                        retriever.release()
+                        val isSwapped = r == 90 || r == 270
+                        if (isSwapped) h.toFloat() / w else w.toFloat() / h
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error getting video aspect: ${e.message}", e)
+                        1.0f
+                    }
+                }
+            } else {
+                val options = BitmapFactory.Options().apply {
+                    inJustDecodeBounds = true
+                }
+                BitmapFactory.decodeFile(tempImageFile.absolutePath, options)
+                if (options.outHeight > 0) options.outWidth.toFloat() / options.outHeight else 1.0f
             }
-            BitmapFactory.decodeFile(tempImageFile.absolutePath, options)
-            val aspect = if (options.outHeight > 0) options.outWidth.toFloat() / options.outHeight else 1.0f
             
             enterImageEditingMode(localUri, aspect)
         }
+    }
+
+    private fun getExtensionFromUri(uri: Uri): String? {
+        val mimeType = contentResolver.getType(uri)
+        if (mimeType != null) {
+            val mime = android.webkit.MimeTypeMap.getSingleton()
+            val ext = mime.getExtensionFromMimeType(mimeType)
+            if (ext != null) {
+                return ".$ext"
+            }
+        }
+        val path = uri.path ?: return null
+        val lastDot = path.lastIndexOf('.')
+        if (lastDot != -1) {
+            return path.substring(lastDot)
+        }
+        return null
+    }
+
+    private fun getOverlayFileDurationMs(uri: Uri): Long? {
+        val path = uri.path ?: return null
+        val isGif = path.endsWith(".gif", ignoreCase = true)
+        val isVideo = path.endsWith(".mp4", ignoreCase = true) ||
+                      path.endsWith(".mkv", ignoreCase = true) ||
+                      path.endsWith(".mov", ignoreCase = true) ||
+                      path.endsWith(".3gp", ignoreCase = true)
+        if (isGif) {
+            try {
+                val movie = android.graphics.Movie.decodeFile(path)
+                if (movie != null && movie.duration() > 0) {
+                    return movie.duration().toLong()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error reading GIF duration: ${e.message}", e)
+            }
+        } else if (isVideo) {
+            try {
+                val retriever = android.media.MediaMetadataRetriever()
+                retriever.setDataSource(path)
+                val durationStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
+                val durationMs = durationStr?.toLongOrNull()
+                retriever.release()
+                if (durationMs != null && durationMs > 0) {
+                    return durationMs
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error reading video duration: ${e.message}", e)
+            }
+        }
+        return null
     }
 
     private fun enterImageEditingMode(uri: Uri, aspect: Float) {
@@ -3708,6 +3790,7 @@ class VideoEditingActivity : AppCompatActivity() {
                         trackIcon = androidx.core.content.ContextCompat.getDrawable(this@VideoEditingActivity, R.drawable.ic_image_24)
                         activeStartMs = op.startTimeMs ?: 0L
                         activeEndMs = op.endTimeMs ?: totalSequenceDuration
+                        maxSelectionDurationMs = op.fileDurationMs
                         setRange(totalSequenceDuration, op.startTimeMs ?: 0L, op.endTimeMs ?: totalSequenceDuration)
                         onTrimChanged = { start, end, _ ->
                             viewModel.updateOperation(op.copy(startTimeMs = start, endTimeMs = end))

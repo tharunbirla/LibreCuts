@@ -236,36 +236,6 @@ class TextOverlayView @JvmOverloads constructor(
                 }
 
                 canvas.drawText(op.text, x, y, paint)
-            } else if (op is EditOperation.AddImageOverlay) {
-                if (op.id == hiddenOperationId) continue
-                val start = op.startTimeMs ?: 0L
-                val end = op.endTimeMs ?: Long.MAX_VALUE
-                if (currentPositionMs < start || currentPositionMs > end) continue
-
-                val bitmap = loadBitmapFromUri(op.imageUri) ?: continue
-
-                // Width and height of image in screen coordinates
-                val imgW = op.relativeWidth * videoRect.width()
-                val imgH = op.relativeHeight * videoRect.height()
-
-                // Center position on screen
-                val centerX = videoRect.left + (op.relativeX * videoRect.width())
-                val centerY = videoRect.top + (op.relativeY * videoRect.height())
-
-                // Rect where image will be drawn
-                val dstRect = RectF(
-                    centerX - imgW / 2f,
-                    centerY - imgH / 2f,
-                    centerX + imgW / 2f,
-                    centerY + imgH / 2f
-                )
-
-                // Draw with rotation
-                canvas.save()
-                canvas.rotate(op.rotationAngle, centerX, centerY)
-                val imgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-                canvas.drawBitmap(bitmap, null, dstRect, imgPaint)
-                canvas.restore()
             }
         }
 

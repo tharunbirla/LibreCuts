@@ -178,7 +178,7 @@ class DraggableImageOverlayView @JvmOverloads constructor(
         relativeHeight = relativeWidth * videoRatio / aspect
         rotationAngle = 0f
 
-        imageView.setImageURI(uri)
+        loadOverlayMedia(uri)
         visibility = VISIBLE
         post {
             updateImageViewSizeAndPosition()
@@ -196,11 +196,49 @@ class DraggableImageOverlayView @JvmOverloads constructor(
         relativeHeight = op.relativeHeight
         rotationAngle = op.rotationAngle
 
-        imageView.setImageURI(op.imageUri)
+        loadOverlayMedia(op.imageUri)
         imageView.rotation = rotationAngle
         visibility = VISIBLE
         post {
             updateImageViewSizeAndPosition()
+        }
+    }
+
+    private fun loadOverlayMedia(uri: Uri) {
+        val path = uri.path
+        if (path != null) {
+            val isGif = path.endsWith(".gif", ignoreCase = true)
+            val isVideo = path.endsWith(".mp4", ignoreCase = true) ||
+                          path.endsWith(".mkv", ignoreCase = true) ||
+                          path.endsWith(".mov", ignoreCase = true) ||
+                          path.endsWith(".3gp", ignoreCase = true)
+
+            if (isGif && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                try {
+                    val source = android.graphics.ImageDecoder.createSource(context.contentResolver, uri)
+                    val drawable = android.graphics.ImageDecoder.decodeDrawable(source)
+                    imageView.setImageDrawable(drawable)
+                    if (drawable is android.graphics.drawable.Animatable) {
+                        drawable.start()
+                    }
+                } catch (e: Exception) {
+                    imageView.setImageURI(uri)
+                }
+            } else if (isVideo) {
+                try {
+                    val retriever = android.media.MediaMetadataRetriever()
+                    retriever.setDataSource(path)
+                    val bitmap = retriever.getFrameAtTime(0, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                    imageView.setImageBitmap(bitmap)
+                    retriever.release()
+                } catch (e: Exception) {
+                    imageView.setImageURI(uri)
+                }
+            } else {
+                imageView.setImageURI(uri)
+            }
+        } else {
+            imageView.setImageURI(uri)
         }
     }
 
