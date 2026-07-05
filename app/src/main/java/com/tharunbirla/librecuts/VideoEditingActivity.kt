@@ -4170,7 +4170,7 @@ class VideoEditingActivity : AppCompatActivity() {
         val filtersList = view.findViewById<LinearLayout>(R.id.colorFiltersList)
         val project = viewModel.project.value ?: return
         val existingOp = project.operations.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.ColorFilter>().find { it.index == clipIndex }
-        val activeFilterName = existingOp?.filterName ?: "none"
+        var activeFilterName = existingOp?.filterName ?: "none"
 
         val filters = listOf(
             Pair("none", "None"),
@@ -4184,95 +4184,77 @@ class VideoEditingActivity : AppCompatActivity() {
             Pair("crossprocess", "Cross P")
         )
 
+        val itemBgs = mutableMapOf<String, FrameLayout>()
+        val itemTvShorts = mutableMapOf<String, TextView>()
+
+        fun refreshSelectionStates() {
+            for ((id, bgFrame) in itemBgs) {
+                val tvShort = itemTvShorts[id]
+                val isSelected = (id == activeFilterName)
+                if (isSelected) {
+                    bgFrame.setBackgroundResource(R.drawable.bg_aspect_ratio_selected)
+                    bgFrame.foreground = androidx.core.content.ContextCompat.getDrawable(this, R.drawable.bg_transition_border_selected)
+                    tvShort?.setTextColor(android.graphics.Color.WHITE)
+                } else {
+                    bgFrame.setBackgroundResource(R.drawable.bg_aspect_ratio_item)
+                    bgFrame.foreground = null
+                    tvShort?.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.textColor))
+                }
+            }
+        }
+
         for ((filterId, displayName) in filters) {
             val itemView = layoutInflater.inflate(R.layout.item_color_filter_option, filtersList, false)
             val tvName = itemView.findViewById<TextView>(R.id.filterName)
-            val tvShort = itemView.findViewById<TextView>(R.id.filterShortName)
             val bg = itemView.findViewById<FrameLayout>(R.id.filterIconBg)
-            val previewColor = itemView.findViewById<View>(R.id.filterPreviewColor)
+            val previewImage = itemView.findViewById<ImageView>(R.id.filterPreviewImage)
+            val tvShort = itemView.findViewById<TextView>(R.id.filterShortName)
+
+            itemBgs[filterId] = bg
+            itemTvShorts[filterId] = tvShort
 
             tvName.text = displayName
             bg.clipToOutline = true
 
-            // Set preview color filter
-            previewColor.setBackgroundColor(android.graphics.Color.parseColor("#444444")) // base grey
-            // Apply the actual filter to the preview view to give the user a direct visual preview!
-            val matrix = when (filterId) {
-                "vintage" -> floatArrayOf(
-                    0.393f, 0.769f, 0.189f, 0f, 0f,
-                    0.349f, 0.686f, 0.168f, 0f, 0f,
-                    0.272f, 0.534f, 0.131f, 0f, 0f,
-                    0f,     0f,     0f,     1f, 0f
-                )
-                "warm" -> floatArrayOf(
-                    1.1f, 0f, 0f, 0f, 10f,
-                    0f, 1.0f, 0f, 0f, 5f,
-                    0f, 0f, 0.9f, 0f, -10f,
-                    0f, 0f, 0f, 1f, 0f
-                )
-                "cool" -> floatArrayOf(
-                    0.9f, 0f, 0f, 0f, -10f,
-                    0f, 1.0f, 0f, 0f, 0f,
-                    0f, 0f, 1.2f, 0f, 15f,
-                    0f, 0f, 0f, 1f, 0f
-                )
-                "contrast" -> floatArrayOf(
-                    1.4f, 0f, 0f, 0f, -50f,
-                    0f, 1.4f, 0f, 0f, -50f,
-                    0f, 0f, 1.4f, 0f, -50f,
-                    0f, 0f, 0f, 1f, 0f
-                )
-                "monochrome" -> floatArrayOf(
-                    0.33f, 0.59f, 0.11f, 0f, 0f,
-                    0.33f, 0.59f, 0.11f, 0f, 0f,
-                    0.33f, 0.59f, 0.11f, 0f, 0f,
-                    0f,    0f,    0f,    1f, 0f
-                )
-                "vignette" -> floatArrayOf(
-                    0.8f, 0f, 0f, 0f, 0f,
-                    0f, 0.8f, 0f, 0f, 0f,
-                    0f, 0f, 0.8f, 0f, 0f,
-                    0f, 0f, 0f, 1f, 0f
-                )
-                "negative" -> floatArrayOf(
-                    -1f, 0f, 0f, 0f, 255f,
-                    0f, -1f, 0f, 0f, 255f,
-                    0f, 0f, -1f, 0f, 255f,
-                    0f, 0f, 0f, 1f, 0f
-                )
-                "crossprocess" -> floatArrayOf(
-                    1.2f, 0f, 0f, 0f, 0f,
-                    0f, 1.0f, 0f, 0f, 10f,
-                    0f, 0f, 1.4f, 0f, -20f,
-                    0f, 0f, 0f, 1f, 0f
-                )
-                else -> null
-            }
-
-            if (matrix != null) {
-                val paint = android.graphics.Paint()
-                paint.colorFilter = android.graphics.ColorMatrixColorFilter(android.graphics.ColorMatrix(matrix))
-                previewColor.setLayerType(View.LAYER_TYPE_HARDWARE, paint)
-                tvShort.text = filterId.take(2).uppercase()
-            } else {
-                previewColor.setLayerType(View.LAYER_TYPE_NONE, null)
-                previewColor.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            if (filterId == "none") {
+                previewImage.visibility = View.GONE
+                tvShort.visibility = View.VISIBLE
                 tvShort.text = "✖"
-            }
-
-            if (filterId == activeFilterName) {
-                bg.setBackgroundResource(R.drawable.bg_transition_border_selected)
             } else {
-                bg.setBackgroundResource(R.drawable.bg_aspect_ratio_item)
+                previewImage.visibility = View.VISIBLE
+                tvShort.visibility = View.GONE
+                val resName = "filter_preview_${filterId.lowercase()}"
+                val resId = resources.getIdentifier(resName, "drawable", packageName)
+                if (resId != 0) {
+                    previewImage.setImageResource(resId)
+                }
             }
 
             itemView.setOnClickListener {
+                activeFilterName = filterId
+                refreshSelectionStates()
                 viewModel.setColorFilter(clipIndex, filterId)
                 applyColorFilterToPlayer(filterId)
-                bottomSheet.dismiss()
             }
             
             filtersList.addView(itemView)
+        }
+
+        refreshSelectionStates()
+
+        view.findViewById<View>(R.id.btnApplyToAll)?.setOnClickListener {
+            val chunkCount = chunkDurationsMs.size
+            for (i in 0 until chunkCount) {
+                viewModel.setColorFilter(i, activeFilterName)
+            }
+            applyColorFilterToPlayer(activeFilterName)
+            viewModel.project.value?.let { renderTracks(it) }
+            bottomSheet.dismiss()
+        }
+
+        view.findViewById<View>(R.id.btnDone)?.setOnClickListener {
+            viewModel.project.value?.let { renderTracks(it) }
+            bottomSheet.dismiss()
         }
 
         bottomSheet.show()
@@ -4286,6 +4268,7 @@ class VideoEditingActivity : AppCompatActivity() {
         val transitionsList = view.findViewById<LinearLayout>(R.id.transitionsList)
         val project = viewModel.project.value ?: return
         val existingOp = project.operations.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.Transition>().find { it.index == transitionIndex }
+        var activeTransitionType = existingOp?.type ?: "none"
         
         val transitions = listOf(
             Pair("none", "None"),
@@ -4304,11 +4287,49 @@ class VideoEditingActivity : AppCompatActivity() {
             Pair("vuslice", "V-Slice")
         )
 
+        val itemBgs = mutableMapOf<String, FrameLayout>()
+        val itemTvShorts = mutableMapOf<String, TextView>()
+
+        fun refreshSelectionStates() {
+            for ((typeKey, bgFrame) in itemBgs) {
+                val tvShort = itemTvShorts[typeKey]
+                val isSelected = (typeKey == activeTransitionType)
+                if (isSelected) {
+                    bgFrame.setBackgroundResource(R.drawable.bg_aspect_ratio_selected)
+                    bgFrame.foreground = androidx.core.content.ContextCompat.getDrawable(this, R.drawable.bg_transition_border_selected)
+                    tvShort?.setTextColor(android.graphics.Color.WHITE)
+                } else {
+                    bgFrame.setBackgroundResource(R.drawable.bg_aspect_ratio_item)
+                    bgFrame.foreground = null
+                    tvShort?.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.textColor))
+                }
+            }
+        }
+
+        fun applyTransitionToIndex(idx: Int, transType: String) {
+            val proj = viewModel.project.value ?: return
+            val existing = proj.operations.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.Transition>().find { it.index == idx }
+            if (transType == "none") {
+                if (existing != null) {
+                    viewModel.removeOperation(existing.id)
+                }
+            } else {
+                if (existing != null) {
+                    viewModel.updateOperation(existing.copy(type = transType))
+                } else {
+                    viewModel.addTransitionOperation(idx, transType)
+                }
+            }
+        }
+
         for ((type, name) in transitions) {
             val itemView = layoutInflater.inflate(R.layout.item_transition_option, transitionsList, false)
             val tvName = itemView.findViewById<TextView>(R.id.transitionName)
             val tvShort = itemView.findViewById<TextView>(R.id.transitionShortName)
             val bg = itemView.findViewById<FrameLayout>(R.id.transitionIconBg)
+
+            itemBgs[type] = bg
+            itemTvShorts[type] = tvShort
 
             tvName.text = name
             bg.clipToOutline = true
@@ -4319,9 +4340,9 @@ class VideoEditingActivity : AppCompatActivity() {
 
             if (startDrawable != null && endDrawable != null) {
                 if (type == "none") {
-                    ivPreview.setImageDrawable(startDrawable)
-                    ivPreview.visibility = View.VISIBLE
-                    tvShort.visibility = View.GONE
+                    ivPreview.visibility = View.GONE
+                    tvShort.visibility = View.VISIBLE
+                    tvShort.text = "✖"
                 } else {
                     val animation = android.graphics.drawable.AnimationDrawable().apply {
                         isOneShot = false
@@ -4363,34 +4384,29 @@ class VideoEditingActivity : AppCompatActivity() {
                 tvShort.text = name.substring(0, minOf(2, name.length)).uppercase()
             }
 
-            val isSelected = (existingOp?.type == type) || (existingOp == null && type == "none")
-            if (isSelected) {
-                bg.setBackgroundResource(R.drawable.bg_aspect_ratio_selected)
-                bg.foreground = androidx.core.content.ContextCompat.getDrawable(this, R.drawable.bg_transition_border_selected)
-                tvShort.setTextColor(android.graphics.Color.WHITE)
-            } else {
-                bg.setBackgroundResource(R.drawable.bg_aspect_ratio_item)
-                bg.foreground = null
-                tvShort.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.textColor))
-            }
-
             itemView.setOnClickListener {
-                if (type == "none") {
-                    if (existingOp != null) {
-                        viewModel.removeOperation(existingOp.id)
-                    }
-                } else {
-                    if (existingOp != null) {
-                        viewModel.updateOperation(existingOp.copy(type = type))
-                    } else {
-                        viewModel.addTransitionOperation(transitionIndex, type)
-                    }
-                }
-                bottomSheet.dismiss()
-                viewModel.project.value?.let { renderTracks(it) }
+                activeTransitionType = type
+                refreshSelectionStates()
+                applyTransitionToIndex(transitionIndex, type)
             }
 
             transitionsList.addView(itemView)
+        }
+
+        refreshSelectionStates()
+
+        view.findViewById<View>(R.id.btnApplyToAll)?.setOnClickListener {
+            val transitionsCount = chunkDurationsMs.size - 1
+            for (i in 0 until transitionsCount) {
+                applyTransitionToIndex(i, activeTransitionType)
+            }
+            viewModel.project.value?.let { renderTracks(it) }
+            bottomSheet.dismiss()
+        }
+
+        view.findViewById<View>(R.id.btnDone)?.setOnClickListener {
+            viewModel.project.value?.let { renderTracks(it) }
+            bottomSheet.dismiss()
         }
 
         bottomSheet.show()

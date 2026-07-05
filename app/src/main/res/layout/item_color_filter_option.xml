@@ -12,20 +12,20 @@
         android:layout_height="60dp"
         android:background="@drawable/bg_aspect_ratio_item">
 
-        <View
-            android:id="@+id/filterPreviewColor"
+        <ImageView
+            android:id="@+id/filterPreviewImage"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-        
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop" />
+
         <TextView
             android:id="@+id/filterShortName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:text="F"
+            android:textSize="20sp"
             android:textColor="@color/textColor"
-            android:textSize="18sp"
-            android:fontFamily="sans-serif-medium" />
+            android:visibility="gone" />
     </FrameLayout>
 
     <TextView

@@ -31,4 +31,34 @@
             android:orientation="horizontal" />
     </HorizontalScrollView>
 
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:paddingHorizontal="16dp">
+
+        <Button
+            android:id="@+id/btnApplyToAll"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:text="Apply to All"
+            android:textColor="@color/colorPrimary"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif-medium" />
+
+        <Button
+            android:id="@+id/btnDone"
+            style="@style/Widget.MaterialComponents.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:text="Done"
+            android:textColor="@color/colorOnPrimary"
+            android:backgroundTint="@color/colorPrimary"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif-medium" />
+    </RelativeLayout>
+
 </LinearLayout>
