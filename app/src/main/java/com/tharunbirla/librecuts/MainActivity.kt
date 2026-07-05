@@ -207,7 +207,7 @@ class MainActivity : AppCompatActivity() {
             val pInfo = packageManager.getPackageInfo(packageName, 0)
             tvVersion.text = "Version ${pInfo.versionName}"
         } catch (e: Exception) {
-            tvVersion.text = "Version 1.0-beta2"
+            tvVersion.text = "Version 1.0-beta3"
         }
 
         view.findViewById<View>(R.id.layoutStarGithub).setBounceClickListener {

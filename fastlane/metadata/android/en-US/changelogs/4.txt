@@ -1,0 +1,11 @@
+Implemented video adjustment features (brightness, contrast, saturation, etc.).
+Added color filters with visual filter previews.
+Added support for rendering GIF and video overlays in ImageOverlayView.
+Implemented custom cropping support CropOverlayView.
+Added video reverse playback functionality.
+Implemented drag-to-rearrange functionality for video segments.
+Added timeline snapping functionality, overlay duplication, and freeze frame actions.
+Added the ability to mute the original video audio.
+Fixed the export directory issue (#19).
+Fixed the export screen by adding a dedicated cancel button.
+Configured dynamic versionCode for F-Droid build compatibility.

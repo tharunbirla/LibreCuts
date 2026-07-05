@@ -43,14 +43,17 @@ Help resist this gatekeeping and support the movement at [keepandroidopen.org](h
 ## 🚀 Features
 
 - **Trim** - Remove unwanted parts from the beginning or end of a video clip with a real-time timeline control.
-- **Overlays** - Place text or images on top of video clips to create engaging content.
-- **Subtitles (Captions)** - Import custom `.srt` subtitle files with fully interactive touch-based resizing and positioning directly on the video preview.
-- **Layer Management** - Easily reorder overlay layers (text and images) to control what renders on top.
-- **Audio** - Manage soundtracks effortlessly by importing custom music or audio tracks with a dedicated cancel functionality and up to 200% volume amplification.
-- **Crop** - Adjust the aspect ratio of a video.
-- **Merge** - Combine multiple video segments into a continuous sequence.
-- **Transition** - Change the orientation of a video clip, featuring animated preview transitions in the toolbar.
+- **Overlays** - Place text, images, GIFs, and video overlays on top of video clips to create engaging content.
+- **Subtitles (Captions)** - Import custom `.srt` subtitle files with a dedicated toolbar slider for resizing and fully interactive touch-based positioning directly on the video preview.
+- **Layer Management** - Easily reorder overlay layers to control what renders on top.
+- **Audio** - Manage soundtracks effortlessly by importing custom music or audio tracks with a dedicated cancel functionality, up to 200% volume amplification, and the ability to mute original audio.
+- **Crop** - Adjust the aspect ratio of a video with custom cropping support.
+- **Merge** - Combine multiple video segments into a continuous sequence with drag-to-rearrange functionality.
+- **Transition** - Apply transitions with animated visual previews in the toolbar.
 - **Speed** - Change the speed of a video clip.
+- **Adjust & Filters** - Modify video brightness, contrast, saturation, and apply color filters.
+- **Reverse** - Reverse video playback.
+- **Timeline Organization** - Enhanced editing with snapping functionality, overlay duplication, and freeze frame actions.
 - **Hardware Acceleration** - Super-fast video exports using device hardware-accelerated `h264_mediacodec` encoding.
 
 ## 📱 Screenshots
