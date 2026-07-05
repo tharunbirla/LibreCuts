@@ -39,6 +39,8 @@
                 android:layout_alignParentEnd="true"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_close_24"
+                android:padding="8dp"
+                android:scaleType="fitCenter"
                 app:tint="@color/activeTool" />
         </RelativeLayout>
 

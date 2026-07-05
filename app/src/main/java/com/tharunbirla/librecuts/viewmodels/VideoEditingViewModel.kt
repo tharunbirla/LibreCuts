@@ -737,6 +737,7 @@ class VideoEditingViewModel : ViewModel() {
                             is EditOperation.AddSubtitles -> op.id == operationId
                             is EditOperation.MuteClip -> op.id == operationId
                             is EditOperation.ColorFilter -> op.id == operationId
+                            is EditOperation.Adjust -> op.id == operationId
                         }
                     }
                     it.copy(operations = newOps)
@@ -747,6 +748,51 @@ class VideoEditingViewModel : ViewModel() {
                     pendingOperationCount = _project.value?.getOperationCount() ?: 0,
                     canUndo = _undoStack.value.isNotEmpty()
                 )
+            }
+        }
+    }
+
+    fun setAdjust(
+        index: Int,
+        brightness: Int = 0,
+        contrast: Int = 0,
+        warmth: Int = 0,
+        shadow: Int = 0,
+        highlights: Int = 0,
+        saturation: Int = 0,
+        exposure: Int = 0,
+        sharpen: Int = 0,
+        vignette: Int = 0
+    ) {
+        viewModelScope.launch {
+            _project.update { current ->
+                if (current == null) return@update null
+                val ops = current.operations.toMutableList()
+                val existingIdx = ops.indexOfFirst { it is EditOperation.Adjust && it.index == index }
+                val newOp = EditOperation.Adjust(
+                    index = index,
+                    brightness = brightness,
+                    contrast = contrast,
+                    warmth = warmth,
+                    shadow = shadow,
+                    highlights = highlights,
+                    saturation = saturation,
+                    exposure = exposure,
+                    sharpen = sharpen,
+                    vignette = vignette
+                )
+                if (existingIdx != -1) {
+                    if (newOp.isDefault()) {
+                        ops.removeAt(existingIdx)
+                    } else {
+                        ops[existingIdx] = newOp
+                    }
+                } else if (!newOp.isDefault()) {
+                    ops.add(newOp)
+                }
+                _undoStack.value = _undoStack.value + current
+                _redoStack.value = emptyList()
+                current.copy(operations = ops)
             }
         }
     }
@@ -825,6 +871,51 @@ class VideoEditingViewModel : ViewModel() {
         } else {
             ":enable='gte(t,$startSec)'"
         }
+    }
+
+    private fun getFFmpegFilterForAdjust(op: EditOperation.Adjust): String? {
+        val filters = mutableListOf<String>()
+
+        // 1. eq filter (brightness, contrast, saturation)
+        if (op.brightness != 0 || op.contrast != 0 || op.saturation != 0) {
+            val b = op.brightness / 100.0
+            val c = 1.0 + (op.contrast / 100.0)
+            val s = 1.0 + (op.saturation / 100.0)
+            filters.add("eq=brightness=$b:contrast=$c:saturation=$s")
+        }
+
+        // 2. exposure
+        if (op.exposure != 0) {
+            val ev = (op.exposure / 100.0) * 3.0
+            filters.add("exposure=exposure=$ev")
+        }
+
+        // 3. warmth (colorbalance)
+        if (op.warmth != 0) {
+            val w = (op.warmth / 100.0) * 0.3
+            filters.add("colorbalance=rs=$w:rm=$w:rh=$w:bs=${-w}:bm=${-w}:bh=${-w}")
+        }
+
+        // 4. shadows & highlights
+        if (op.shadow != 0 || op.highlights != 0) {
+            val sh = op.shadow / 100.0
+            val hl = op.highlights / 100.0
+            filters.add("shadows_highlights=shadows=$sh:highlights=$hl")
+        }
+
+        // 5. sharpen (unsharp)
+        if (op.sharpen != 0) {
+            val amt = (op.sharpen / 100.0) * 1.5
+            filters.add("unsharp=luma_amount=$amt")
+        }
+
+        // 6. vignette
+        if (op.vignette != 0) {
+            val angle = 1.5 - (op.vignette / 100.0) * 0.9
+            filters.add("vignette=angle=$angle")
+        }
+
+        return if (filters.isNotEmpty()) filters.joinToString(",") else null
     }
 
     private fun getFFmpegFilterForName(name: String): String? {
@@ -1182,8 +1273,17 @@ class VideoEditingViewModel : ViewModel() {
             for (i in 0 until inputCount) {
                 val colorFilterOp = operations.filterIsInstance<EditOperation.ColorFilter>().find { it.index == i }
                 val lutFilterExpr = colorFilterOp?.let { getFFmpegFilterForName(it.filterName) }
-                val normTargetWithLut = if (lutFilterExpr != null) "$normTarget,$lutFilterExpr" else normTarget
-                filterParts.add("[$i:v]${normTargetWithLut}[norm$i]")
+                val adjustOp = operations.filterIsInstance<EditOperation.Adjust>().find { it.index == i }
+                val adjustFilterExpr = adjustOp?.let { getFFmpegFilterForAdjust(it) }
+
+                var clipFilters = normTarget
+                if (lutFilterExpr != null) {
+                    clipFilters = "$clipFilters,$lutFilterExpr"
+                }
+                if (adjustFilterExpr != null) {
+                    clipFilters = "$clipFilters,$adjustFilterExpr"
+                }
+                filterParts.add("[$i:v]${clipFilters}[norm$i]")
 
                 val isClipMuted = operations.filterIsInstance<EditOperation.MuteClip>().find { it.index == i }?.isMuted ?: false
                 if (hasAudioArray[i] && !isClipMuted) {
@@ -1407,12 +1507,26 @@ class VideoEditingViewModel : ViewModel() {
         var currentInputVideoLabel = "[0:v]"
 
         val colorFilterOp = operations.filterIsInstance<EditOperation.ColorFilter>().find { it.index == 0 }
+        val adjustOp = operations.filterIsInstance<EditOperation.Adjust>().find { it.index == 0 }
+
+        val prepFilters = mutableListOf<String>()
         if (colorFilterOp != null) {
             val lutFilterExpr = getFFmpegFilterForName(colorFilterOp.filterName)
             if (lutFilterExpr != null) {
-                filterComplexParts.add("[0:v]${lutFilterExpr}[cfv]")
-                currentInputVideoLabel = "[cfv]"
+                prepFilters.add(lutFilterExpr)
             }
+        }
+        if (adjustOp != null) {
+            val adjustFilterExpr = getFFmpegFilterForAdjust(adjustOp)
+            if (adjustFilterExpr != null) {
+                prepFilters.add(adjustFilterExpr)
+            }
+        }
+
+        if (prepFilters.isNotEmpty()) {
+            val combinedFilters = prepFilters.joinToString(",")
+            filterComplexParts.add("[0:v]${combinedFilters}[cfv]")
+            currentInputVideoLabel = "[cfv]"
         }
 
         // ── Video filter stages (crop, text, image overlays) ──
@@ -1496,7 +1610,7 @@ class VideoEditingViewModel : ViewModel() {
         }
 
         // ── Assemble the command ──
-        val hasVideoFilters = videoStages.isNotEmpty() || colorFilterOp != null
+        val hasVideoFilters = videoStages.isNotEmpty() || colorFilterOp != null || adjustOp != null
         val hasAudioFilters = finalAudioLabel != null
 
         if (hasVideoFilters || hasAudioFilters) {

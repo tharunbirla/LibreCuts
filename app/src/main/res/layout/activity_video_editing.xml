@@ -28,6 +28,8 @@
                 android:layout_height="40dp"
                 android:background="@android:color/transparent"
                 android:src="@drawable/ic_back_24"
+                android:padding="8dp"
+                android:scaleType="fitCenter"
                 android:contentDescription="Back"
                 app:tint="@color/colorOnPrimary" />
 
@@ -42,6 +44,8 @@
                 android:layout_height="48dp"
                 android:src="@drawable/ic_undo_24"
                 android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
                 android:contentDescription="Undo"
                 android:layout_marginEnd="8dp"
                 android:alpha="0.5"
@@ -53,6 +57,8 @@
                 android:layout_height="48dp"
                 android:src="@drawable/ic_redo_24"
                 android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
                 android:contentDescription="Redo"
                 android:layout_marginEnd="16dp"
                 android:alpha="0.5"
@@ -64,6 +70,8 @@
                 android:layout_height="48dp"
                 android:src="@drawable/ic_preview_24"
                 android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
                 android:contentDescription="Preview Render"
                 android:layout_marginEnd="16dp"
                 android:visibility="gone"
@@ -219,6 +227,8 @@
                         android:layout_height="40dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:src="@drawable/ic_arrow_up_24"
+                        android:padding="8dp"
+                        android:scaleType="fitCenter"
                         android:visibility="gone"
                         app:tint="@color/colorOnSecondary" />
 
@@ -229,6 +239,8 @@
                         android:layout_marginStart="8dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:src="@drawable/ic_arrow_down_24"
+                        android:padding="8dp"
+                        android:scaleType="fitCenter"
                         android:visibility="gone"
                         app:tint="@color/colorOnSecondary" />
                 </LinearLayout>
@@ -244,6 +256,8 @@
                     android:layout_height="40dp"
                     android:background="@android:color/transparent"
                     android:src="@drawable/ic_play_24"
+                    android:padding="8dp"
+                    android:scaleType="fitCenter"
                     app:tint="@color/colorOnSecondary" />
 
                 <Space
@@ -263,6 +277,8 @@
                         android:layout_height="40dp"
                         android:background="@android:color/transparent"
                         android:src="@drawable/ic_magnet_24"
+                        android:padding="8dp"
+                        android:scaleType="fitCenter"
                         app:tint="@color/colorOnSecondary" />
 
                     <ImageButton
@@ -271,6 +287,8 @@
                         android:layout_height="40dp"
                         android:background="@android:color/transparent"
                         android:src="@drawable/ic_volume_up_24"
+                        android:padding="8dp"
+                        android:scaleType="fitCenter"
                         app:tint="@color/colorOnSecondary" />
                 </LinearLayout>
             </LinearLayout>
@@ -471,6 +489,8 @@
                     android:layout_height="48dp"
                     android:background="@drawable/tool_button_inactive"
                     android:src="@drawable/ic_text_24"
+                    android:padding="12dp"
+                    android:scaleType="fitCenter"
                     app:tint="@color/toolTextInactive" />
                 <TextView
                     android:layout_width="wrap_content"
@@ -494,6 +514,8 @@
                     android:layout_height="48dp"
                     android:background="@drawable/tool_button_inactive"
                     android:src="@drawable/ic_sticker_24"
+                    android:padding="12dp"
+                    android:scaleType="fitCenter"
                     app:tint="@color/toolTextInactive" />
                 <TextView
                     android:layout_width="wrap_content"
@@ -517,6 +539,8 @@
                     android:layout_height="48dp"
                     android:background="@drawable/tool_button_inactive"
                     android:src="@drawable/ic_audio_24"
+                    android:padding="12dp"
+                    android:scaleType="fitCenter"
                     app:tint="@color/toolTextInactive" />
                 <TextView
                     android:layout_width="wrap_content"
@@ -540,6 +564,8 @@
                     android:layout_height="48dp"
                     android:background="@drawable/tool_button_inactive"
                     android:src="@drawable/ic_closed_caption_24"
+                    android:padding="12dp"
+                    android:scaleType="fitCenter"
                     app:tint="@color/toolTextInactive" />
                 <TextView
                     android:layout_width="wrap_content"
@@ -563,6 +589,8 @@
                     android:layout_height="48dp"
                     android:background="@drawable/tool_button_inactive"
                     android:src="@drawable/ic_crop_24"
+                    android:padding="12dp"
+                    android:scaleType="fitCenter"
                     app:tint="@color/toolTextInactive" />
                 <TextView
                     android:layout_width="wrap_content"

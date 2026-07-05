@@ -8,16 +8,48 @@
     android:paddingTop="16dp"
     android:paddingBottom="24dp">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <!-- Title and Slider Label -->
+    <RelativeLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Color Filters"
-        android:textColor="@color/textColor"
-        android:textSize="18sp"
-        android:fontFamily="sans-serif-medium"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginBottom="16dp" />
+        android:layout_marginBottom="8dp">
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:text="Adjust"
+            android:textColor="@color/textColor"
+            android:textSize="18sp"
+            android:fontFamily="sans-serif-medium" />
+
+        <TextView
+            android:id="@+id/adjustValueLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:text="Brightness: 0"
+            android:textColor="@color/colorPrimary"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif-medium" />
+    </RelativeLayout>
+
+    <!-- Slider for adjustments -->
+    <com.google.android.material.slider.Slider
+        android:id="@+id/adjustSlider"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="8dp"
+        android:layout_marginBottom="16dp"
+        android:valueFrom="-100.0"
+        android:valueTo="100.0"
+        android:value="0.0"
+        app:thumbColor="@color/colorPrimary"
+        app:trackColorActive="@color/colorPrimary"
+        app:trackColorInactive="@color/toolTextInactive" />
+
+    <!-- List of adjust options -->
     <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -26,12 +58,13 @@
         android:paddingHorizontal="16dp">
 
         <LinearLayout
-            android:id="@+id/colorFiltersList"
+            android:id="@+id/adjustOptionsList"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal" />
     </HorizontalScrollView>
 
+    <!-- Action Buttons -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

@@ -213,6 +213,36 @@ sealed class EditOperation : Serializable {
     ) : EditOperation() {
         fun hasCustomPosition(): Boolean = relativeX != null && relativeY != null
     }
+
+    /**
+     * Adjust operation: Adjusts video properties for a specific clip index.
+     * All properties range from -100 to 100, default is 0.
+     */
+    data class Adjust(
+        val index: Int,
+        val brightness: Int = 0,
+        val contrast: Int = 0,
+        val warmth: Int = 0,
+        val shadow: Int = 0,
+        val highlights: Int = 0,
+        val saturation: Int = 0,
+        val exposure: Int = 0,
+        val sharpen: Int = 0,
+        val vignette: Int = 0,
+        val id: String = System.nanoTime().toString()
+    ) : EditOperation() {
+        fun isDefault(): Boolean {
+            return brightness == 0 &&
+                   contrast == 0 &&
+                   warmth == 0 &&
+                   shadow == 0 &&
+                   highlights == 0 &&
+                   saturation == 0 &&
+                   exposure == 0 &&
+                   sharpen == 0 &&
+                   vignette == 0
+        }
+    }
 }
 
 data class SubtitleCue(

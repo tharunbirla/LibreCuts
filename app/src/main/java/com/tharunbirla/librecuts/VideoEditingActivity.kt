@@ -747,6 +747,11 @@ class VideoEditingActivity : AppCompatActivity() {
                         showColorFilterSelectionDialog(index)
                     }
                 }
+                toolbar.findViewById<ImageButton>(R.id.btnVideoAdjust)?.setBounceClickListener {
+                    selectedVideoIndex?.let { index ->
+                        showAdjustSelectionDialog(index)
+                    }
+                }
             }
         } catch (e: Exception) {
             Log.w(TAG, "Video editing toolbar not found: ${e.message}")
@@ -3176,17 +3181,24 @@ class VideoEditingActivity : AppCompatActivity() {
     }
 
     private var lastAppliedFilterName: String? = null
+    private var lastAppliedAdjust: com.tharunbirla.librecuts.models.EditOperation.Adjust? = null
 
     private fun applyColorFilterToPlayer(filterName: String) {
-        if (lastAppliedFilterName == filterName) return
+        val idx = selectedVideoIndex ?: 0
+        val activeAdjust = viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.Adjust>()
+            ?.find { it.index == idx }
+        applyColorFilterAndAdjustToPlayer(filterName, activeAdjust)
+    }
+
+    private fun applyColorFilterAndAdjustToPlayer(
+        filterName: String,
+        adjust: com.tharunbirla.librecuts.models.EditOperation.Adjust?
+    ) {
+        if (lastAppliedFilterName == filterName && lastAppliedAdjust == adjust) return
         lastAppliedFilterName = filterName
+        lastAppliedAdjust = adjust
 
-        if (filterName == "none") {
-            playerView.setLayerType(View.LAYER_TYPE_NONE, null)
-            return
-        }
-
-        val matrix = when (filterName.lowercase()) {
+        val filterMatrix = when (filterName.lowercase()) {
             "vintage" -> floatArrayOf(
                 0.393f, 0.769f, 0.189f, 0f, 0f,
                 0.349f, 0.686f, 0.168f, 0f, 0f,
@@ -3238,9 +3250,68 @@ class VideoEditingActivity : AppCompatActivity() {
             else -> null
         }
 
-        if (matrix != null) {
+        val baseMatrix = if (filterMatrix != null) {
+            android.graphics.ColorMatrix(filterMatrix)
+        } else {
+            android.graphics.ColorMatrix()
+        }
+
+        if (adjust != null && !adjust.isDefault()) {
+            if (adjust.saturation != 0) {
+                val satFactor = 1.0f + (adjust.saturation / 100f)
+                val satMatrix = android.graphics.ColorMatrix()
+                satMatrix.setSaturation(satFactor)
+                baseMatrix.postConcat(satMatrix)
+            }
+            if (adjust.contrast != 0) {
+                val scale = 1.0f + (adjust.contrast / 100f)
+                val translate = 127.5f * (1.0f - scale)
+                val contrastMatrix = android.graphics.ColorMatrix(floatArrayOf(
+                    scale, 0f, 0f, 0f, translate,
+                    0f, scale, 0f, 0f, translate,
+                    0f, 0f, scale, 0f, translate,
+                    0f, 0f, 0f, 1f, 0f
+                ))
+                baseMatrix.postConcat(contrastMatrix)
+            }
+            if (adjust.brightness != 0) {
+                val bOffset = (adjust.brightness / 100f) * 255f
+                val brightMatrix = android.graphics.ColorMatrix(floatArrayOf(
+                    1f, 0f, 0f, 0f, bOffset,
+                    0f, 1f, 0f, 0f, bOffset,
+                    0f, 0f, 1f, 0f, bOffset,
+                    0f, 0f, 0f, 1f, 0f
+                ))
+                baseMatrix.postConcat(brightMatrix)
+            }
+            if (adjust.exposure != 0) {
+                val ev = (adjust.exposure / 100f) * 3.0f
+                val scale = Math.pow(2.0, ev.toDouble()).toFloat()
+                val expMatrix = android.graphics.ColorMatrix(floatArrayOf(
+                    scale, 0f, 0f, 0f, 0f,
+                    0f, scale, 0f, 0f, 0f,
+                    0f, 0f, scale, 0f, 0f,
+                    0f, 0f, 0f, 1f, 0f
+                ))
+                baseMatrix.postConcat(expMatrix)
+            }
+            if (adjust.warmth != 0) {
+                val rOffset = (adjust.warmth / 100f) * 30f
+                val bOffset = -(adjust.warmth / 100f) * 30f
+                val warmthMatrix = android.graphics.ColorMatrix(floatArrayOf(
+                    1f, 0f, 0f, 0f, rOffset,
+                    0f, 1f, 0f, 0f, rOffset / 2f,
+                    0f, 0f, 1f, 0f, bOffset,
+                    0f, 0f, 0f, 1f, 0f
+                ))
+                baseMatrix.postConcat(warmthMatrix)
+            }
+        }
+
+        val hasAdjustments = (adjust != null && !adjust.isDefault())
+        if (filterMatrix != null || hasAdjustments) {
             val paint = android.graphics.Paint()
-            paint.colorFilter = android.graphics.ColorMatrixColorFilter(android.graphics.ColorMatrix(matrix))
+            paint.colorFilter = android.graphics.ColorMatrixColorFilter(baseMatrix)
             playerView.setLayerType(View.LAYER_TYPE_HARDWARE, paint)
         } else {
             playerView.setLayerType(View.LAYER_TYPE_NONE, null)
@@ -3279,7 +3350,9 @@ class VideoEditingActivity : AppCompatActivity() {
             }
             val activeFilterName = viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.ColorFilter>()
                 ?.find { it.index == activeClipIndex }?.filterName ?: "none"
-            applyColorFilterToPlayer(activeFilterName)
+            val activeAdjust = viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.Adjust>()
+                ?.find { it.index == activeClipIndex }
+            applyColorFilterAndAdjustToPlayer(activeFilterName, activeAdjust)
         }
     }
 
@@ -4819,6 +4892,211 @@ class VideoEditingActivity : AppCompatActivity() {
                 it.invalidate()
             }
         }
+    }
+
+    private fun showAdjustSelectionDialog(clipIndex: Int) {
+        val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.dialog_adjustments, null)
+        bottomSheet.setContentView(view)
+
+        val optionsList = view.findViewById<LinearLayout>(R.id.adjustOptionsList)
+        val slider = view.findViewById<com.google.android.material.slider.Slider>(R.id.adjustSlider)
+        val valueLabel = view.findViewById<TextView>(R.id.adjustValueLabel)
+
+        val project = viewModel.project.value ?: return
+        val existingOp = project.operations.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.Adjust>().find { it.index == clipIndex }
+        
+        var localAdjust = existingOp ?: com.tharunbirla.librecuts.models.EditOperation.Adjust(index = clipIndex)
+        var selectedOptionId = "brightness" // Default selection
+
+        val options = listOf(
+            Pair("reset_all", "Reset All"),
+            Pair("brightness", "Brightness"),
+            Pair("contrast", "Contrast"),
+            Pair("warmth", "Warmth"),
+            Pair("shadow", "Shadow"),
+            Pair("highlights", "Highlights"),
+            Pair("saturation", "Saturation"),
+            Pair("exposure", "Exposure"),
+            Pair("sharpen", "Sharpen"),
+            Pair("vignette", "Vignette")
+        )
+
+        val itemBgs = mutableMapOf<String, FrameLayout>()
+        val itemTvShorts = mutableMapOf<String, TextView>()
+        val itemTvNames = mutableMapOf<String, TextView>()
+
+        fun getValForOption(id: String): Int {
+            return when (id) {
+                "brightness" -> localAdjust.brightness
+                "contrast" -> localAdjust.contrast
+                "warmth" -> localAdjust.warmth
+                "shadow" -> localAdjust.shadow
+                "highlights" -> localAdjust.highlights
+                "saturation" -> localAdjust.saturation
+                "exposure" -> localAdjust.exposure
+                "sharpen" -> localAdjust.sharpen
+                "vignette" -> localAdjust.vignette
+                else -> 0
+            }
+        }
+
+        fun refreshSelectionStates() {
+            for ((id, bgFrame) in itemBgs) {
+                val tvName = itemTvNames[id]
+                val isSelected = (id == selectedOptionId)
+                val isModified = (id != "reset_all" && getValForOption(id) != 0)
+
+                if (isSelected) {
+                    bgFrame.setBackgroundResource(R.drawable.bg_aspect_ratio_selected)
+                    bgFrame.foreground = androidx.core.content.ContextCompat.getDrawable(this, R.drawable.bg_transition_border_selected)
+                    tvName?.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.colorPrimary))
+                } else if (isModified) {
+                    bgFrame.setBackgroundResource(R.drawable.bg_aspect_ratio_item)
+                    bgFrame.foreground = androidx.core.content.ContextCompat.getDrawable(this, R.drawable.bg_transition_border_selected)
+                    tvName?.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.textColor))
+                } else {
+                    bgFrame.setBackgroundResource(R.drawable.bg_aspect_ratio_item)
+                    bgFrame.foreground = null
+                    tvName?.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.textColor))
+                }
+            }
+        }
+
+        fun updateSliderForSelection() {
+            if (selectedOptionId == "reset_all") {
+                slider.visibility = View.INVISIBLE
+                valueLabel.text = "Reset All"
+            } else {
+                slider.visibility = View.VISIBLE
+                val currentVal = getValForOption(selectedOptionId)
+                slider.value = currentVal.toFloat()
+                valueLabel.text = "${selectedOptionId.replaceFirstChar { it.uppercase() }}: $currentVal"
+            }
+        }
+
+        val activeFilterName = project.operations.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.ColorFilter>()
+            .find { it.index == clipIndex }?.filterName ?: "none"
+
+        for ((id, displayName) in options) {
+            val itemView = layoutInflater.inflate(R.layout.item_adjust_option, optionsList, false)
+            val tvName = itemView.findViewById<TextView>(R.id.adjustName)
+            val bg = itemView.findViewById<FrameLayout>(R.id.adjustIconBg)
+            val iconImage = itemView.findViewById<ImageView>(R.id.adjustIconImage)
+            val tvShort = itemView.findViewById<TextView>(R.id.adjustShortName)
+
+            itemBgs[id] = bg
+            itemTvShorts[id] = tvShort
+            itemTvNames[id] = tvName
+
+            tvName.text = displayName
+            bg.clipToOutline = true
+
+            val resName = "ic_${id.lowercase()}_24"
+            val resId = resources.getIdentifier(resName, "drawable", packageName)
+            if (resId != 0) {
+                iconImage.setImageResource(resId)
+                iconImage.visibility = View.VISIBLE
+                tvShort.visibility = View.GONE
+            } else {
+                iconImage.visibility = View.GONE
+                tvShort.visibility = View.VISIBLE
+                tvShort.text = displayName.substring(0, minOf(2, displayName.length)).uppercase()
+            }
+
+            itemView.setOnClickListener {
+                if (id == "reset_all") {
+                    localAdjust = com.tharunbirla.librecuts.models.EditOperation.Adjust(index = clipIndex)
+                    viewModel.setAdjust(
+                        index = clipIndex,
+                        brightness = 0,
+                        contrast = 0,
+                        warmth = 0,
+                        shadow = 0,
+                        highlights = 0,
+                        saturation = 0,
+                        exposure = 0,
+                        sharpen = 0,
+                        vignette = 0
+                    )
+                    applyColorFilterAndAdjustToPlayer(activeFilterName, localAdjust)
+                    refreshSelectionStates()
+                    updateSliderForSelection()
+                } else {
+                    selectedOptionId = id
+                    refreshSelectionStates()
+                    updateSliderForSelection()
+                }
+            }
+
+            optionsList.addView(itemView)
+        }
+
+        slider.addOnChangeListener { _, value, fromUser ->
+            if (fromUser && selectedOptionId != "reset_all") {
+                val intVal = value.toInt()
+                localAdjust = when (selectedOptionId) {
+                    "brightness" -> localAdjust.copy(brightness = intVal)
+                    "contrast" -> localAdjust.copy(contrast = intVal)
+                    "warmth" -> localAdjust.copy(warmth = intVal)
+                    "shadow" -> localAdjust.copy(shadow = intVal)
+                    "highlights" -> localAdjust.copy(highlights = intVal)
+                    "saturation" -> localAdjust.copy(saturation = intVal)
+                    "exposure" -> localAdjust.copy(exposure = intVal)
+                    "sharpen" -> localAdjust.copy(sharpen = intVal)
+                    "vignette" -> localAdjust.copy(vignette = intVal)
+                    else -> localAdjust
+                }
+
+                valueLabel.text = "${selectedOptionId.replaceFirstChar { it.uppercase() }}: $intVal"
+                
+                viewModel.setAdjust(
+                    index = clipIndex,
+                    brightness = localAdjust.brightness,
+                    contrast = localAdjust.contrast,
+                    warmth = localAdjust.warmth,
+                    shadow = localAdjust.shadow,
+                    highlights = localAdjust.highlights,
+                    saturation = localAdjust.saturation,
+                    exposure = localAdjust.exposure,
+                    sharpen = localAdjust.sharpen,
+                    vignette = localAdjust.vignette
+                )
+                applyColorFilterAndAdjustToPlayer(activeFilterName, localAdjust)
+                refreshSelectionStates()
+            }
+        }
+
+        refreshSelectionStates()
+        updateSliderForSelection()
+
+        view.findViewById<View>(R.id.btnApplyToAll)?.setOnClickListener {
+            val chunkCount = chunkDurationsMs.size
+            for (i in 0 until chunkCount) {
+                viewModel.setAdjust(
+                    index = i,
+                    brightness = localAdjust.brightness,
+                    contrast = localAdjust.contrast,
+                    warmth = localAdjust.warmth,
+                    shadow = localAdjust.shadow,
+                    highlights = localAdjust.highlights,
+                    saturation = localAdjust.saturation,
+                    exposure = localAdjust.exposure,
+                    sharpen = localAdjust.sharpen,
+                    vignette = localAdjust.vignette
+                )
+            }
+            applyColorFilterAndAdjustToPlayer(activeFilterName, localAdjust)
+            viewModel.project.value?.let { renderTracks(it) }
+            bottomSheet.dismiss()
+        }
+
+        view.findViewById<View>(R.id.btnDone)?.setOnClickListener {
+            viewModel.project.value?.let { renderTracks(it) }
+            bottomSheet.dismiss()
+        }
+
+        bottomSheet.show()
     }
 
     private fun showQuitConfirmationDialog() {

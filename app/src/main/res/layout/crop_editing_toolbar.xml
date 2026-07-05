@@ -29,6 +29,8 @@
                 android:layout_alignParentStart="true"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_close_24"
+                android:padding="8dp"
+                android:scaleType="fitCenter"
                 app:tint="@color/activeTool" />
 
             <TextView
@@ -48,6 +50,8 @@
                 android:layout_alignParentEnd="true"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_check_24"
+                android:padding="8dp"
+                android:scaleType="fitCenter"
                 app:tint="@color/activeTool" />
         </RelativeLayout>
 

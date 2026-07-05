@@ -52,6 +52,8 @@
                 android:layout_height="48dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_close_24"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />
             <TextView
                 android:layout_width="wrap_content"
@@ -76,6 +78,8 @@
                 android:layout_height="48dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_keyboard_24"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
                 app:tint="@color/colorPrimary" />
             <TextView
                 android:layout_width="wrap_content"
@@ -100,6 +104,8 @@
                 android:layout_height="48dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_palette_24"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />
             <TextView
                 android:layout_width="wrap_content"
@@ -124,6 +130,8 @@
                 android:layout_height="48dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_copy_24"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />
             <TextView
                 android:layout_width="wrap_content"
@@ -148,6 +156,8 @@
                 android:layout_height="48dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_delete_24"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
                 app:tint="#F44336" />
             <TextView
                 android:layout_width="wrap_content"
@@ -172,6 +182,8 @@
                 android:layout_height="48dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_check_24"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
                 app:tint="@color/colorPrimary" />
             <TextView
                 android:layout_width="wrap_content"
