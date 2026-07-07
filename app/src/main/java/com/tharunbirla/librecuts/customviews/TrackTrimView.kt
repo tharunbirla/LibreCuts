@@ -41,6 +41,9 @@ class TrackTrimView @JvmOverloads constructor(
     var trackThumbnail: android.graphics.Bitmap? = null
     var isAudioTrack: Boolean = false
     var onTrackClicked: (() -> Unit)? = null
+    
+    var beats: List<Long> = emptyList()
+    var internalStartMs: Long = 0L
 
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
@@ -61,6 +64,10 @@ class TrackTrimView @JvmOverloads constructor(
         style = Paint.Style.STROKE
         strokeWidth = 3f
         strokeCap = Paint.Cap.ROUND
+    }
+    private val beatPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        style = Paint.Style.FILL
     }
     private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
@@ -125,16 +132,41 @@ class TrackTrimView @JvmOverloads constructor(
         
         // Draw track fill
         if (isMainVideoTrack) {
-            if (startX > 0f) {
-                canvas.drawRect(0f, 0f, startX, height.toFloat(), dimPaint)
+            if (isSelectedTrack) {
+                if (isTrimEnabled) {
+                    val ghostPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = Color.parseColor("#4DFFFFFF") // 30% white
+                        style = Paint.Style.STROKE
+                        strokeWidth = 4f
+                        pathEffect = android.graphics.DashPathEffect(floatArrayOf(10f, 10f), 0f)
+                    }
+                    val ghostFill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = Color.parseColor("#1AFFFFFF") // 10% white
+                        style = Paint.Style.FILL
+                    }
+                    val fullRect = RectF(0f, 0f, width.toFloat(), height.toFloat())
+                    canvas.drawRect(fullRect, ghostFill)
+                    canvas.drawRect(fullRect, ghostPaint)
+                    
+                    // Only dim the unused bounds when selected, so it doesn't leak over adjacent clips
+                    if (startX > 0f) {
+                        canvas.drawRect(0f, 0f, startX, height.toFloat(), dimPaint)
+                    }
+                    if (endX < width) {
+                        canvas.drawRect(endX, 0f, width.toFloat(), height.toFloat(), dimPaint)
+                    }
+                    
+                    // Draw a thick border enclosing the active range when selected
+                    borderPaint.color = Color.parseColor("#FF4081")
+                    borderPaint.strokeWidth = 8f
+                    canvas.drawRect(rectF, borderPaint)
+                } else {
+                    // Main track selection highlight without trimmer handles/ghosts
+                    borderPaint.color = Color.WHITE
+                    borderPaint.strokeWidth = 8f // Use a thick border so it's clearly visible over thumbnails
+                    canvas.drawRect(rectF, borderPaint)
+                }
             }
-            if (endX < width) {
-                canvas.drawRect(endX, 0f, width.toFloat(), height.toFloat(), dimPaint)
-            }
-            // Draw a thick yellow border enclosing the active range
-            borderPaint.color = Color.parseColor("#FF4081")
-            borderPaint.strokeWidth = 8f
-            canvas.drawRect(rectF, borderPaint)
         } else {
             trackPaint.color = trackColor
             trackPaint.alpha = 200
@@ -156,6 +188,24 @@ class TrackTrimView @JvmOverloads constructor(
                 canvas.drawLine(x, centerY - amplitude, x, centerY + amplitude, wavePaint)
                 x += waveSpacing
                 timeOffset += 1f
+            }
+            canvas.restore()
+        }
+
+        // Draw Beat Markers
+        if (beats.isNotEmpty()) {
+            canvas.save()
+            canvas.clipRect(rectF)
+            val beatRadius = 4f
+            val yPos = height - 12f
+            for (beatTimeMs in beats) {
+                val relativeToInternalStart = beatTimeMs - internalStartMs
+                if (relativeToInternalStart >= 0) {
+                    val beatX = startX + (relativeToInternalStart / msPerPixel)
+                    if (beatX <= endX) {
+                        canvas.drawCircle(beatX, yPos, beatRadius, beatPaint)
+                    }
+                }
             }
             canvas.restore()
         }

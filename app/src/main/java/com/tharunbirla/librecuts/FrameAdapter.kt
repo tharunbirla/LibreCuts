@@ -34,7 +34,7 @@ class FrameAdapter(
             holder.imageView.setImageBitmap(frameBitmaps[position])
             holder.imageView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
         } else {
-            holder.imageView.setImageBitmap(null)
+            holder.imageView.setImageDrawable(null)
             holder.imageView.setBackgroundColor(android.graphics.Color.parseColor("#2C2C2C"))
         }
     }

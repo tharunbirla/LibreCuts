@@ -304,13 +304,15 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:clipToPadding="false"
+                    android:clipChildren="false"
                     android:scrollbars="none">
 
                     <LinearLayout
                         android:id="@+id/scrollableTimelineContent"
                         android:layout_width="wrap_content"
                         android:layout_height="match_parent"
-                        android:orientation="vertical">
+                        android:orientation="vertical"
+                        android:clipChildren="false">
 
                         <com.tharunbirla.librecuts.customviews.TimeRulerView
                             android:id="@+id/timeRulerView"
@@ -324,12 +326,14 @@
                             android:layout_height="0dp"
                             android:layout_weight="1"
                             android:clipToPadding="false"
+                            android:clipChildren="false"
                             android:scrollbars="none">
                             
                             <LinearLayout
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:orientation="vertical"
+                                android:clipChildren="false"
                                 android:paddingBottom="16dp">
                                 
                                 <!-- Video Track Sequence Container -->
@@ -337,7 +341,8 @@
                                     android:id="@+id/sequenceTrackContainer"
                                     android:layout_width="wrap_content"
                                     android:layout_height="64dp"
-                                    android:layout_marginBottom="4dp">
+                                    android:layout_marginBottom="4dp"
+                                    android:clipChildren="false">
                                 </FrameLayout>
 
                                 <!-- Text Track Container -->
@@ -346,6 +351,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:orientation="vertical"
+                                    android:clipChildren="false"
                                     android:visibility="gone"/>
 
                                 <!-- Image Track Container -->
@@ -354,6 +360,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:orientation="vertical"
+                                    android:clipChildren="false"
                                     android:visibility="gone"/>
 
                                 <!-- Audio Track Container -->
@@ -362,6 +369,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:orientation="vertical"
+                                    android:clipChildren="false"
                                     android:visibility="gone"/>
 
                             </LinearLayout>
@@ -387,6 +395,46 @@
                     android:elevation="10dp"
                     android:clickable="false"
                     android:focusable="false" />
+
+                <LinearLayout
+                    android:id="@+id/emptyProjectState"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:visibility="gone"
+                    android:background="@drawable/bg_bottom_nav_floating"
+                    android:elevation="2dp"
+                    android:clickable="true"
+                    android:focusable="true">
+                    
+                    <ImageView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:src="@drawable/ic_add_24"
+                        android:background="@drawable/circle_primary_container"
+                        android:padding="12dp"
+                        app:tint="@color/colorOnPrimary" />
+                        
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="Timeline Empty"
+                        android:textSize="16sp"
+                        android:textColor="@color/textColor"
+                        android:fontFamily="sans-serif-medium" />
+                        
+                    <Button
+                        android:id="@+id/btnEmptyImportVideo"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="Import Video"
+                        app:cornerRadius="8dp"
+                        android:textColor="@color/onPrimaryContainer"
+                        android:backgroundTint="@color/colorPrimary" />
+                </LinearLayout>
             </FrameLayout>
 
             <View
@@ -689,5 +737,7 @@
             android:indeterminate="true"
             android:indeterminateTint="#FF4081" />
     </FrameLayout>
+
+
 
 </RelativeLayout>

@@ -112,6 +112,8 @@ class VideoEditingActivity : AppCompatActivity() {
     private lateinit var btnSaveText: View
     private lateinit var btnSaveDropdown: View
     private lateinit var editingControlsWrapper: LinearLayout
+    private lateinit var emptyProjectState: View
+    private lateinit var btnEmptyImportVideo: Button
 
     private var tvPreviewBadge: TextView? = null
     private var textOverlayView: com.tharunbirla.librecuts.customviews.TextOverlayView? = null
@@ -398,6 +400,13 @@ class VideoEditingActivity : AppCompatActivity() {
         timelineContainer = findViewById(R.id.timelineContainer)
         timelineVerticalScroll = findViewById(R.id.timelineVerticalScroll)
         btnTimelineAdd = findViewById(R.id.btnTimelineAdd)
+        
+        emptyProjectState = findViewById(R.id.emptyProjectState)
+        btnEmptyImportVideo = findViewById(R.id.btnEmptyImportVideo)
+        
+        btnEmptyImportVideo.setBounceClickListener {
+            openFilePickerMain()
+        }
 
         btnTimelineAdd.setBounceClickListener {
             openFilePickerMerge()
@@ -801,6 +810,30 @@ class VideoEditingActivity : AppCompatActivity() {
                     }
                     exitAudioEditingMode()
                 }
+                toolbar.findViewById<ImageButton>(R.id.btnAudioBeats)?.setBounceClickListener {
+                    val id = viewModel.selectedOperationId.value ?: return@setBounceClickListener
+                    val project = viewModel.project.value ?: return@setBounceClickListener
+                    val op = project.operations.find { it is com.tharunbirla.librecuts.models.EditOperation.AddBackgroundAudio && it.id == id } as? com.tharunbirla.librecuts.models.EditOperation.AddBackgroundAudio ?: return@setBounceClickListener
+                    
+                    if (op.beats.isNotEmpty()) {
+                        // Toggle off if already detected
+                        viewModel.updateOperation(op.copy(beats = emptyList()))
+                        android.widget.Toast.makeText(this@VideoEditingActivity, "Beats cleared", android.widget.Toast.LENGTH_SHORT).show()
+                        return@setBounceClickListener
+                    }
+                    
+                    android.widget.Toast.makeText(this@VideoEditingActivity, "Analyzing beats...", android.widget.Toast.LENGTH_SHORT).show()
+                    com.tharunbirla.librecuts.utils.AudioAnalyzer.detectBeats(this@VideoEditingActivity, op.audioUri) { beats ->
+                        runOnUiThread {
+                            if (beats.isNotEmpty()) {
+                                viewModel.updateOperation(op.copy(beats = beats))
+                                android.widget.Toast.makeText(this@VideoEditingActivity, "Found ${beats.size} beats!", android.widget.Toast.LENGTH_SHORT).show()
+                            } else {
+                                android.widget.Toast.makeText(this@VideoEditingActivity, "No clear beats found.", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                }
                 val volumeSlider = toolbar.findViewById<com.google.android.material.slider.Slider>(R.id.audioVolumeSlider)
                 val tvVolumeValue = toolbar.findViewById<TextView>(R.id.tvAudioVolumeValue)
                 volumeSlider?.addOnChangeListener { _, value, _ ->
@@ -1145,7 +1178,8 @@ class VideoEditingActivity : AppCompatActivity() {
                     exportScreen.findViewById<TextView>(R.id.tvExportPercentage)?.text = "$progress%"
                     exportScreen.findViewById<android.widget.ProgressBar>(R.id.exportProgressBar)?.progress = progress
                 } else {
-                    if (isImportLoading || !isVideoLoaded) {
+                    val emptyStateVisible = findViewById<View>(R.id.emptyProjectState)?.visibility == View.VISIBLE
+                    if (isImportLoading || (!isVideoLoaded && !emptyStateVisible)) {
                         loadingScreen.visibility = View.VISIBLE
                     } else {
                         loadingScreen.visibility = View.GONE
@@ -2071,7 +2105,7 @@ class VideoEditingActivity : AppCompatActivity() {
         viewModel.selectOperation(null)
         videoEditingToolbar?.visibility = View.VISIBLE
         editingControlsWrapper.visibility = View.GONE
-        videoEditingToolbar?.findViewById<View>(R.id.btnVideoDeleteContainer)?.visibility = if (selectedVideoIndex != null && selectedVideoIndex!! > 0) View.VISIBLE else View.GONE
+        videoEditingToolbar?.findViewById<View>(R.id.btnVideoDeleteContainer)?.visibility = View.VISIBLE
         selectedVideoIndex?.let { index ->
             videoEditingToolbar?.let { toolbar ->
                 updateVideoMuteButtonState(toolbar, index)
@@ -2649,13 +2683,96 @@ class VideoEditingActivity : AppCompatActivity() {
         exitVideoEditingMode()
     }
     
+    private fun clearProjectAndShowImportScreen() {
+        if (::player.isInitialized) {
+            if (player.isPlaying) player.pause()
+            player.clearMediaItems()
+        }
+        isVideoLoaded = false
+        videoUri = null
+        viewModel.clearAllOperations() // wait, no initialize is better
+        
+        // Keep timeline container visible, but hide its normal contents
+        timelineContainer.visibility = View.VISIBLE
+        playerContainer.visibility = View.INVISIBLE
+        findViewById<View>(R.id.seekerContainer).visibility = View.VISIBLE
+        findViewById<View>(R.id.editingControlsScroll).visibility = View.INVISIBLE
+        
+        // Hide normal timeline elements inside the container
+        findViewById<View>(R.id.timelineHorizontalScroll)?.visibility = View.INVISIBLE
+        findViewById<View>(R.id.btnTimelineAdd)?.visibility = View.INVISIBLE
+        findViewById<View>(R.id.customVideoSeeker)?.visibility = View.INVISIBLE
+        
+        // Hide toolbars
+        exitVideoEditingMode()
+        exitAudioEditingMode()
+        exitImageEditingMode()
+        exitTextEditingMode()
+        
+        // Show empty state
+        findViewById<View>(R.id.emptyProjectState)?.visibility = View.VISIBLE
+        
+        // Ensure loading screen is hidden and reset
+        isImportLoading = false
+        loadingScreen.visibility = View.GONE
+    }
+
     private fun deleteSelectedVideo() {
         val index = selectedVideoIndex ?: return
+        val items = getSequenceItems()
+        
+        if (items.size <= 1) {
+            clearProjectAndShowImportScreen()
+            return
+        }
+        
         if (index > 0) {
             viewModel.removeMergeVideo(index - 1)
-            selectedVideoIndex = null
-            exitVideoEditingMode()
+        } else {
+            val nextItem = items[1]
+            viewModel.removeMergeVideo(0)
+            
+            val newSourceFile = File(nextItem.uri.path ?: nextItem.uri.toString())
+            tempInputFile = newSourceFile
+            originalMainVideoDurationMs = nextItem.durationMs
+            videoFileName = tempInputFile.name
+            videoUri = nextItem.uri
+            
+            // Reinitialize project base with new operations
+            val mainOps = viewModel.project.value?.operations?.filter { 
+                it is EditOperation.Trim || it is EditOperation.SpeedMain || it is EditOperation.ReverseMain 
+            }
+            if (mainOps != null) {
+                mainOps.forEach { op ->
+                    val opId = when(op) {
+                        is EditOperation.Trim -> op.id
+                        is EditOperation.SpeedMain -> op.id
+                        is EditOperation.ReverseMain -> op.id
+                        else -> null
+                    }
+                    if (opId != null) viewModel.removeOperation(opId) 
+                }
+            }
+            
+            if (nextItem.trimStartMs > 0 || nextItem.trimEndMs < nextItem.durationMs) {
+                viewModel.updateMainVideoTrim(nextItem.trimStartMs, nextItem.trimEndMs)
+            }
+            if (nextItem.speed != 1.0f) {
+                viewModel.updateMainVideoSpeed(nextItem.speed, nextItem.proxyUri)
+            }
+            if (nextItem.isReversed) {
+                viewModel.updateMainVideoReverse(true, nextItem.proxyUri)
+            }
+            
+            // Need to update the sourceUri and sourceName in the project
+            viewModel.project.value?.let { proj ->
+                viewModel.updateSequenceOrder(getSequenceItems().toMutableList().apply { 
+                    this[0] = this[0].copy(uri = nextItem.uri, durationMs = nextItem.durationMs) 
+                })
+            }
         }
+        selectedVideoIndex = null
+        exitVideoEditingMode()
     }
 
     private fun extractAudioFromSegment(index: Int, item: com.tharunbirla.librecuts.models.EditOperation.MergeItem) {
@@ -2716,6 +2833,48 @@ class VideoEditingActivity : AppCompatActivity() {
             putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
         }
         startActivityForResult(Intent.createChooser(intent, "Select Video"), PICK_VIDEO_REQUEST)
+    }
+
+    private fun openFilePickerMain() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "video/*"
+            addCategory(Intent.CATEGORY_OPENABLE)
+            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, false)
+        }
+        mainFilePickerLauncher.launch(Intent.createChooser(intent, "Select Video"))
+    }
+
+    private val mainFilePickerLauncher = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.data?.let { uri ->
+                emptyProjectState.visibility = View.GONE
+                playerContainer.visibility = View.VISIBLE
+                timelineContainer.visibility = View.VISIBLE
+                findViewById<View>(R.id.seekerContainer).visibility = View.VISIBLE
+                findViewById<View>(R.id.editingControlsScroll).visibility = View.VISIBLE
+                
+                // Restore timeline children visibility
+                findViewById<View>(R.id.timelineHorizontalScroll)?.visibility = View.VISIBLE
+                findViewById<View>(R.id.btnTimelineAdd)?.visibility = View.VISIBLE
+                findViewById<View>(R.id.customVideoSeeker)?.visibility = View.VISIBLE
+                
+                loadingScreen.visibility = View.VISIBLE
+                isImportLoading = true
+                isVideoLoaded = false
+                videoUri = uri
+                
+                lifecycleScope.launch {
+                    val projectSourcePath = getFilePathFromUri(uri)
+                    if (projectSourcePath != null) {
+                        tempInputFile = File(projectSourcePath)
+                        videoFileName = tempInputFile.name
+                    }
+                    
+                    viewModel.initializeProject(uri, videoFileName)
+                    initializeVideoData()
+                }
+            }
+        }
     }
 
     @Deprecated("This method has been deprecated in favor of using the Activity Result API")
@@ -4065,6 +4224,7 @@ class VideoEditingActivity : AppCompatActivity() {
             trackTrimView.trackColor = android.graphics.Color.TRANSPARENT
             trackTrimView.maxDurationMs = item.durationMs
             trackTrimView.customMsPerPixel = 1.0f / pixelsPerMs
+            trackTrimView.isSelectedTrack = (selectedVideoIndex == index)
             trackTrimView.isTrimEnabled = false
             
             // Set the full untrimmed width on TrackTrimView and offset it
@@ -4077,12 +4237,8 @@ class VideoEditingActivity : AppCompatActivity() {
             trackTrimView.activeEndMs = item.trimEndMs
             trackTrimView.setRange(item.durationMs, item.trimStartMs, item.trimEndMs)
             
-            // Apply selection border if selected
-            if (selectedVideoIndex == index) {
-                segmentView.setBackgroundResource(R.drawable.bg_track_selected)
-            } else {
-                segmentView.background = null
-            }
+            // Selection highlight is drawn by TrackTrimView in the foreground
+            segmentView.background = null
             
             trackTrimView.onTrackClicked = {
                 if (selectedVideoIndex == index) {
@@ -4148,8 +4304,9 @@ class VideoEditingActivity : AppCompatActivity() {
                 }
                 
                 val transitionWidth = 24.dpToPx()
-                val transParams = FrameLayout.LayoutParams(transitionWidth, ViewGroup.LayoutParams.MATCH_PARENT).apply {
+                val transParams = FrameLayout.LayoutParams(transitionWidth, transitionWidth).apply {
                     leftMargin = segmentLeft - transitionWidth / 2
+                    gravity = android.view.Gravity.CENTER_VERTICAL
                 }
                 transitionViewsToLayout.add(Pair(transitionView, transParams))
                 transitionView.setOnClickListener {
@@ -4298,6 +4455,8 @@ class VideoEditingActivity : AppCompatActivity() {
                     activeStartMs = op.startTimeMs ?: 0L
                     activeEndMs = op.endTimeMs ?: totalSequenceDuration
                     customMsPerPixel = 1.0f / pixelsPerMs
+                    beats = op.beats
+                    internalStartMs = op.internalStartMs
                     setRange(totalSequenceDuration, op.startTimeMs ?: 0L, op.endTimeMs ?: totalSequenceDuration)
                     onTrimChanged = { start, end, target ->
                         val oldOp = viewModel.project.value?.operations?.find { 
@@ -5382,6 +5541,17 @@ class VideoEditingActivity : AppCompatActivity() {
                 is EditOperation.AddBackgroundAudio -> {
                     op.startTimeMs?.let { targets.add(it) }
                     op.endTimeMs?.let { targets.add(it) }
+                    val start = op.startTimeMs ?: 0L
+                    val end = op.endTimeMs ?: getTotalSequenceDuration()
+                    for (beat in op.beats) {
+                        val relative = beat - op.internalStartMs
+                        if (relative >= 0) {
+                            val timelineMs = start + relative
+                            if (timelineMs <= end) {
+                                targets.add(timelineMs)
+                            }
+                        }
+                    }
                 }
                 is EditOperation.AddText -> {
                     op.startTimeMs?.let { targets.add(it) }
