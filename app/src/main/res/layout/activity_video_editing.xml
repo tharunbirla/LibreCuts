@@ -463,147 +463,200 @@
             android:layout_marginTop="16dp"
             android:visibility="gone" />
 
-        <LinearLayout
-            android:id="@+id/editingControlsWrapper"
+        <HorizontalScrollView
+            android:id="@+id/editingControlsScroll"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"
             android:layout_marginBottom="24dp"
             android:layout_marginTop="16dp"
-            android:orientation="horizontal"
-            android:gravity="center"
+            android:scrollbars="none"
             android:background="@drawable/bg_bottom_nav_floating"
-            android:paddingVertical="12dp"
-            android:paddingHorizontal="8dp"
-            android:elevation="12dp">
+            android:elevation="12dp"
+            android:clipToOutline="true"
+            android:requiresFadingEdge="horizontal"
+            android:fadingEdgeLength="32dp"
+            android:fillViewport="true">
 
             <LinearLayout
-                android:layout_width="0dp"
+                android:id="@+id/editingControlsWrapper"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center">
-                <ImageButton
-                    android:id="@+id/btnText"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="@drawable/tool_button_inactive"
-                    android:src="@drawable/ic_text_24"
-                    android:padding="12dp"
-                    android:scaleType="fitCenter"
-                    app:tint="@color/toolTextInactive" />
-                <TextView
-                    android:layout_width="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:paddingVertical="12dp"
+                android:paddingHorizontal="8dp">
+
+                <LinearLayout
+                    android:layout_width="72dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="Text"
-                    android:textSize="11sp"
-                    android:fontFamily="sans-serif-medium"
-                    android:textColor="@color/toolTextInactive"/>
-            </LinearLayout>
+                    android:orientation="vertical"
+                    android:gravity="center">
+                    <ImageButton
+                        android:id="@+id/btnText"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/tool_button_inactive"
+                        android:src="@drawable/ic_text_24"
+                        android:padding="12dp"
+                        android:scaleType="fitCenter"
+                        app:tint="@color/toolTextInactive" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Text"
+                        android:textSize="11sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textColor="@color/toolTextInactive"/>
+                </LinearLayout>
 
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center">
-                <ImageButton
-                    android:id="@+id/btnImageOverlay"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="@drawable/tool_button_inactive"
-                    android:src="@drawable/ic_sticker_24"
-                    android:padding="12dp"
-                    android:scaleType="fitCenter"
-                    app:tint="@color/toolTextInactive" />
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="72dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="Stickers"
-                    android:textSize="11sp"
-                    android:fontFamily="sans-serif-medium"
-                    android:textColor="@color/toolTextInactive"/>
-            </LinearLayout>
+                    android:orientation="vertical"
+                    android:gravity="center">
+                    <ImageButton
+                        android:id="@+id/btnMediaOverlay"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/tool_button_inactive"
+                        android:src="@drawable/ic_layers_24"
+                        android:padding="12dp"
+                        android:scaleType="fitCenter"
+                        app:tint="@color/toolTextInactive" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Overlay"
+                        android:textSize="11sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textColor="@color/toolTextInactive"/>
+                </LinearLayout>
 
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center">
-                <ImageButton
-                    android:id="@+id/btnAudio"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="@drawable/tool_button_inactive"
-                    android:src="@drawable/ic_audio_24"
-                    android:padding="12dp"
-                    android:scaleType="fitCenter"
-                    app:tint="@color/toolTextInactive" />
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="72dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="Audio"
-                    android:textSize="11sp"
-                    android:fontFamily="sans-serif-medium"
-                    android:textColor="@color/toolTextInactive"/>
-            </LinearLayout>
+                    android:orientation="vertical"
+                    android:gravity="center">
+                    <ImageButton
+                        android:id="@+id/btnImageOverlay"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/tool_button_inactive"
+                        android:src="@drawable/ic_sticker_24"
+                        android:padding="12dp"
+                        android:scaleType="fitCenter"
+                        app:tint="@color/toolTextInactive" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Stickers"
+                        android:textSize="11sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textColor="@color/toolTextInactive"/>
+                </LinearLayout>
 
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center">
-                <ImageButton
-                    android:id="@+id/btnSubtitles"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="@drawable/tool_button_inactive"
-                    android:src="@drawable/ic_closed_caption_24"
-                    android:padding="12dp"
-                    android:scaleType="fitCenter"
-                    app:tint="@color/toolTextInactive" />
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="72dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="Subtitles"
-                    android:textSize="11sp"
-                    android:fontFamily="sans-serif-medium"
-                    android:textColor="@color/toolTextInactive"/>
-            </LinearLayout>
+                    android:orientation="vertical"
+                    android:gravity="center">
+                    <ImageButton
+                        android:id="@+id/btnAudio"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/tool_button_inactive"
+                        android:src="@drawable/ic_audio_24"
+                        android:padding="12dp"
+                        android:scaleType="fitCenter"
+                        app:tint="@color/toolTextInactive" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Audio"
+                        android:textSize="11sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textColor="@color/toolTextInactive"/>
+                </LinearLayout>
 
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center">
-                <ImageButton
-                    android:id="@+id/btnCrop"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="@drawable/tool_button_inactive"
-                    android:src="@drawable/ic_crop_24"
-                    android:padding="12dp"
-                    android:scaleType="fitCenter"
-                    app:tint="@color/toolTextInactive" />
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="72dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="Crop"
-                    android:textSize="11sp"
-                    android:fontFamily="sans-serif-medium"
-                    android:textColor="@color/toolTextInactive"/>
+                    android:orientation="vertical"
+                    android:gravity="center">
+                    <ImageButton
+                        android:id="@+id/btnVoiceOver"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/tool_button_inactive"
+                        android:src="@drawable/ic_mic_24"
+                        android:padding="12dp"
+                        android:scaleType="fitCenter"
+                        app:tint="@color/toolTextInactive" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Voice"
+                        android:textSize="11sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textColor="@color/toolTextInactive"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="72dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center">
+                    <ImageButton
+                        android:id="@+id/btnSubtitles"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/tool_button_inactive"
+                        android:src="@drawable/ic_closed_caption_24"
+                        android:padding="12dp"
+                        android:scaleType="fitCenter"
+                        app:tint="@color/toolTextInactive" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Subtitles"
+                        android:textSize="11sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textColor="@color/toolTextInactive"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="72dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center">
+                    <ImageButton
+                        android:id="@+id/btnCrop"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/tool_button_inactive"
+                        android:src="@drawable/ic_crop_24"
+                        android:padding="12dp"
+                        android:scaleType="fitCenter"
+                        app:tint="@color/toolTextInactive" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Crop"
+                        android:textSize="11sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textColor="@color/toolTextInactive"/>
+                </LinearLayout>
+
             </LinearLayout>
-
-
-        </LinearLayout>
+        </HorizontalScrollView>
     </LinearLayout>
 
     <include

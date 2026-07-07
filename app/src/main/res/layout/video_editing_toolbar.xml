@@ -8,13 +8,17 @@
     android:layout_marginBottom="24dp"
     android:scrollbars="none"
     android:background="@drawable/bg_bottom_nav_floating"
-    android:elevation="12dp">
+    android:elevation="12dp"
+    android:clipToOutline="true"
+    android:requiresFadingEdge="horizontal"
+    android:fadingEdgeLength="32dp"
+    android:fillViewport="true">
 
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center_vertical"
+        android:gravity="center"
         android:paddingVertical="12dp"
         android:paddingHorizontal="8dp">
 
@@ -158,7 +162,7 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="@drawable/tool_button_inactive"
-                android:src="@drawable/ic_tune_24"
+                android:src="@drawable/ic_page_info_24"
                 android:padding="12dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />

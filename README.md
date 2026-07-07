@@ -20,7 +20,7 @@
     <img src="src/images/badges/badge_obtainium.png" height="96" alt="Get it on Obtainium" />
   </a>
   <a href="https://discord.gg/gwr3nE7YW">
-    <img src="src/images/badges/badge_discord.png" height="66" alt="Join Discord" />
+    <img src="src/images/badges/badge_discord.png" height="96" alt="Join Discord" />
   </a>
 </div>
 

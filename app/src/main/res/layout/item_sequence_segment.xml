@@ -14,39 +14,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- Control buttons container (rearrange, delete) -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:background="#80000000"
-        android:padding="2dp">
 
-        <ImageButton
-            android:id="@+id/btnMoveLeft"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@android:drawable/ic_media_previous"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@android:color/white"
-            android:visibility="gone"/>
-            
-        <Space
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"/>
-
-        <ImageButton
-            android:id="@+id/btnMoveRight"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@android:drawable/ic_media_next"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:tint="@android:color/white"
-            android:visibility="gone"/>
-
-    </LinearLayout>
 
 </FrameLayout>

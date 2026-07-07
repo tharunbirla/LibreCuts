@@ -189,6 +189,20 @@ class VideoEditingActivity : AppCompatActivity() {
     
     private var isInitialFitDone = false
 
+    private var mediaRecorder: android.media.MediaRecorder? = null
+    private var isRecordingVoiceOver = false
+    private var voiceOverFile: File? = null
+    private var voiceOverStartTimeMs = 0L
+
+    private val requestRecordAudioPermissionLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            showVoiceOverDialog()
+        } else {
+            Toast.makeText(this, "Microphone permission required for voice over", Toast.LENGTH_SHORT).show()
+        }
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_video_editing)
@@ -1012,6 +1026,10 @@ class VideoEditingActivity : AppCompatActivity() {
             setActiveToolButton(R.id.btnText)
             textAction()
         }
+        findViewById<ImageButton>(R.id.btnMediaOverlay)?.setBounceClickListener {
+            setActiveToolButton(R.id.btnMediaOverlay)
+            mediaOverlayAction()
+        }
         findViewById<ImageButton>(R.id.btnImageOverlay).setBounceClickListener {
             setActiveToolButton(R.id.btnImageOverlay)
             imageOverlayAction()
@@ -1028,6 +1046,11 @@ class VideoEditingActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btnSubtitles).setBounceClickListener {
             setActiveToolButton(R.id.btnSubtitles)
             subtitlesAction()
+        }
+
+        findViewById<ImageButton>(R.id.btnVoiceOver)?.setBounceClickListener {
+            setActiveToolButton(R.id.btnVoiceOver)
+            voiceOverAction()
         }
 
         try {
@@ -1102,7 +1125,7 @@ class VideoEditingActivity : AppCompatActivity() {
 
     private fun setActiveToolButton(activeId: Int) {
         if (isShowingPreview) dismissPreview()
-        val toolIds = listOf(R.id.btnText, R.id.btnImageOverlay, R.id.btnAudio, R.id.btnCrop, R.id.btnSubtitles)
+        val toolIds = listOf(R.id.btnText, R.id.btnMediaOverlay, R.id.btnImageOverlay, R.id.btnAudio, R.id.btnCrop, R.id.btnSubtitles, R.id.btnVoiceOver)
         for (id in toolIds) {
             val btn = findViewById<ImageButton>(id) ?: continue
             btn.setBackgroundResource(if (id == activeId) R.drawable.tool_button_active else R.drawable.tool_button_inactive)
@@ -1552,6 +1575,168 @@ class VideoEditingActivity : AppCompatActivity() {
         }
     }
 
+    private fun voiceOverAction() {
+        if (androidx.core.content.ContextCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.RECORD_AUDIO
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            showVoiceOverDialog()
+        } else {
+            requestRecordAudioPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
+    private fun showVoiceOverDialog() {
+        val bottomSheet = BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.dialog_voice_over, null)
+        bottomSheet.setContentView(view)
+
+        val btnClose = view.findViewById<ImageButton>(R.id.btnCloseVoiceOver)
+        val btnToggle = view.findViewById<ImageButton>(R.id.btnToggleRecording)
+        val tvStatus = view.findViewById<TextView>(R.id.tvRecordingStatus)
+        val ripple1 = view.findViewById<View>(R.id.ripple1)
+        val ripple2 = view.findViewById<View>(R.id.ripple2)
+        
+        isRecordingVoiceOver = false
+
+        val scaleX1 = android.animation.ObjectAnimator.ofFloat(ripple1, "scaleX", 1f, 1.8f)
+        val scaleY1 = android.animation.ObjectAnimator.ofFloat(ripple1, "scaleY", 1f, 1.8f)
+        val alpha1 = android.animation.ObjectAnimator.ofFloat(ripple1, "alpha", 0.6f, 0f)
+        
+        val scaleX2 = android.animation.ObjectAnimator.ofFloat(ripple2, "scaleX", 1f, 1.8f)
+        val scaleY2 = android.animation.ObjectAnimator.ofFloat(ripple2, "scaleY", 1f, 1.8f)
+        val alpha2 = android.animation.ObjectAnimator.ofFloat(ripple2, "alpha", 0.6f, 0f)
+
+        scaleX1.repeatCount = android.animation.ValueAnimator.INFINITE
+        scaleY1.repeatCount = android.animation.ValueAnimator.INFINITE
+        alpha1.repeatCount = android.animation.ValueAnimator.INFINITE
+        
+        scaleX2.repeatCount = android.animation.ValueAnimator.INFINITE
+        scaleY2.repeatCount = android.animation.ValueAnimator.INFINITE
+        alpha2.repeatCount = android.animation.ValueAnimator.INFINITE
+        
+        val rippleAnimator = android.animation.AnimatorSet().apply {
+            playTogether(scaleX1, scaleY1, alpha1)
+            duration = 1500
+        }
+        val rippleAnimator2 = android.animation.AnimatorSet().apply {
+            playTogether(scaleX2, scaleY2, alpha2)
+            duration = 1500
+            startDelay = 750
+        }
+
+        btnToggle.setBounceClickListener {
+            if (!isRecordingVoiceOver) {
+                // Start Recording
+                voiceOverFile = File(cacheDir, "voice_over_${System.currentTimeMillis()}.m4a")
+                try {
+                    mediaRecorder = android.media.MediaRecorder().apply {
+                        setAudioSource(android.media.MediaRecorder.AudioSource.MIC)
+                        setOutputFormat(android.media.MediaRecorder.OutputFormat.MPEG_4)
+                        setAudioEncoder(android.media.MediaRecorder.AudioEncoder.AAC)
+                        setOutputFile(voiceOverFile?.absolutePath)
+                        prepare()
+                        start()
+                    }
+                    
+                    isRecordingVoiceOver = true
+                    tvStatus.text = "Recording... Tap to stop"
+                    btnToggle.backgroundTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#FF4081"))
+                    
+                    rippleAnimator.start()
+                    rippleAnimator2.start()
+                    
+                    // Play video while recording
+                    voiceOverStartTimeMs = getGlobalPosition()
+                    if (::player.isInitialized) {
+                        player.play()
+                        btnPlayPause.setImageResource(R.drawable.ic_pause_24)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    Toast.makeText(this@VideoEditingActivity, "Failed to start recording", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                // Stop Recording
+                try {
+                    mediaRecorder?.stop()
+                    mediaRecorder?.release()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                mediaRecorder = null
+                isRecordingVoiceOver = false
+                
+                rippleAnimator.cancel()
+                rippleAnimator2.cancel()
+                ripple1.alpha = 0f
+                ripple2.alpha = 0f
+                ripple1.scaleX = 1f
+                ripple1.scaleY = 1f
+                ripple2.scaleX = 1f
+                ripple2.scaleY = 1f
+                
+                // Pause video
+                if (::player.isInitialized) {
+                    player.pause()
+                    btnPlayPause.setImageResource(R.drawable.ic_play_24)
+                }
+                
+                tvStatus.text = "Tap to start recording"
+                btnToggle.backgroundTintList = null // Reset tint
+                
+                // Add to audio layer
+                voiceOverFile?.let { file ->
+                    if (file.exists()) {
+                        var durationMs = 3000L
+                        try {
+                            val retriever = android.media.MediaMetadataRetriever()
+                            retriever.setDataSource(file.absolutePath)
+                            val timeStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
+                            if (timeStr != null) {
+                                durationMs = timeStr.toLong()
+                            }
+                            retriever.release()
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                        
+                        viewModel.addBackgroundAudioOperation(
+                            audioUri = Uri.fromFile(file),
+                            startTimeMs = voiceOverStartTimeMs,
+                            endTimeMs = voiceOverStartTimeMs + durationMs,
+                            internalStartMs = 0L,
+                            internalEndMs = durationMs
+                        )
+                    }
+                }
+                bottomSheet.dismiss()
+            }
+        }
+
+        btnClose.setBounceClickListener {
+            bottomSheet.dismiss()
+        }
+        
+        bottomSheet.setOnDismissListener {
+            rippleAnimator.cancel()
+            rippleAnimator2.cancel()
+            if (isRecordingVoiceOver) {
+                try { mediaRecorder?.stop(); mediaRecorder?.release() } catch(e: Exception) {}
+                mediaRecorder = null
+                isRecordingVoiceOver = false
+                if (::player.isInitialized) {
+                    player.pause()
+                    btnPlayPause.setImageResource(R.drawable.ic_play_24)
+                }
+            }
+            setActiveToolButton(-1)
+        }
+
+        bottomSheet.show()
+    }
+
     private fun subtitlesAction() {
         enterSubtitlesEditingMode()
     }
@@ -1641,12 +1826,95 @@ class VideoEditingActivity : AppCompatActivity() {
         Toast.makeText(this, "Subtitles removed", Toast.LENGTH_SHORT).show()
     }
 
-    private fun imageOverlayAction() {
+    private fun mediaOverlayAction() {
         if (isImageEditingActive) {
             draggableImageOverlay?.commitImage()
             return
         }
         openImagePicker()
+    }
+
+    private fun imageOverlayAction() {
+        if (isImageEditingActive) {
+            draggableImageOverlay?.commitImage()
+            return
+        }
+        showStickerPicker()
+    }
+
+    private fun showStickerPicker() {
+        val bottomSheet = BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.bottom_sheet_sticker_picker, null)
+        bottomSheet.setContentView(view)
+
+        val stickerIds = listOf(
+            R.mipmap.ic_launcher,
+            R.drawable.sticker_fire,
+            R.drawable.sticker_heart,
+            R.drawable.sticker_thumbs_up,
+            R.drawable.sticker_sparkles,
+            R.drawable.sticker_laugh,
+            R.drawable.sticker_party,
+            R.drawable.sticker_rocket,
+            R.drawable.sticker_bell,
+            R.drawable.sticker_chat,
+            R.drawable.sticker_star,
+            R.drawable.sticker_crown
+        )
+
+        val grid = view.findViewById<android.widget.GridLayout>(R.id.stickerGrid)
+        
+        val displayMetrics = resources.displayMetrics
+        val screenWidth = displayMetrics.widthPixels
+        val padding = 48.dpToPx()
+        val columnWidth = (screenWidth - padding) / 4
+
+        for (resId in stickerIds) {
+            val imageView = ImageView(this).apply {
+                setImageResource(resId)
+                val params = android.widget.GridLayout.LayoutParams().apply {
+                    width = columnWidth - 16.dpToPx()
+                    height = columnWidth - 16.dpToPx()
+                    setMargins(8.dpToPx(), 8.dpToPx(), 8.dpToPx(), 8.dpToPx())
+                }
+                layoutParams = params
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                
+                val outValue = android.util.TypedValue()
+                theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
+                setBackgroundResource(outValue.resourceId)
+                
+                isClickable = true
+                isFocusable = true
+                
+                setBounceClickListener {
+                    if (resId == R.mipmap.ic_launcher) {
+                        val drawable = getDrawable(resId)
+                        if (drawable != null) {
+                            val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 512
+                            val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 512
+                            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                            val canvas = android.graphics.Canvas(bitmap)
+                            drawable.setBounds(0, 0, canvas.width, canvas.height)
+                            drawable.draw(canvas)
+                            val tempFile = File(cacheDir, "app_icon_${System.currentTimeMillis()}.png")
+                            tempFile.outputStream().use { out ->
+                                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                            }
+                            showImageOverlayConfig(Uri.fromFile(tempFile))
+                            bottomSheet.dismiss()
+                            return@setBounceClickListener
+                        }
+                    }
+                    val uri = Uri.parse("android.resource://$packageName/$resId")
+                    showImageOverlayConfig(uri)
+                    bottomSheet.dismiss()
+                }
+            }
+            grid.addView(imageView)
+        }
+
+        bottomSheet.show()
     }
 
     private fun openImagePicker() {
@@ -3863,20 +4131,7 @@ class VideoEditingActivity : AppCompatActivity() {
             segmentView.setOnTouchListener(touchListener)
             trackTrimView.setOnTouchListener(touchListener)
             
-            val btnLeft = segmentView.findViewById<ImageButton>(R.id.btnMoveLeft)
-            val btnRight = segmentView.findViewById<ImageButton>(R.id.btnMoveRight)
-            
-            if (index == 0) {
-                btnLeft.visibility = View.GONE
-                btnRight.visibility = if (sequenceItems.size > 1) View.VISIBLE else View.GONE
-                btnRight.setBounceClickListener { viewModel.reorderSequenceItem(sequenceItems, 0, 1) }
-            } else {
-                btnLeft.visibility = View.VISIBLE
-                btnLeft.setBounceClickListener { viewModel.reorderSequenceItem(sequenceItems, index, index - 1) }
-                
-                btnRight.visibility = if (index < sequenceItems.size - 1) View.VISIBLE else View.GONE
-                btnRight.setBounceClickListener { viewModel.reorderSequenceItem(sequenceItems, index, index + 1) }
-            }
+
 
             if (index > 0) {
                 val transitionView = layoutInflater.inflate(R.layout.item_transition_button, sequenceTrackContainer, false)
