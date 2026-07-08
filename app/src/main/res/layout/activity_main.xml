@@ -74,6 +74,118 @@
 
     </LinearLayout>
 
+    <!-- Settings Page Content -->
+    <ScrollView
+        android:id="@+id/layoutSettingsContent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:padding="24dp"
+        android:paddingBottom="120dp"
+        android:clipToPadding="false"
+        android:overScrollMode="never"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:fontFamily="sans-serif-medium"
+                android:text="Settings"
+                android:textColor="@color/textColor"
+                android:textSize="28sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:background="@drawable/bg_import_card"
+                android:orientation="vertical"
+                android:padding="24dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="General"
+                    android:textColor="@color/textColor"
+                    android:textSize="18sp"
+                    android:layout_marginBottom="16dp" />
+
+                <!-- Export Folder Setting -->
+                <LinearLayout
+                    android:id="@+id/btnChangeExportFolder"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingVertical="12dp">
+                    
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Export Folder"
+                        android:textColor="@color/textColor"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                    
+                    <TextView
+                        android:id="@+id/tvCurrentExportFolder"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Default (Movies/LibreCuts)"
+                        android:textColor="@color/iconSecondary"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/outline"
+                    android:layout_marginVertical="8dp" />
+
+                <!-- Check for Updates Setting -->
+                <LinearLayout
+                    android:id="@+id/btnCheckForUpdates"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingVertical="12dp">
+                    
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Check for Updates"
+                        android:textColor="@color/textColor"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                    
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Manually check for the latest version"
+                        android:textColor="@color/iconSecondary"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
     <!-- About Page Content -->
     <ScrollView
         android:id="@+id/layoutAboutContent"
@@ -225,7 +337,7 @@
     <!-- Bottom Navigation Bar (Floating Pill) -->
     <LinearLayout
         android:id="@+id/bottomNavBar"
-        android:layout_width="200dp"
+        android:layout_width="260dp"
         android:layout_height="64dp"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
@@ -255,6 +367,27 @@
                     android:layout_gravity="center"
                     android:src="@drawable/ic_home_24"
                     app:tint="@color/colorPrimary" />
+            </FrameLayout>
+        </FrameLayout>
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1">
+            <FrameLayout
+                android:id="@+id/tabSettings"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_gravity="center"
+                android:clickable="true"
+                android:focusable="true">
+                <ImageView
+                    android:id="@+id/ivSettings"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_settings_24"
+                    app:tint="@color/inactiveTool" />
             </FrameLayout>
         </FrameLayout>
 

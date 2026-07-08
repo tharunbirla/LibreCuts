@@ -21,6 +21,13 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.tharunbirla.librecuts.databinding.ActivityMainBinding
 import com.tharunbirla.librecuts.utils.ErrorCode
 import com.tharunbirla.librecuts.utils.setBounceClickListener
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
 class MainActivity : AppCompatActivity() {
 
@@ -32,6 +39,24 @@ class MainActivity : AppCompatActivity() {
                 navigateToEditingScreen(uri)
             } else {
                 Log.e("VideoSelectionError", "No video selected")
+            }
+        }
+
+    private val selectFolderLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
+            if (uri != null) {
+                try {
+                    val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                            Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    contentResolver.takePersistableUriPermission(uri, takeFlags)
+
+                    val prefs = getSharedPreferences("librecuts_prefs", MODE_PRIVATE)
+                    prefs.edit().putString("export_directory_uri", uri.toString()).apply()
+                    updateExportFolderUI(uri)
+                } catch (e: Exception) {
+                    Log.e("FolderSelectionError", "Error securing permission for URI", e)
+                    showToast("Failed to set export folder")
+                }
             }
         }
 
@@ -52,15 +77,38 @@ class MainActivity : AppCompatActivity() {
         val ta = obtainStyledAttributes(attrs)
         val inactiveBg = ta.getDrawable(0)
         ta.recycle()
+        binding.tabSettings.background = inactiveBg
         binding.tabAbout.background = inactiveBg
 
         // Setup bottom navigation tab switching
         binding.tabHome.setBounceClickListener {
-            switchTab(true)
+            switchTab(0)
+        }
+        
+        binding.tabSettings.setBounceClickListener {
+            switchTab(1)
         }
 
         binding.tabAbout.setBounceClickListener {
-            switchTab(false)
+            switchTab(2)
+        }
+        
+        // Setup Settings Actions
+        binding.btnChangeExportFolder.setBounceClickListener {
+            selectFolderLauncher.launch(null)
+        }
+        
+        binding.btnCheckForUpdates.setBounceClickListener {
+            checkForUpdates()
+        }
+        
+        // Initialize Settings UI
+        val prefs = getSharedPreferences("librecuts_prefs", MODE_PRIVATE)
+        val savedUriString = prefs.getString("export_directory_uri", null)
+        if (savedUriString != null) {
+            updateExportFolderUI(Uri.parse(savedUriString))
+        } else {
+            updateExportFolderUI(null)
         }
 
         // Setup GitHub button listeners
@@ -76,7 +124,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Onboarding / Welcome Dialog
-        val prefs = getSharedPreferences("librecuts_prefs", MODE_PRIVATE)
         val isFirstLaunch = prefs.getBoolean("first_launch_v1", true)
         if (isFirstLaunch) {
             showOnboardingDialog(prefs)
@@ -86,27 +133,58 @@ class MainActivity : AppCompatActivity() {
         handleIntent(intent)
     }
 
-    private fun switchTab(isHome: Boolean) {
+    private fun updateExportFolderUI(uri: Uri?) {
+        if (uri == null) {
+            binding.tvCurrentExportFolder.text = "Default (Movies/LibreCuts)"
+        } else {
+            try {
+                val path = uri.lastPathSegment?.split(":")?.lastOrNull()
+                if (!path.isNullOrEmpty()) {
+                    binding.tvCurrentExportFolder.text = path
+                } else {
+                    binding.tvCurrentExportFolder.text = "Custom Directory"
+                }
+            } catch (e: Exception) {
+                binding.tvCurrentExportFolder.text = "Custom Directory"
+            }
+        }
+    }
+
+    private fun switchTab(tabIndex: Int) {
         val activeBg = ContextCompat.getDrawable(this, R.drawable.bg_nav_active)
         val attrs = intArrayOf(android.R.attr.selectableItemBackgroundBorderless)
         val ta = obtainStyledAttributes(attrs)
         val inactiveBg = ta.getDrawable(0)
         ta.recycle()
 
-        if (isHome) {
-            binding.layoutHomeContent.visibility = View.VISIBLE
-            binding.layoutAboutContent.visibility = View.GONE
-            binding.tabHome.background = activeBg
-            binding.ivHome.setColorFilter(ContextCompat.getColor(this, R.color.colorPrimary))
-            binding.tabAbout.background = inactiveBg
-            binding.ivAbout.setColorFilter(ContextCompat.getColor(this, R.color.inactiveTool))
-        } else {
-            binding.layoutHomeContent.visibility = View.GONE
-            binding.layoutAboutContent.visibility = View.VISIBLE
-            binding.tabAbout.background = activeBg
-            binding.ivAbout.setColorFilter(ContextCompat.getColor(this, R.color.colorPrimary))
-            binding.tabHome.background = inactiveBg
-            binding.ivHome.setColorFilter(ContextCompat.getColor(this, R.color.inactiveTool))
+        // Reset all tabs to inactive
+        binding.layoutHomeContent.visibility = View.GONE
+        binding.layoutSettingsContent.visibility = View.GONE
+        binding.layoutAboutContent.visibility = View.GONE
+
+        binding.tabHome.background = inactiveBg
+        binding.ivHome.setColorFilter(ContextCompat.getColor(this, R.color.inactiveTool))
+        binding.tabSettings.background = inactiveBg
+        binding.ivSettings.setColorFilter(ContextCompat.getColor(this, R.color.inactiveTool))
+        binding.tabAbout.background = inactiveBg
+        binding.ivAbout.setColorFilter(ContextCompat.getColor(this, R.color.inactiveTool))
+
+        when (tabIndex) {
+            0 -> {
+                binding.layoutHomeContent.visibility = View.VISIBLE
+                binding.tabHome.background = activeBg
+                binding.ivHome.setColorFilter(ContextCompat.getColor(this, R.color.colorPrimary))
+            }
+            1 -> {
+                binding.layoutSettingsContent.visibility = View.VISIBLE
+                binding.tabSettings.background = activeBg
+                binding.ivSettings.setColorFilter(ContextCompat.getColor(this, R.color.colorPrimary))
+            }
+            2 -> {
+                binding.layoutAboutContent.visibility = View.VISIBLE
+                binding.tabAbout.background = activeBg
+                binding.ivAbout.setColorFilter(ContextCompat.getColor(this, R.color.colorPrimary))
+            }
         }
     }
 
@@ -237,5 +315,58 @@ class MainActivity : AppCompatActivity() {
     private fun showToast(message: String) {
         Log.d("ToastMessage", "Showing toast: $message")
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun checkForUpdates() {
+        showToast("Checking for updates...")
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val url = URL("https://api.github.com/repos/tharunbirla/LibreCuts/releases/latest")
+                val connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
+                
+                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                    val response = connection.inputStream.bufferedReader().use { it.readText() }
+                    val json = JSONObject(response)
+                    val latestVersion = json.getString("tag_name")
+                    val releaseUrl = json.getString("html_url")
+                    
+                    val currentVersion = try {
+                        packageManager.getPackageInfo(packageName, 0).versionName
+                    } catch (e: Exception) {
+                        "1.0-beta3"
+                    }
+                    
+                    withContext(Dispatchers.Main) {
+                        if (latestVersion != "v$currentVersion" && latestVersion != currentVersion) {
+                            showUpdateDialog(latestVersion, releaseUrl)
+                        } else {
+                            showToast("You are on the latest version!")
+                        }
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        showToast("Failed to check for updates.")
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    showToast("Failed to check for updates.")
+                    Log.e("UpdateCheck", "Error", e)
+                }
+            }
+        }
+    }
+
+    private fun showUpdateDialog(latestVersion: String, releaseUrl: String) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Update Available")
+            .setMessage("A new version ($latestVersion) is available! Would you like to download it now?")
+            .setPositiveButton("Download") { _, _ ->
+                openUrl(releaseUrl)
+            }
+            .setNegativeButton("Later", null)
+            .show()
     }
 }

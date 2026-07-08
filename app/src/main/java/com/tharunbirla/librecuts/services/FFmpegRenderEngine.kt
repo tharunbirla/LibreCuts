@@ -233,9 +233,10 @@ class FFmpegRenderEngine(private val context: Context) {
                         if (msg.isNotEmpty()) Log.d(TAG, "[ffmpeg] $msg")
                     }, { statistics ->
                         if (totalDurationSecs != null && totalDurationSecs > 0) {
-                            // statistics.getTime() is in SECONDS (Double) in the antonkarpenko fork
-                            val timeSecs = statistics.getTime()
-                            if (timeSecs > 0) {
+                            // statistics.getTime() actually returns milliseconds
+                            val timeMs = statistics.time
+                            if (timeMs > 0) {
+                                val timeSecs = timeMs.toDouble() / 1000.0
                                 val progress = (timeSecs / totalDurationSecs * 100).toInt()
                                 onProgress?.invoke(progress.coerceIn(0, 100))
                             }

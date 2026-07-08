@@ -144,6 +144,7 @@ class VideoEditingActivity : AppCompatActivity() {
     private var draggedIndex = -1
     private var draggedView: View? = null
     private var initialTouchX = 0f
+    private var initialScrollX = 0
     private var segmentViews = mutableListOf<View>()
     private var originalLefts = mutableListOf<Int>()
     private var currentDragOrder = listOf<Int>()
@@ -251,16 +252,16 @@ class VideoEditingActivity : AppCompatActivity() {
                     player.pause()
                     btnPlayPause.setImageResource(R.drawable.ic_play_24)
                 } else {
-                    val trimOp = viewModel.project.value?.operations?.filterIsInstance<EditOperation.Trim>()?.lastOrNull()
-                    val startMs = trimOp?.startMs ?: 0L
                     val totalDuration = getTotalSequenceDuration()
-                    val endMs = trimOp?.endMs ?: totalDuration
                     val currentGlobalPos = getGlobalPosition()
-                    if (currentGlobalPos < startMs || currentGlobalPos >= endMs) {
-                        seekToGlobalPosition(startMs)
-                        timelineHorizontalScroll.scrollTo((startMs * pixelsPerMs).toInt(), 0)
-                        updateDurationDisplay(startMs.toInt(), totalDuration.toInt())
+                    
+                    // If we reached the end of the timeline, restart from beginning
+                    if (currentGlobalPos >= totalDuration - 100L || player.playbackState == Player.STATE_ENDED) {
+                        seekToGlobalPosition(0L)
+                        timelineHorizontalScroll.scrollTo(0, 0)
+                        updateDurationDisplay(0, totalDuration.toInt())
                     }
+                    
                     player.play()
                     btnPlayPause.setImageResource(R.drawable.ic_pause_24)
                 }
@@ -3916,6 +3917,7 @@ class VideoEditingActivity : AppCompatActivity() {
         draggedIndex = index
         draggedView = view
         initialTouchX = rawX
+        initialScrollX = timelineHorizontalScroll.scrollX
 
         timelineHorizontalScroll.requestDisallowInterceptTouchEvent(true)
         view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
@@ -3939,7 +3941,18 @@ class VideoEditingActivity : AppCompatActivity() {
 
     private fun updateDragPosition(rawX: Float) {
         val draggedView = draggedView ?: return
-        val dx = rawX - initialTouchX
+        
+        // Auto-scroll logic when dragging near screen edges
+        val screenWidth = resources.displayMetrics.widthPixels
+        val edgeThreshold = 100f * resources.displayMetrics.density
+        if (rawX < edgeThreshold) {
+            timelineHorizontalScroll.scrollBy(-15, 0)
+        } else if (rawX > screenWidth - edgeThreshold) {
+            timelineHorizontalScroll.scrollBy(15, 0)
+        }
+        
+        val scrollDelta = timelineHorizontalScroll.scrollX - initialScrollX
+        val dx = rawX - initialTouchX + scrollDelta
         draggedView.translationX = dx
 
         val draggedCenter = originalLefts[draggedIndex] + draggedView.width / 2f + dx

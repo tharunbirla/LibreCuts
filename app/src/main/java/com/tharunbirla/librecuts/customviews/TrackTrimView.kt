@@ -162,9 +162,19 @@ class TrackTrimView @JvmOverloads constructor(
                     canvas.drawRect(rectF, borderPaint)
                 } else {
                     // Main track selection highlight without trimmer handles/ghosts
-                    borderPaint.color = Color.WHITE
-                    borderPaint.strokeWidth = 8f // Use a thick border so it's clearly visible over thumbnails
-                    canvas.drawRect(rectF, borderPaint)
+                    borderPaint.color = Color.parseColor("#FFD700") // Gold/Yellow selection for better visibility
+                    borderPaint.strokeWidth = 10f
+                    // Inset the rect so the stroke doesn't get clipped by the parent FrameLayout
+                    val inset = borderPaint.strokeWidth / 2f
+                    val selRect = RectF(rectF.left + inset, rectF.top + inset, rectF.right - inset, rectF.bottom - inset)
+                    canvas.drawRect(selRect, borderPaint)
+                    
+                    // Add a semi-transparent overlay to make the selected clip stand out more
+                    val overlay = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = Color.parseColor("#33FFD700")
+                        style = Paint.Style.FILL
+                    }
+                    canvas.drawRect(selRect, overlay)
                 }
             }
         } else {
