@@ -1,35 +1,21 @@
-LibreCuts is a free, open-source video editor for Android that prioritizes simplicity, efficiency, and privacy. Built for seamless performance, it empowers creators to easily select, edit, and export watermark-free videos locally on their device.
+<p>LibreCuts is a free and open-source video editor for Android focused on simplicity, performance, and privacy. Edit and export watermark free videos entirely on your device.</p>
 
-⚠️ NOTE: LibreCuts is currently in its Beta stage. Please expect bugs, potential instability, and incomplete features as we continue active development.
+<p><b>Note:</b> LibreCuts is currently in beta. You may encounter bugs, instability, or incomplete features as development continues.</p>
 
-## Features
+<p><b>Features</b></p>
 
-- Trim - Remove unwanted parts from the beginning or end of a video clip with a real-time timeline control.
-- Overlays - Place text or images on top of video clips to create engaging content.
-- Audio - Manage soundtracks effortlessly by importing custom music or audio tracks.
-- Scale - Adjust the size and positioning of a video or image within the frame.
-- Merge - Combine multiple video segments into a continuous sequence.
-- Rotate - Change the orientation of a video clip.
-
-## Support LibreCuts
-
-LibreCuts is built with passion and provided to the community for free. If this app has helped you create amazing videos, consider supporting its continued development! Your sponsorship helps keep the project alive and growing.
-
-Sponsor Link: https://github.com/sponsors/tharunbirla
-
-## Permissions
-
-LibreCuts requires the following permissions to function properly:
-
-- READ_EXTERNAL_STORAGE: To read videos from the device.
-- WRITE_EXTERNAL_STORAGE: (For older Android versions) To save edited videos.
-- POST_NOTIFICATIONS: To show notifications related to video editing.
-- READ_MEDIA_AUDIO/VIDEO/IMAGES: For accessing media files on devices running Android 13 (API level 33) and above.
-
-## Contributing
-
-Contributions are welcome! If you have suggestions or improvements, feel free to create a pull request or open an issue.
-
-## License
-
-This project is licensed under the MIT License.
+<ul>
+<li><b>Trim:</b> Remove unwanted parts from the beginning or end of a video.</li>
+<li><b>Merge:</b> Combine multiple video clips and rearrange them.</li>
+<li><b>Overlays:</b> Add text, images, GIFs, and video overlays.</li>
+<li><b>Subtitles:</b> Import .srt subtitle files and reposition captions in the preview.</li>
+<li><b>Layer Management:</b> Reorder overlay layers.</li>
+<li><b>Audio:</b> Import audio, boost volume up to 200%, or mute the original audio.</li>
+<li><b>Crop:</b> Crop videos to custom aspect ratios.</li>
+<li><b>Transitions:</b> Add smooth transitions between clips.</li>
+<li><b>Speed:</b> Speed up or slow down videos.</li>
+<li><b>Adjust &amp; Filters:</b> Adjust brightness, contrast, saturation, and apply filters.</li>
+<li><b>Reverse:</b> Play videos in reverse.</li>
+<li><b>Timeline Tools:</b> Snap clips, duplicate overlays, and create freeze frames.</li>
+<li><b>Hardware Acceleration:</b> Export videos faster using supported hardware encoders.</li>
+</ul>
