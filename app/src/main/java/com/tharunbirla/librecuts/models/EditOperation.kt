@@ -174,6 +174,7 @@ sealed class EditOperation : Serializable {
         val originalDurationMs: Long = 0L,
         val extractedFromSegmentIndex: Int? = null,
         val beats: List<Long> = emptyList(),
+        val ducking: Boolean = false,
         val id: String = System.nanoTime().toString()
     ) : EditOperation() {
         init {

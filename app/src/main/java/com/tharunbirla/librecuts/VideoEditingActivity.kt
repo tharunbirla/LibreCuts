@@ -820,6 +820,7 @@ class VideoEditingActivity : AppCompatActivity() {
                         // Toggle off if already detected
                         viewModel.updateOperation(op.copy(beats = emptyList()))
                         android.widget.Toast.makeText(this@VideoEditingActivity, "Beats cleared", android.widget.Toast.LENGTH_SHORT).show()
+                        toolbar.findViewById<ImageButton>(R.id.btnAudioBeats)?.setColorFilter(getColor(R.color.toolTextInactive))
                         return@setBounceClickListener
                     }
                     
@@ -829,11 +830,25 @@ class VideoEditingActivity : AppCompatActivity() {
                             if (beats.isNotEmpty()) {
                                 viewModel.updateOperation(op.copy(beats = beats))
                                 android.widget.Toast.makeText(this@VideoEditingActivity, "Found ${beats.size} beats!", android.widget.Toast.LENGTH_SHORT).show()
+                                toolbar.findViewById<ImageButton>(R.id.btnAudioBeats)?.setColorFilter(getColor(R.color.colorPrimary))
                             } else {
                                 android.widget.Toast.makeText(this@VideoEditingActivity, "No clear beats found.", android.widget.Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
+                }
+                toolbar.findViewById<ImageButton>(R.id.btnAudioDucking)?.setBounceClickListener {
+                    val id = viewModel.selectedOperationId.value ?: return@setBounceClickListener
+                    val project = viewModel.project.value ?: return@setBounceClickListener
+                    val op = project.operations.find { it is com.tharunbirla.librecuts.models.EditOperation.AddBackgroundAudio && it.id == id } as? com.tharunbirla.librecuts.models.EditOperation.AddBackgroundAudio ?: return@setBounceClickListener
+
+                    val newDucking = !op.ducking
+                    viewModel.updateOperation(op.copy(ducking = newDucking))
+                    
+                    val color = if (newDucking) getColor(R.color.colorPrimary) else getColor(R.color.toolTextInactive)
+                    toolbar.findViewById<ImageButton>(R.id.btnAudioDucking)?.setColorFilter(color)
+                    val msg = if (newDucking) "Audio ducking enabled" else "Audio ducking disabled"
+                    android.widget.Toast.makeText(this@VideoEditingActivity, msg, android.widget.Toast.LENGTH_SHORT).show()
                 }
                 val volumeSlider = toolbar.findViewById<com.google.android.material.slider.Slider>(R.id.audioVolumeSlider)
                 val tvVolumeValue = toolbar.findViewById<TextView>(R.id.tvAudioVolumeValue)
@@ -2241,6 +2256,13 @@ class VideoEditingActivity : AppCompatActivity() {
             val tvValue = toolbar.findViewById<TextView>(R.id.tvAudioVolumeValue)
             slider?.value = op.volume.coerceIn(0f, 2f)
             tvValue?.text = "${(op.volume * 100).toInt()}%"
+            
+            val btnBeats = toolbar.findViewById<ImageButton>(R.id.btnAudioBeats)
+            btnBeats?.setColorFilter(if (op.beats.isNotEmpty()) getColor(R.color.colorPrimary) else getColor(R.color.toolTextInactive))
+
+            val btnDucking = toolbar.findViewById<ImageButton>(R.id.btnAudioDucking)
+            btnDucking?.setColorFilter(if (op.ducking) getColor(R.color.colorPrimary) else getColor(R.color.toolTextInactive))
+
 
             val trimTrack = toolbar.findViewById<com.tharunbirla.librecuts.customviews.TrackTrimView>(R.id.audioTrimTrack)
             val tvTrimValue = toolbar.findViewById<TextView>(R.id.tvAudioTrimValues)

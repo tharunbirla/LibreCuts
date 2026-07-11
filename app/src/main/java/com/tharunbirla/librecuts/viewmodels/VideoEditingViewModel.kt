@@ -1462,6 +1462,31 @@ class VideoEditingViewModel : ViewModel() {
                 }
 
                 if (!audioInputIndices.any { it.second.removeOriginalAudio }) {
+                    var mainAudioRef = currentAudioLabel
+                    val duckingCount = audioInputIndices.count { it.second.ducking }
+                    
+                    if (duckingCount > 0) {
+                        val splits = (0..duckingCount).map { "[main_split_$it]" }
+                        filterParts.add("${mainAudioRef}asplit=${duckingCount + 1}${splits.joinToString("")}")
+                        mainAudioRef = splits[0]
+                        
+                        var splitIdx = 1
+                        for (i in mixInputLabels.indices.drop(1)) { // skip index 0 which is currentAudioLabel
+                            val opIndex = i - 1
+                            val op = audioInputIndices[opIndex].second
+                            if (op.ducking) {
+                                val bgLabel = mixInputLabels[i]
+                                val sidechainLabel = splits[splitIdx++]
+                                val duckedLabel = "[ducked_$opIndex]"
+                                filterParts.add("${bgLabel}aformat=sample_rates=44100:channel_layouts=stereo[bg_fmt_$opIndex]")
+                                filterParts.add("${sidechainLabel}aformat=sample_rates=44100:channel_layouts=stereo[sc_fmt_$opIndex]")
+                                filterParts.add("[bg_fmt_$opIndex][sc_fmt_$opIndex]sidechaincompress=threshold=0.03:ratio=4:attack=5:release=500${duckedLabel}")
+                                mixInputLabels[i] = duckedLabel
+                            }
+                        }
+                    }
+                    
+                    mixInputLabels[0] = mainAudioRef
                     val allInputs = mixInputLabels.joinToString("")
                     filterParts.add("${allInputs}amix=inputs=${mixInputLabels.size}:duration=longest[outa]")
                     currentAudioLabel = "[outa]"
@@ -1592,7 +1617,30 @@ class VideoEditingViewModel : ViewModel() {
 
             // Mix original audio with all background tracks
             if (hasAudio && !mainVideoMuted && !audioInputIndices.any { it.second.removeOriginalAudio }) {
-                val allInputs = "[0:a]" + mixInputLabels.joinToString("")
+                var mainAudioRef = "[0:a]"
+                val duckingCount = audioInputIndices.count { it.second.ducking }
+                
+                if (duckingCount > 0) {
+                    val splits = (0..duckingCount).map { "[main_split_$it]" }
+                    filterComplexParts.add("${mainAudioRef}asplit=${duckingCount + 1}${splits.joinToString("")}")
+                    mainAudioRef = splits[0]
+                    
+                    var splitIdx = 1
+                    for (i in mixInputLabels.indices) {
+                        val op = audioInputIndices[i].second
+                        if (op.ducking) {
+                            val bgLabel = mixInputLabels[i]
+                            val sidechainLabel = splits[splitIdx++]
+                            val duckedLabel = "[ducked_$i]"
+                            filterComplexParts.add("${bgLabel}aformat=sample_rates=44100:channel_layouts=stereo[bg_fmt_$i]")
+                            filterComplexParts.add("${sidechainLabel}aformat=sample_rates=44100:channel_layouts=stereo[sc_fmt_$i]")
+                            filterComplexParts.add("[bg_fmt_$i][sc_fmt_$i]sidechaincompress=threshold=0.03:ratio=4:attack=5:release=500${duckedLabel}")
+                            mixInputLabels[i] = duckedLabel
+                        }
+                    }
+                }
+
+                val allInputs = mainAudioRef + mixInputLabels.joinToString("")
                 val totalInputs = 1 + mixInputLabels.size
                 filterComplexParts.add("${allInputs}amix=inputs=$totalInputs:duration=longest[outa]")
                 finalAudioLabel = "[outa]"
