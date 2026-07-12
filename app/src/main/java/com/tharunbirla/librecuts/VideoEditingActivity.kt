@@ -850,6 +850,12 @@ class VideoEditingActivity : AppCompatActivity() {
                     val msg = if (newDucking) "Audio ducking enabled" else "Audio ducking disabled"
                     android.widget.Toast.makeText(this@VideoEditingActivity, msg, android.widget.Toast.LENGTH_SHORT).show()
                 }
+                toolbar.findViewById<ImageButton>(R.id.btnAudioFade)?.setBounceClickListener {
+                    val id = viewModel.selectedOperationId.value ?: return@setBounceClickListener
+                    val project = viewModel.project.value ?: return@setBounceClickListener
+                    val op = project.operations.find { it is com.tharunbirla.librecuts.models.EditOperation.AddBackgroundAudio && it.id == id } as? com.tharunbirla.librecuts.models.EditOperation.AddBackgroundAudio ?: return@setBounceClickListener
+                    showFadeDialog(op)
+                }
                 val volumeSlider = toolbar.findViewById<com.google.android.material.slider.Slider>(R.id.audioVolumeSlider)
                 val tvVolumeValue = toolbar.findViewById<TextView>(R.id.tvAudioVolumeValue)
                 volumeSlider?.addOnChangeListener { _, value, _ ->
@@ -2263,6 +2269,10 @@ class VideoEditingActivity : AppCompatActivity() {
             val btnDucking = toolbar.findViewById<ImageButton>(R.id.btnAudioDucking)
             btnDucking?.setColorFilter(if (op.ducking) getColor(R.color.colorPrimary) else getColor(R.color.toolTextInactive))
 
+            val btnFade = toolbar.findViewById<ImageButton>(R.id.btnAudioFade)
+            val isFadeActive = op.fadeInDurationMs > 0 || op.fadeOutDurationMs > 0
+            btnFade?.setColorFilter(if (isFadeActive) getColor(R.color.colorPrimary) else getColor(R.color.toolTextInactive))
+
 
             val trimTrack = toolbar.findViewById<com.tharunbirla.librecuts.customviews.TrackTrimView>(R.id.audioTrimTrack)
             val tvTrimValue = toolbar.findViewById<TextView>(R.id.tvAudioTrimValues)
@@ -2307,6 +2317,65 @@ class VideoEditingActivity : AppCompatActivity() {
         
         audioEditingToolbar?.findViewById<ImageButton>(R.id.btnAudioPreviewPlay)?.setImageResource(R.drawable.ic_play_24)
         setActiveToolButton(0)
+    }
+
+    private fun showFadeDialog(op: com.tharunbirla.librecuts.models.EditOperation.AddBackgroundAudio) {
+        val bottomSheet = BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.dialog_audio_fade, null)
+        bottomSheet.setContentView(view)
+
+        val fadeInSlider = view.findViewById<com.google.android.material.slider.Slider>(R.id.fadeInSlider)
+        val fadeOutSlider = view.findViewById<com.google.android.material.slider.Slider>(R.id.fadeOutSlider)
+        val tvFadeInValue = view.findViewById<TextView>(R.id.tvFadeInValue)
+        val tvFadeOutValue = view.findViewById<TextView>(R.id.tvFadeOutValue)
+        val btnFadeDone = view.findViewById<android.view.View>(R.id.btnFadeDone)
+
+        val clipDurMs = if (op.endTimeMs != null && op.startTimeMs != null) {
+            op.endTimeMs - op.startTimeMs
+        } else if (op.internalEndMs > 0L) {
+            op.internalEndMs - op.internalStartMs
+        } else {
+            op.originalDurationMs - op.internalStartMs
+        }
+        val maxFadeMs = if (clipDurMs > 0) clipDurMs.coerceAtMost(5000L).toFloat() / 1000f else 5.0f
+
+        fadeInSlider.valueTo = if (maxFadeMs >= 0.1f) maxFadeMs else 0.1f
+        fadeOutSlider.valueTo = if (maxFadeMs >= 0.1f) maxFadeMs else 0.1f
+
+        val initFadeInSec = (op.fadeInDurationMs / 1000f).coerceIn(0f, fadeInSlider.valueTo)
+        val initFadeOutSec = (op.fadeOutDurationMs / 1000f).coerceIn(0f, fadeOutSlider.valueTo)
+
+        fadeInSlider.value = initFadeInSec
+        fadeOutSlider.value = initFadeOutSec
+        tvFadeInValue.text = String.format(java.util.Locale.US, "%.1fs", initFadeInSec)
+        tvFadeOutValue.text = String.format(java.util.Locale.US, "%.1fs", initFadeOutSec)
+
+        fadeInSlider.addOnChangeListener { _, value, _ ->
+            tvFadeInValue.text = String.format(java.util.Locale.US, "%.1fs", value)
+            if (clipDurMs > 0 && value + fadeOutSlider.value > clipDurMs / 1000f) {
+                val newOut = (clipDurMs / 1000f - value).coerceAtLeast(0f).coerceAtMost(fadeOutSlider.valueTo)
+                fadeOutSlider.value = newOut
+                tvFadeOutValue.text = String.format(java.util.Locale.US, "%.1fs", newOut)
+            }
+        }
+
+        fadeOutSlider.addOnChangeListener { _, value, _ ->
+            tvFadeOutValue.text = String.format(java.util.Locale.US, "%.1fs", value)
+            if (clipDurMs > 0 && value + fadeInSlider.value > clipDurMs / 1000f) {
+                val newIn = (clipDurMs / 1000f - value).coerceAtLeast(0f).coerceAtMost(fadeInSlider.valueTo)
+                fadeInSlider.value = newIn
+                tvFadeInValue.text = String.format(java.util.Locale.US, "%.1fs", newIn)
+            }
+        }
+
+        btnFadeDone.setBounceClickListener {
+            val newFadeInMs = (fadeInSlider.value * 1000).toLong()
+            val newFadeOutMs = (fadeOutSlider.value * 1000).toLong()
+            viewModel.updateOperation(op.copy(fadeInDurationMs = newFadeInMs, fadeOutDurationMs = newFadeOutMs))
+            bottomSheet.dismiss()
+        }
+
+        bottomSheet.show()
     }
 
     private fun getPresetCropBounds(aspectRatio: String): android.graphics.RectF {

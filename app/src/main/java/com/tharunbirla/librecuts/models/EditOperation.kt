@@ -175,6 +175,8 @@ sealed class EditOperation : Serializable {
         val extractedFromSegmentIndex: Int? = null,
         val beats: List<Long> = emptyList(),
         val ducking: Boolean = false,
+        val fadeInDurationMs: Long = 0L,
+        val fadeOutDurationMs: Long = 0L,
         val id: String = System.nanoTime().toString()
     ) : EditOperation() {
         init {

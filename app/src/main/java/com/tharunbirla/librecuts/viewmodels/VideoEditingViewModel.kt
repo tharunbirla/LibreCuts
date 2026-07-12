@@ -1444,6 +1444,22 @@ class VideoEditingViewModel : ViewModel() {
                             filters.add("atrim=start=$internalStartSec,asetpts=PTS-STARTPTS")
                         }
                     }
+                    if (audioOp.fadeInDurationMs > 0L) {
+                        val fadeSec = audioOp.fadeInDurationMs / 1000.0
+                        filters.add("afade=t=in:st=0:d=$fadeSec")
+                    }
+                    if (audioOp.fadeOutDurationMs > 0L) {
+                        val fadeSec = audioOp.fadeOutDurationMs / 1000.0
+                        val clipDur = if (audioOp.endTimeMs != null && audioOp.startTimeMs != null) {
+                            (audioOp.endTimeMs - audioOp.startTimeMs) / 1000.0
+                        } else if (audioOp.internalEndMs > 0L) {
+                            (audioOp.internalEndMs - audioOp.internalStartMs) / 1000.0
+                        } else {
+                            (audioOp.originalDurationMs - audioOp.internalStartMs) / 1000.0
+                        }
+                        val fadeOutStart = maxOf(0.0, clipDur - fadeSec)
+                        filters.add("afade=t=out:st=$fadeOutStart:d=$fadeSec")
+                    }
                     var delayMs = audioOp.startTimeMs ?: 0L
                     if (delayMs < 0) delayMs = 0L
                     if (delayMs > 0) {
@@ -1596,6 +1612,22 @@ class VideoEditingViewModel : ViewModel() {
                     } else {
                         filters.add("atrim=start=$internalStartSec,asetpts=PTS-STARTPTS")
                     }
+                }
+                if (audioOp.fadeInDurationMs > 0L) {
+                    val fadeSec = audioOp.fadeInDurationMs / 1000.0
+                    filters.add("afade=t=in:st=0:d=$fadeSec")
+                }
+                if (audioOp.fadeOutDurationMs > 0L) {
+                    val fadeSec = audioOp.fadeOutDurationMs / 1000.0
+                    val clipDur = if (audioOp.endTimeMs != null && audioOp.startTimeMs != null) {
+                        (audioOp.endTimeMs - audioOp.startTimeMs) / 1000.0
+                    } else if (audioOp.internalEndMs > 0L) {
+                        (audioOp.internalEndMs - audioOp.internalStartMs) / 1000.0
+                    } else {
+                        (audioOp.originalDurationMs - audioOp.internalStartMs) / 1000.0
+                    }
+                    val fadeOutStart = maxOf(0.0, clipDur - fadeSec)
+                    filters.add("afade=t=out:st=$fadeOutStart:d=$fadeSec")
                 }
                 var delayMs = audioOp.startTimeMs ?: 0L
                 if (delayMs < 0) delayMs = 0L
