@@ -43,18 +43,19 @@ Help resist this gatekeeping and support the movement at [keepandroidopen.org](h
 ## 🚀 Features
 
 - **Trim** - Remove unwanted parts from the beginning or end of a video clip with a real-time timeline control.
-- **Overlays** - Place text, images, GIFs, and video overlays on top of video clips to create engaging content.
+- **Overlays** - Place text, stickers, images, GIFs, and video overlays on top of video clips to create engaging content.
 - **Subtitles (Captions)** - Import custom `.srt` subtitle files with a dedicated toolbar slider for resizing and fully interactive touch-based positioning directly on the video preview.
 - **Layer Management** - Easily reorder overlay layers to control what renders on top.
-- **Audio** - Manage soundtracks effortlessly by importing custom music or audio tracks with a dedicated cancel functionality, up to 200% volume amplification, and the ability to mute original audio.
+- **Audio** - Manage soundtracks effortlessly by importing custom music or audio tracks, recording voice overs, applying audio ducking and fades, amplifying volume up to 200%, and muting original audio.
 - **Crop** - Adjust the aspect ratio of a video with custom cropping support.
 - **Merge** - Combine multiple video segments into a continuous sequence with drag-to-rearrange functionality.
 - **Transition** - Apply transitions with animated visual previews in the toolbar.
 - **Speed** - Change the speed of a video clip.
 - **Adjust & Filters** - Modify video brightness, contrast, saturation, and apply color filters.
 - **Reverse** - Reverse video playback.
-- **Timeline Organization** - Enhanced editing with snapping functionality, overlay duplication, and freeze frame actions.
-- **Hardware Acceleration** - Super-fast video exports using device hardware-accelerated `h264_mediacodec` encoding.
+- **Timeline Organization** - Enhanced editing with snapping functionality, overlay duplication, freeze frame actions, and improved UI visual styling.
+- **Settings** - A dedicated settings page to customize your app preferences.
+- **Hardware Acceleration** - Super-fast and reliable video exports using device hardware-accelerated `h264_mediacodec` encoding with accurate FFmpeg progress calculation.
 
 ## 📱 Screenshots
 

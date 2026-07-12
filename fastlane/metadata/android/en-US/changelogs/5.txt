@@ -1,0 +1,7 @@
+<ul>
+  <li>Implemented voice over recording feature and stickers integration.</li>
+  <li>Added audio ducking feature.</li>
+  <li>Implemented audio fade.</li>
+  <li>Added settings page./li>
+  <li>Fixed FFmpeg related bugs and UI improvements.</li>
+</ul>
