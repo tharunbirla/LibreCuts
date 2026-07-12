@@ -19,7 +19,7 @@
         android:id="@+id/tvTitleCrop"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Edit Text"
+        android:text="@string/str_edit_text"
         android:layout_gravity="center"
         android:textSize="18sp"
         android:fontFamily="sans-serif-medium"
@@ -48,7 +48,7 @@
                 android:textColor="@android:color/white"
                 android:textSize="16sp"
                 android:backgroundTint="@android:color/transparent"
-                android:hint="Enter text here"/>
+                android:hint="@string/str_enter_text_here"/>
         </com.google.android.material.textfield.TextInputLayout>
 
     </LinearLayout>
@@ -75,7 +75,7 @@
                 android:id="@+id/fontSize"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Font size"
+                android:hint="@string/str_font_size"
                 android:backgroundTint="@android:color/transparent"
                 android:textColor="@android:color/white"
                 android:textSize="16sp"

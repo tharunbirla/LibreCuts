@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.tharunbirla.librecuts.R
 
 class ErrorDisplayActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,7 +29,7 @@ class ErrorDisplayActivity : AppCompatActivity() {
             .setNeutralButton("Copy Log") { _, _ ->
                 val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 clipboard.setPrimaryClip(ClipData.newPlainText("Error Log", log))
-                Toast.makeText(this, "Log copied", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.toast_log_copied, Toast.LENGTH_SHORT).show()
                 showCrashDialog(code, log) // Re-show to keep the choice alive
             }
             .setPositiveButton("GitHub Report") { _, _ ->

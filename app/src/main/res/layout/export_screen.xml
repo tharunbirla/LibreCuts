@@ -30,7 +30,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Saving video..."
+                android:text="@string/str_saving_video"
                 android:textColor="@color/textColor"
                 android:fontFamily="sans-serif-medium"
                 android:textSize="20sp" />
@@ -41,7 +41,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Please don't close the app"
+                android:text="@string/str_please_don_t_close_the_app"
                 android:textAlignment="center"
                 android:textColor="@color/outline"
                 android:fontFamily="sans-serif"
@@ -68,7 +68,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
-                    android:text="0%"
+                    android:text="@string/str_0"
                     android:textColor="@color/colorPrimary"
                     android:fontFamily="sans-serif-bold"
                     android:textSize="18sp" />
@@ -80,7 +80,7 @@
                 android:layout_width="160dp"
                 android:layout_height="48dp"
                 android:layout_marginTop="28dp"
-                android:text="Cancel"
+                android:text="@string/cancel"
                 android:textColor="@color/textColor"
                 android:backgroundTint="@color/surfaceVariant"
                 app:strokeColor="@color/outline"

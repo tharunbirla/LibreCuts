@@ -41,7 +41,7 @@
             android:layout_width="48dp"
             android:layout_height="wrap_content"
             android:gravity="end"
-            android:text="0°"
+            android:text="@string/str_0_1"
             android:textColor="@color/textColor"
             android:textSize="14sp"
             android:fontFamily="sans-serif-medium" />
@@ -80,7 +80,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Cancel"
+                android:text="@string/cancel"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="@color/toolTextInactive"/>
@@ -106,7 +106,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Duplicate"
+                android:text="@string/str_duplicate"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="@color/toolTextInactive"/>
@@ -132,7 +132,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Delete"
+                android:text="@string/delete"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="#F44336"/>
@@ -157,7 +157,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Done"
+                android:text="@string/done"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="@color/colorPrimary"/>

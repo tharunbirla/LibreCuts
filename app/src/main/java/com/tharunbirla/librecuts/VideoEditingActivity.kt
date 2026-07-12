@@ -203,7 +203,7 @@ class VideoEditingActivity : AppCompatActivity() {
         if (isGranted) {
             showVoiceOverDialog()
         } else {
-            Toast.makeText(this, "Microphone permission required for voice over", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.toast_microphone_permission_required, Toast.LENGTH_SHORT).show()
         }
     }
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -296,10 +296,10 @@ class VideoEditingActivity : AppCompatActivity() {
             isMagnetEnabled = !isMagnetEnabled
             if (isMagnetEnabled) {
                 btnMagnet.setImageResource(R.drawable.ic_magnet_24)
-                Toast.makeText(this, "Snapping enabled", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.toast_snapping_enabled, Toast.LENGTH_SHORT).show()
             } else {
                 btnMagnet.setImageResource(R.drawable.ic_magnet_off_24)
-                Toast.makeText(this, "Snapping disabled", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.toast_snapping_disabled, Toast.LENGTH_SHORT).show()
             }
             draggableTextOverlay?.isSnappingEnabled = isMagnetEnabled
             draggableImageOverlay?.isSnappingEnabled = isMagnetEnabled
@@ -364,7 +364,7 @@ class VideoEditingActivity : AppCompatActivity() {
                 val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                 val clip = ClipData.newPlainText("Error Log", technicalLog)
                 clipboard.setPrimaryClip(clip)
-                Toast.makeText(this, "Log copied to clipboard", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.toast_log_copied_to_clipboard, Toast.LENGTH_SHORT).show()
             }
             .setPositiveButton("Report on GitHub") { _, _ ->
                 val githubUrl = "https://github.com/tharunbirla/librecuts/issues/new?title=" +
@@ -819,12 +819,12 @@ class VideoEditingActivity : AppCompatActivity() {
                     if (op.beats.isNotEmpty()) {
                         // Toggle off if already detected
                         viewModel.updateOperation(op.copy(beats = emptyList()))
-                        android.widget.Toast.makeText(this@VideoEditingActivity, "Beats cleared", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(this@VideoEditingActivity, R.string.toast_beats_cleared, android.widget.Toast.LENGTH_SHORT).show()
                         toolbar.findViewById<ImageButton>(R.id.btnAudioBeats)?.setColorFilter(getColor(R.color.toolTextInactive))
                         return@setBounceClickListener
                     }
                     
-                    android.widget.Toast.makeText(this@VideoEditingActivity, "Analyzing beats...", android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(this@VideoEditingActivity, R.string.toast_analyzing_beats, android.widget.Toast.LENGTH_SHORT).show()
                     com.tharunbirla.librecuts.utils.AudioAnalyzer.detectBeats(this@VideoEditingActivity, op.audioUri) { beats ->
                         runOnUiThread {
                             if (beats.isNotEmpty()) {
@@ -832,7 +832,7 @@ class VideoEditingActivity : AppCompatActivity() {
                                 android.widget.Toast.makeText(this@VideoEditingActivity, "Found ${beats.size} beats!", android.widget.Toast.LENGTH_SHORT).show()
                                 toolbar.findViewById<ImageButton>(R.id.btnAudioBeats)?.setColorFilter(getColor(R.color.colorPrimary))
                             } else {
-                                android.widget.Toast.makeText(this@VideoEditingActivity, "No clear beats found.", android.widget.Toast.LENGTH_SHORT).show()
+                                android.widget.Toast.makeText(this@VideoEditingActivity, R.string.toast_no_clear_beats_found, android.widget.Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
@@ -1516,7 +1516,7 @@ class VideoEditingActivity : AppCompatActivity() {
 
     @SuppressLint("InflateParams")
     private fun trimAction() {
-        Toast.makeText(this, "Drag the handles on the timeline's main video track to trim.", Toast.LENGTH_LONG).show()
+        Toast.makeText(this, R.string.toast_drag_the_handles_on_the_timeli, Toast.LENGTH_LONG).show()
     }
 
     @SuppressLint("InflateParams")
@@ -1711,7 +1711,7 @@ class VideoEditingActivity : AppCompatActivity() {
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    Toast.makeText(this@VideoEditingActivity, "Failed to start recording", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@VideoEditingActivity, R.string.toast_failed_to_start_recording, Toast.LENGTH_SHORT).show()
                 }
             } else {
                 // Stop Recording
@@ -1879,7 +1879,7 @@ class VideoEditingActivity : AppCompatActivity() {
             layoutHas?.visibility = View.GONE
         }
         
-        Toast.makeText(this, "Subtitles removed", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, R.string.toast_subtitles_removed, Toast.LENGTH_SHORT).show()
     }
 
     private fun mediaOverlayAction() {
@@ -1989,7 +1989,7 @@ class VideoEditingActivity : AppCompatActivity() {
                 copyContentUriToTempFile(imageUri, "overlay_image", extension)
             }
             if (tempImageFile == null) {
-                Toast.makeText(this@VideoEditingActivity, "Failed to load overlay file", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@VideoEditingActivity, R.string.toast_failed_to_load_overlay_file, Toast.LENGTH_SHORT).show()
                 return@launch
             }
             val localUri = Uri.fromFile(tempImageFile)
@@ -2238,9 +2238,9 @@ class VideoEditingActivity : AppCompatActivity() {
                 selectedVideoIndex = null
                 exitVideoEditingMode()
                 viewModel.updateSequenceOrder(newItems)
-                Toast.makeText(this@VideoEditingActivity, "Freeze frame added to sequence", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@VideoEditingActivity, R.string.toast_freeze_frame_added_to_sequence, Toast.LENGTH_SHORT).show()
             } else {
-                Toast.makeText(this@VideoEditingActivity, "Failed to create freeze frame", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@VideoEditingActivity, R.string.toast_failed_to_create_freeze_frame, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -2544,7 +2544,7 @@ class VideoEditingActivity : AppCompatActivity() {
                         }
                         hideSpeedEditingToolbar()
                     } else {
-                        android.widget.Toast.makeText(this@VideoEditingActivity, "Failed to apply speed reset", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(this@VideoEditingActivity, R.string.toast_failed_to_apply_speed_reset, android.widget.Toast.LENGTH_SHORT).show()
                     }
                 }
             } else {
@@ -2598,7 +2598,7 @@ class VideoEditingActivity : AppCompatActivity() {
                         }
                         hideSpeedEditingToolbar()
                     } else {
-                        android.widget.Toast.makeText(this@VideoEditingActivity, "Failed to reverse speed proxy", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(this@VideoEditingActivity, R.string.toast_failed_to_reverse_speed_proxy, android.widget.Toast.LENGTH_SHORT).show()
                     }
                 } else {
                     hideLoading()
@@ -2612,7 +2612,7 @@ class VideoEditingActivity : AppCompatActivity() {
                 }
             } else {
                 hideLoading()
-                android.widget.Toast.makeText(this@VideoEditingActivity, "Failed to apply speed", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(this@VideoEditingActivity, R.string.toast_failed_to_apply_speed, android.widget.Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -2672,7 +2672,7 @@ class VideoEditingActivity : AppCompatActivity() {
                     updateVideoSegment(index, item.copy(isReversed = true, proxyUri = reversedProxyUri))
                 }
             } else {
-                android.widget.Toast.makeText(this@VideoEditingActivity, "Failed to reverse video", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(this@VideoEditingActivity, R.string.toast_failed_to_reverse_video, android.widget.Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -2702,7 +2702,7 @@ class VideoEditingActivity : AppCompatActivity() {
                     updateVideoSegment(index, item.copy(isReversed = false, speed = item.speed, proxyUri = proxyUri))
                 }
             } else {
-                android.widget.Toast.makeText(this@VideoEditingActivity, "Failed to restore video speed proxy", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(this@VideoEditingActivity, R.string.toast_failed_to_restore_video_speed, android.widget.Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -2762,7 +2762,7 @@ class VideoEditingActivity : AppCompatActivity() {
         
         // Check if the seeker is inside this clip
         if (globalPos <= clipStartGlobal || globalPos >= clipEndGlobal) {
-            Toast.makeText(this, "Seeker is not over the selected clip.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.toast_seeker_is_not_over_the_selecte, Toast.LENGTH_SHORT).show()
             return
         }
         
@@ -2903,9 +2903,9 @@ class VideoEditingActivity : AppCompatActivity() {
                         extractedFromSegmentIndex = index
                     )
                 )
-                Toast.makeText(this@VideoEditingActivity, "Audio extracted to new layer", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@VideoEditingActivity, R.string.toast_audio_extracted_to_new_layer, Toast.LENGTH_SHORT).show()
             } else if (result is com.tharunbirla.librecuts.services.FFmpegRenderEngine.RenderResult.Failure) {
-                Toast.makeText(this@VideoEditingActivity, "Failed to extract audio", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@VideoEditingActivity, R.string.toast_failed_to_extract_audio, Toast.LENGTH_SHORT).show()
                 Log.e(TAG, "Audio extraction failed: ${result.error}")
             }
             
@@ -3013,7 +3013,7 @@ class VideoEditingActivity : AppCompatActivity() {
                             viewModel.addMergeOperation(mergeItems)
                             Toast.makeText(this@VideoEditingActivity, "${mergeItems.size} video(s) added to sequence", Toast.LENGTH_SHORT).show()
                         } else {
-                            Toast.makeText(this@VideoEditingActivity, "Failed to load selected video(s)", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this@VideoEditingActivity, R.string.toast_failed_to_load_selected_video, Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -3045,7 +3045,7 @@ class VideoEditingActivity : AppCompatActivity() {
                                 originalDurationMs = realDurationMs
                             )
                         )
-                        Toast.makeText(this@VideoEditingActivity, "Audio track added", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@VideoEditingActivity, R.string.toast_audio_track_added, Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -3114,7 +3114,7 @@ class VideoEditingActivity : AppCompatActivity() {
                             updateSubtitlesUi()
                             textOverlayView?.setSubtitleCues(cues)
                         } else {
-                            Toast.makeText(this@VideoEditingActivity, "Failed to parse subtitle file. Please ensure it is a valid SRT file.", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@VideoEditingActivity, R.string.toast_failed_to_parse_subtitle_file, Toast.LENGTH_LONG).show()
                         }
                     }
                 }
@@ -3133,10 +3133,10 @@ class VideoEditingActivity : AppCompatActivity() {
                     if (activeTitle != null && activePath != null) {
                         updateExportDirectoryUi(activeTitle, activePath)
                     }
-                    Toast.makeText(this, "Export location updated successfully!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, R.string.toast_export_location_updated_succes, Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
                     Log.e(TAG, "Error saving export directory: ${e.message}", e)
-                    Toast.makeText(this, "Failed to select folder", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, R.string.toast_failed_to_select_folder, Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -3247,7 +3247,7 @@ class VideoEditingActivity : AppCompatActivity() {
                             viewModel.finishExport()
                             Toast.makeText(
                                 this@VideoEditingActivity,
-                                "Video exported to Gallery successfully!",
+                                R.string.toast_video_exported_to_gallery_succ,
                                 Toast.LENGTH_LONG
                             ).show()
                             Log.d(TAG, "Export successful: $savedUri")
@@ -3257,7 +3257,7 @@ class VideoEditingActivity : AppCompatActivity() {
                             viewModel.exportError("Failed to save video to Gallery")
                             Toast.makeText(
                                 this@VideoEditingActivity,
-                                "Failed to save video to Gallery",
+                                R.string.toast_failed_to_save_video_to_galler,
                                 Toast.LENGTH_LONG
                             ).show()
                         }
@@ -3273,14 +3273,14 @@ class VideoEditingActivity : AppCompatActivity() {
                     }
                     FFmpegRenderEngine.RenderResult.Cancelled -> {
                         viewModel.exportError("Export cancelled")
-                        Toast.makeText(this@VideoEditingActivity, "Export cancelled", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@VideoEditingActivity, R.string.toast_export_cancelled, Toast.LENGTH_SHORT).show()
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 tempOutputFile?.let { if (it.exists()) it.delete() }
                 concatFile?.let { if (it.exists()) it.delete() }
                 viewModel.exportError("Export cancelled")
-                Toast.makeText(this@VideoEditingActivity, "Export cancelled", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@VideoEditingActivity, R.string.toast_export_cancelled, Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
                 tempOutputFile?.let { if (it.exists()) it.delete() }
                 concatFile?.let { if (it.exists()) it.delete() }
@@ -3328,21 +3328,21 @@ class VideoEditingActivity : AppCompatActivity() {
         layoutHigh.setBounceClickListener {
             viewModel.setExportQuality(com.tharunbirla.librecuts.viewmodels.ExportQuality.HIGH)
             updateSelection(com.tharunbirla.librecuts.viewmodels.ExportQuality.HIGH)
-            Toast.makeText(this, "Export quality set to High", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.toast_export_quality_set_to_high, Toast.LENGTH_SHORT).show()
             bottomSheetDialog.dismiss()
         }
 
         layoutMedium.setBounceClickListener {
             viewModel.setExportQuality(com.tharunbirla.librecuts.viewmodels.ExportQuality.MEDIUM)
             updateSelection(com.tharunbirla.librecuts.viewmodels.ExportQuality.MEDIUM)
-            Toast.makeText(this, "Export quality set to Medium", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.toast_export_quality_set_to_medium, Toast.LENGTH_SHORT).show()
             bottomSheetDialog.dismiss()
         }
 
         layoutLow.setBounceClickListener {
             viewModel.setExportQuality(com.tharunbirla.librecuts.viewmodels.ExportQuality.LOW)
             updateSelection(com.tharunbirla.librecuts.viewmodels.ExportQuality.LOW)
-            Toast.makeText(this, "Export quality set to Low", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.toast_export_quality_set_to_low, Toast.LENGTH_SHORT).show()
             bottomSheetDialog.dismiss()
         }
 
@@ -3468,7 +3468,7 @@ class VideoEditingActivity : AppCompatActivity() {
                 }
                 withContext(kotlinx.coroutines.Dispatchers.Main) {
                     viewModel.exportError("Export cancelled")
-                    Toast.makeText(this@VideoEditingActivity, "Export cancelled", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@VideoEditingActivity, R.string.toast_export_cancelled, Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 outputFile?.let { if (it.exists()) it.delete() }
@@ -3496,7 +3496,7 @@ class VideoEditingActivity : AppCompatActivity() {
         }
         exportJob?.cancel()
         viewModel.exportError("Export cancelled")
-        Toast.makeText(this, "Export cancelled", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, R.string.toast_export_cancelled, Toast.LENGTH_SHORT).show()
     }
 
     private fun updateExportDirectoryUi(titleView: TextView, pathView: TextView) {

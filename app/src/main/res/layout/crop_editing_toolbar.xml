@@ -39,7 +39,7 @@
                 android:layout_height="wrap_content"
                 android:layout_centerInParent="true"
                 android:fontFamily="sans-serif-medium"
-                android:text="Crop Aspect Ratio"
+                android:text="@string/str_crop_aspect_ratio"
                 android:textColor="@color/textColor"
                 android:textSize="18sp" />
 
@@ -95,7 +95,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="16:9"
+                        android:text="@string/str_16_9"
                         android:textColor="@color/toolTextInactive"
                         android:textSize="11sp" />
                 </LinearLayout>
@@ -125,7 +125,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="9:16"
+                        android:text="@string/str_9_16"
                         android:textColor="@color/toolTextInactive"
                         android:textSize="11sp" />
                 </LinearLayout>
@@ -155,7 +155,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="1:1"
+                        android:text="@string/str_1_1"
                         android:textColor="@color/toolTextInactive"
                         android:textSize="11sp" />
                 </LinearLayout>
@@ -184,7 +184,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Custom"
+                        android:text="@string/str_custom"
                         android:textColor="@color/toolTextInactive"
                         android:textSize="11sp" />
                 </LinearLayout>

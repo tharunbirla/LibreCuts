@@ -10,7 +10,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Fade In"
+        android:text="@string/str_fade_in"
         android:textColor="@color/textColor"
         android:fontFamily="sans-serif-medium"
         android:textSize="16sp"/>
@@ -38,7 +38,7 @@
             android:layout_width="48dp"
             android:layout_height="wrap_content"
             android:gravity="end"
-            android:text="0.0s"
+            android:text="@string/str_0_0s"
             android:textColor="@color/textColor"
             android:textSize="14sp"
             android:fontFamily="sans-serif-medium" />
@@ -48,7 +48,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="Fade Out"
+        android:text="@string/str_fade_out"
         android:textColor="@color/textColor"
         android:fontFamily="sans-serif-medium"
         android:textSize="16sp"/>
@@ -76,7 +76,7 @@
             android:layout_width="48dp"
             android:layout_height="wrap_content"
             android:gravity="end"
-            android:text="0.0s"
+            android:text="@string/str_0_0s"
             android:textColor="@color/textColor"
             android:textSize="14sp"
             android:fontFamily="sans-serif-medium" />
@@ -87,7 +87,7 @@
         android:layout_width="match_parent"
         android:layout_height="48dp"
         android:layout_marginTop="24dp"
-        android:text="Done"
+        android:text="@string/done"
         android:textColor="@color/onPrimaryContainer"
         android:textSize="14sp"
         android:fontFamily="sans-serif-medium"

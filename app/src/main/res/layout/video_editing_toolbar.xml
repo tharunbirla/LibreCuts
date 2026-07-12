@@ -41,7 +41,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Cancel"
+                android:text="@string/cancel"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="@color/toolTextInactive"/>
@@ -66,7 +66,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Trim"
+                android:text="@string/trim"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="@color/toolTextInactive"/>
@@ -91,7 +91,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Split"
+                android:text="@string/split"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="@color/toolTextInactive"/>
@@ -118,7 +118,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Mute"
+                android:text="@string/str_mute"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="@color/toolTextInactive"/>
@@ -144,7 +144,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Filters"
+                android:text="@string/str_filters"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="@color/toolTextInactive"/>
@@ -170,7 +170,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Adjust"
+                android:text="@string/str_adjust"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="@color/toolTextInactive"/>
@@ -196,7 +196,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Speed"
+                android:text="@string/str_speed"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="@color/toolTextInactive"/>
@@ -222,7 +222,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Extract"
+                android:text="@string/str_extract"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="@color/toolTextInactive"/>
@@ -248,7 +248,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Freeze"
+                android:text="@string/str_freeze"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="@color/toolTextInactive"/>
@@ -274,7 +274,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Reverse"
+                android:text="@string/str_reverse"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="@color/toolTextInactive"/>
@@ -300,7 +300,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Delete"
+                android:text="@string/delete"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="@color/colorPrimary"/>

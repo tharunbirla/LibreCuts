@@ -24,7 +24,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Voice Over"
+                android:text="@string/str_voice_over"
                 android:textSize="18sp"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="@color/textColor"
@@ -44,7 +44,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Record live commentary while the video plays."
+            android:text="@string/str_record_live_commentary_while_t"
             android:textColor="@color/textColor"
             android:textSize="14sp"
             android:layout_marginBottom="24dp"
@@ -97,7 +97,7 @@
             android:id="@+id/tvRecordingStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Tap to start recording"
+            android:text="@string/str_tap_to_start_recording"
             android:textColor="@color/textColor"
             android:textSize="14sp"
             android:fontFamily="sans-serif-medium"

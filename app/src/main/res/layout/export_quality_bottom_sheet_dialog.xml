@@ -28,7 +28,7 @@
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
             android:fontFamily="sans-serif-medium"
-            android:text="Export Settings"
+            android:text="@string/str_export_settings"
             android:textColor="@color/textColor"
             android:textSize="18sp" />
 
@@ -72,7 +72,7 @@
                     android:id="@+id/tvQualityHighTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="High Quality (1080p/Original)"
+                    android:text="@string/str_high_quality_1080p_original"
                     android:textColor="@color/textColor"
                     android:textSize="16sp"
                     android:fontFamily="sans-serif-medium" />
@@ -81,7 +81,7 @@
                     android:id="@+id/tvQualityHighDesc"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Best visual quality, larger file size"
+                    android:text="@string/str_best_visual_quality_larger_fil"
                     android:textColor="@color/iconSecondary"
                     android:textSize="12sp"
                     android:layout_marginTop="4dp" />
@@ -120,7 +120,7 @@
                     android:id="@+id/tvQualityMediumTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Medium Quality (Default)"
+                    android:text="@string/str_medium_quality_default"
                     android:textColor="@color/textColor"
                     android:textSize="16sp"
                     android:fontFamily="sans-serif-medium" />
@@ -129,7 +129,7 @@
                     android:id="@+id/tvQualityMediumDesc"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Balanced quality and file size"
+                    android:text="@string/str_balanced_quality_and_file_size"
                     android:textColor="@color/iconSecondary"
                     android:textSize="12sp"
                     android:layout_marginTop="4dp" />
@@ -167,7 +167,7 @@
                     android:id="@+id/tvQualityLowTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Low Quality (Fastest)"
+                    android:text="@string/str_low_quality_fastest"
                     android:textColor="@color/textColor"
                     android:textSize="16sp"
                     android:fontFamily="sans-serif-medium" />
@@ -176,7 +176,7 @@
                     android:id="@+id/tvQualityLowDesc"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Smallest file size, fastest export"
+                    android:text="@string/str_smallest_file_size_fastest_exp"
                     android:textColor="@color/iconSecondary"
                     android:textSize="12sp"
                     android:layout_marginTop="4dp" />
@@ -197,7 +197,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
             android:layout_marginBottom="12dp"
-            android:text="Export Location"
+            android:text="@string/str_export_location"
             android:textColor="@color/textColor"
             android:textSize="14sp"
             android:fontFamily="sans-serif-medium"
@@ -232,7 +232,7 @@
                     android:id="@+id/tvExportDirectoryTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="LibreCuts"
+                    android:text="@string/app_name"
                     android:textColor="@color/textColor"
                     android:textSize="15sp"
                     android:fontFamily="sans-serif-medium" />
@@ -241,7 +241,7 @@
                     android:id="@+id/tvExportDirectoryPath"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Downloads/LibreCuts"
+                    android:text="@string/str_downloads_librecuts"
                     android:textColor="@color/iconSecondary"
                     android:textSize="12sp"
                     android:layout_marginTop="4dp"

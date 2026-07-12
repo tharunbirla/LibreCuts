@@ -40,7 +40,7 @@
                     android:id="@+id/tvOnboardingTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="LibreCuts"
+                    android:text="@string/app_name"
                     android:textColor="@color/textColor"
                     android:textSize="24sp"
                     android:layout_marginTop="8dp"
@@ -50,7 +50,7 @@
                     android:id="@+id/tvOnboardingVersion"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Version 1.0"
+                    android:text="@string/str_version_1_0"
                     android:textColor="@color/inactiveTool"
                     android:textSize="12sp"
                     android:fontFamily="sans-serif" />
@@ -58,7 +58,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Free. Open-Source. Limitless."
+                    android:text="@string/str_free_open_source_limitless"
                     android:textColor="@color/colorPrimary"
                     android:textSize="14sp"
                     android:layout_marginTop="4dp"
@@ -69,7 +69,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="COMMUNITY &amp; SUPPORT"
+                android:text="@string/str_community_amp_support"
                 android:textColor="@color/inactiveTool"
                 android:textSize="10sp"
                 android:layout_marginBottom="8dp"
@@ -105,7 +105,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Star on GitHub"
+                        android:text="@string/str_star_on_github"
                         android:textColor="@color/textColor"
                         android:textSize="14sp"
                         android:fontFamily="sans-serif-medium" />
@@ -113,7 +113,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Show your appreciation by starring the repo"
+                        android:text="@string/str_show_your_appreciation_by_star"
                         android:textColor="@color/inactiveTool"
                         android:textSize="11sp" />
                 </LinearLayout>
@@ -149,7 +149,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="GitHub Sponsors"
+                        android:text="@string/str_github_sponsors"
                         android:textColor="@color/textColor"
                         android:textSize="14sp"
                         android:fontFamily="sans-serif-medium" />
@@ -157,7 +157,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Support our open source development directly"
+                        android:text="@string/str_support_our_open_source_develo"
                         android:textColor="@color/inactiveTool"
                         android:textSize="11sp" />
                 </LinearLayout>
@@ -193,7 +193,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Discord Server"
+                        android:text="@string/str_discord_server"
                         android:textColor="@color/textColor"
                         android:textSize="14sp"
                         android:fontFamily="sans-serif-medium" />
@@ -201,7 +201,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Join us for app updates and community chat"
+                        android:text="@string/str_join_us_for_app_updates_and_co"
                         android:textColor="@color/inactiveTool"
                         android:textSize="11sp" />
                 </LinearLayout>
@@ -238,7 +238,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="6dp"
-                        android:text="Troubleshooting &amp; Wiki Guide"
+                        android:text="@string/str_troubleshooting_amp_wiki_guide"
                         android:textColor="@color/textColor"
                         android:textSize="12sp"
                         android:fontFamily="sans-serif-medium" />
@@ -247,7 +247,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="If you encounter any export issues or rendering errors, tap here to read our wiki guide for troubleshooting and error codes."
+                    android:text="@string/str_if_you_encounter_any_export_is"
                     android:textColor="@color/inactiveTool"
                     android:textSize="11sp"
                     android:lineSpacingMultiplier="1.1" />
@@ -258,7 +258,7 @@
                 android:id="@+id/btnOnboardingGetStarted"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
-                android:text="Get Started"
+                android:text="@string/str_get_started"
                 android:textColor="@color/onPrimaryContainer"
                 android:textSize="14sp"
                 android:fontFamily="sans-serif-medium"

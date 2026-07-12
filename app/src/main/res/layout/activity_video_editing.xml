@@ -92,7 +92,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="0.75"
                     android:gravity="center"
-                    android:text="Export"
+                    android:text="@string/export"
                     android:textColor="@color/onPrimaryContainer"
                     android:fontFamily="sans-serif-medium"
                     android:textSize="14sp"
@@ -174,7 +174,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="top|end"
                 android:layout_margin="12dp"
-                android:text="PREVIEW"
+                android:text="@string/str_preview"
                 android:textColor="@color/textColor"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
@@ -192,7 +192,7 @@
                 android:background="@drawable/rounded_time_bg"
                 android:paddingHorizontal="10dp"
                 android:paddingVertical="4dp"
-                android:text="0:00 / 0:00"
+                android:text="@string/str_0_00_0_00"
                 android:textColor="@color/textColor"
                 android:textSize="14sp"
                 android:fontFamily="sans-serif-medium" />
@@ -420,7 +420,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:text="Timeline Empty"
+                        android:text="@string/str_timeline_empty"
                         android:textSize="16sp"
                         android:textColor="@color/textColor"
                         android:fontFamily="sans-serif-medium" />
@@ -430,7 +430,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:text="Import Video"
+                        android:text="@string/str_import_video"
                         app:cornerRadius="8dp"
                         android:textColor="@color/onPrimaryContainer"
                         android:backgroundTint="@color/colorPrimary" />
@@ -553,7 +553,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Text"
+                        android:text="@string/str_text"
                         android:textSize="11sp"
                         android:fontFamily="sans-serif-medium"
                         android:textColor="@color/toolTextInactive"/>
@@ -577,7 +577,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Overlay"
+                        android:text="@string/str_overlay"
                         android:textSize="11sp"
                         android:fontFamily="sans-serif-medium"
                         android:textColor="@color/toolTextInactive"/>
@@ -601,7 +601,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Stickers"
+                        android:text="@string/str_stickers"
                         android:textSize="11sp"
                         android:fontFamily="sans-serif-medium"
                         android:textColor="@color/toolTextInactive"/>
@@ -625,7 +625,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Audio"
+                        android:text="@string/str_audio"
                         android:textSize="11sp"
                         android:fontFamily="sans-serif-medium"
                         android:textColor="@color/toolTextInactive"/>
@@ -649,7 +649,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Voice"
+                        android:text="@string/str_voice"
                         android:textSize="11sp"
                         android:fontFamily="sans-serif-medium"
                         android:textColor="@color/toolTextInactive"/>
@@ -673,7 +673,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Subtitles"
+                        android:text="@string/str_subtitles"
                         android:textSize="11sp"
                         android:fontFamily="sans-serif-medium"
                         android:textColor="@color/toolTextInactive"/>
@@ -697,7 +697,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Crop"
+                        android:text="@string/str_crop"
                         android:textSize="11sp"
                         android:fontFamily="sans-serif-medium"
                         android:textColor="@color/toolTextInactive"/>

@@ -43,7 +43,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="32dp"
                 android:letterSpacing="0.2"
-                android:text="NEW PROJECT"
+                android:text="@string/str_new_project"
                 android:textColor="@color/textColor"
                 android:textSize="14sp"
                 android:fontFamily="sans-serif-medium" />
@@ -52,7 +52,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Tap to select media"
+                android:text="@string/str_tap_to_select_media"
                 android:textColor="@color/iconSecondary"
                 android:textSize="12sp"
                 android:fontFamily="sans-serif" />
@@ -66,7 +66,7 @@
             android:gravity="center"
             android:letterSpacing="0.1"
             android:lineSpacingMultiplier="1.4"
-            android:text="free. open-source.\nlimitless creativity."
+            android:text="@string/str_free_open_source_nlimitless_cr"
             android:textColor="@color/colorOnSurface"
             android:alpha="0.5"
             android:textSize="18sp"
@@ -97,7 +97,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="32dp"
                 android:fontFamily="sans-serif-medium"
-                android:text="Settings"
+                android:text="@string/str_settings"
                 android:textColor="@color/textColor"
                 android:textSize="28sp" />
 
@@ -113,7 +113,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-medium"
-                    android:text="General"
+                    android:text="@string/str_general"
                     android:textColor="@color/textColor"
                     android:textSize="18sp"
                     android:layout_marginBottom="16dp" />
@@ -132,7 +132,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Export Folder"
+                        android:text="@string/str_export_folder"
                         android:textColor="@color/textColor"
                         android:textSize="16sp"
                         android:textStyle="bold" />
@@ -142,7 +142,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Default (Movies/LibreCuts)"
+                        android:text="@string/str_default_movies_librecuts"
                         android:textColor="@color/iconSecondary"
                         android:textSize="13sp" />
                 </LinearLayout>
@@ -167,7 +167,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Check for Updates"
+                        android:text="@string/str_check_for_updates"
                         android:textColor="@color/textColor"
                         android:textSize="16sp"
                         android:textStyle="bold" />
@@ -176,7 +176,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Manually check for the latest version"
+                        android:text="@string/str_manually_check_for_the_latest"
                         android:textColor="@color/iconSecondary"
                         android:textSize="13sp" />
                 </LinearLayout>
@@ -215,7 +215,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:fontFamily="sans-serif-medium"
-                android:text="LibreCuts"
+                android:text="@string/app_name"
                 android:textColor="@color/textColor"
                 android:textSize="28sp" />
 
@@ -224,7 +224,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:alpha="0.6"
-                android:text="v1.0-beta4"
+                android:text="@string/str_v1_0_beta4"
                 android:textColor="@color/colorPrimary"
                 android:textSize="14sp"
                 android:fontFamily="sans-serif-medium" />
@@ -235,7 +235,7 @@
                 android:layout_marginTop="24dp"
                 android:gravity="center"
                 android:lineSpacingMultiplier="1.3"
-                android:text="A privacy friendly, open source video editor for Android.\nExport watermark free videos locally."
+                android:text="@string/str_a_privacy_friendly_open_source"
                 android:textColor="@color/iconSecondary"
                 android:textSize="15sp" />
 
@@ -253,7 +253,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="sans-serif-medium"
-                    android:text="Support &amp; Feedback"
+                    android:text="@string/str_support_amp_feedback"
                     android:textColor="@color/textColor"
                     android:textSize="18sp" />
 
@@ -262,7 +262,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:gravity="center"
-                    android:text="LibreCuts is open source. Help us improve by starring the project on GitHub or reporting bugs."
+                    android:text="@string/str_librecuts_is_open_source_help"
                     android:textColor="@color/iconSecondary"
                     android:textSize="13sp" />
 
@@ -271,7 +271,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:layout_marginTop="24dp"
-                    android:text="Star on GitHub"
+                    android:text="@string/str_star_on_github"
                     android:textColor="@color/onPrimaryContainer"
                     android:backgroundTint="@color/colorPrimary"
                     app:cornerRadius="16dp"
@@ -288,7 +288,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:layout_marginTop="16dp"
-                    android:text="Report a Bug"
+                    android:text="@string/str_report_a_bug"
                     android:textColor="@color/textColor"
                     android:backgroundTint="@color/surfaceContainerHigh"
                     app:strokeColor="@color/outline"
@@ -306,7 +306,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:layout_marginTop="16dp"
-                    android:text="Sponsor Project"
+                    android:text="@string/str_sponsor_project"
                     android:textColor="#ff69b4"
                     android:backgroundTint="@color/surfaceContainerHigh"
                     app:strokeColor="#ff69b4"
@@ -327,7 +327,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="48dp"
                 android:alpha="0.4"
-                android:text="Made by Tharun Birla"
+                android:text="@string/str_made_by_tharun_birla"
                 android:textColor="@color/textColor"
                 android:textSize="12sp" />
 

@@ -39,7 +39,7 @@
             android:layout_width="48dp"
             android:layout_height="wrap_content"
             android:gravity="end"
-            android:text="100%"
+            android:text="@string/str_100"
             android:textColor="@color/textColor"
             android:textSize="14sp"
             android:fontFamily="sans-serif-medium" />
@@ -65,7 +65,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Audio Segment"
+                android:text="@string/str_audio_segment"
                 android:textColor="@color/textColor"
                 android:fontFamily="sans-serif-medium"/>
             <View
@@ -76,7 +76,7 @@
                 android:id="@+id/tvAudioTrimValues"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="0.0s - 0.0s"
+                android:text="@string/str_0_0s_0_0s"
                 android:textColor="@color/outline"
                 android:textSize="12sp"/>
         </LinearLayout>
@@ -132,7 +132,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Cancel"
+                android:text="@string/cancel"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="@color/toolTextInactive"/>
@@ -158,7 +158,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Beats"
+                android:text="@string/str_beats"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="@color/toolTextInactive"/>
@@ -184,7 +184,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Ducking"
+                android:text="@string/str_ducking"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="@color/toolTextInactive"/>
@@ -210,7 +210,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Fade"
+                android:text="@string/str_fade"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="@color/toolTextInactive"/>
@@ -236,7 +236,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Delete"
+                android:text="@string/delete"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="#F44336"/>
@@ -262,7 +262,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Done"
+                android:text="@string/done"
                 android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:textColor="@color/colorPrimary"/>

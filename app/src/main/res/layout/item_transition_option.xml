@@ -24,7 +24,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:text="Aa"
+            android:text="@string/str_aa"
             android:textColor="@color/textColor"
             android:textSize="18sp"
             android:fontFamily="sans-serif-medium" />
@@ -35,7 +35,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="None"
+        android:text="@string/str_none"
         android:textColor="@color/textColor"
         android:textSize="12sp"
         android:maxLines="1"
