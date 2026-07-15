@@ -153,7 +153,7 @@
                     android:background="@color/outline"
                     android:layout_marginVertical="8dp" />
 
-                <!-- Check for Updates Setting -->
+                <!-- Check for Updates (F-Droid builds may lag Play/GitHub releases) Setting -->
                 <LinearLayout
                     android:id="@+id/btnCheckForUpdates"
                     android:layout_width="match_parent"

@@ -104,7 +104,7 @@
     <string name="str_general">General</string>
     <string name="str_export_folder">Export Folder</string>
     <string name="str_default_movies_librecuts">Default (Movies/LibreCuts)</string>
-    <string name="str_check_for_updates">Check for Updates</string>
+    <string name="str_check_for_updates">Check for Updates (F-Droid builds may lag Play/GitHub releases)</string>
     <string name="str_manually_check_for_the_latest">Manually check for the latest version</string>
     <string name="str_v1_0_beta4">v1.0-beta4</string>
     <string name="str_a_privacy_friendly_open_source">A privacy friendly, open source video editor for Android.\nExport watermark free videos locally.</string>
