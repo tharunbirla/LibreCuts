@@ -29,12 +29,13 @@ jobs:
       - name: Create Thread in Discord
         # Only run if a valid label was found (bug or enhancement)
         if: env.WEBHOOK_URL != ''
+        env:
+          THREAD_NAME: "#${{ github.event.issue.number }}: ${{ github.event.issue.title }}"
+          ISSUE_BODY: "A new issue was labeled **${{ github.event.label.name }}**\n\n**Link:** ${{ github.event.issue.html_url }}\n\n${{ github.event.issue.body }}"
         run: |
           # Using jq to safely escape newlines and quotes in the issue body
           jq -n \
-            --arg thread_name "#${{ github.event.issue.number }}: ${{ github.event.issue.title }}" \
-            --arg content "A new issue was labeled **${{ github.event.label.name }}**\n\n**Link:** ${{ github.event.issue.html_url }}\n\n${{ github.event.issue.body }}" \
-            '{thread_name: $thread_name, content: $content}' > payload.json
+            '{thread_name: env.THREAD_NAME, content: env.ISSUE_BODY}' > payload.json
           
           curl -H "Content-Type: application/json" -d @payload.json ${{ env.WEBHOOK_URL }}
 

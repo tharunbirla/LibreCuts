@@ -330,7 +330,7 @@ class FFmpegRenderEngine(private val context: Context) {
             "atempo=$safeSpeed"
         }
         
-        val command = "-y -ss $startSecs -i \"$sourceFilePath\" -to $durationSecs -filter:v \"setpts=${ptsMultiplier}*PTS\" -filter:a \"$audioFilter\" \"$outputFilePath\""
+        val command = "-y -ss $startSecs -i \"$sourceFilePath\" -to $durationSecs -filter:v \"setpts=${ptsMultiplier}*PTS,format=yuv420p\" -filter:a \"$audioFilter\" \"$outputFilePath\""
         return executeCommand(command)
     }
 
@@ -342,7 +342,7 @@ class FFmpegRenderEngine(private val context: Context) {
     ): RenderResult {
         val startSecs = startMs / 1000.0
         val durationSecs = (endMs - startMs) / 1000.0
-        val command = "-y -ss $startSecs -i \"$sourceFilePath\" -to $durationSecs -filter:v \"reverse\" -filter:a \"areverse\" -c:v h264_mediacodec -c:a aac \"$outputFilePath\""
+        val command = "-y -ss $startSecs -i \"$sourceFilePath\" -to $durationSecs -filter:v \"reverse,format=yuv420p\" -filter:a \"areverse\" -c:v h264_mediacodec -c:a aac \"$outputFilePath\""
         return executeCommand(command)
     }
 
