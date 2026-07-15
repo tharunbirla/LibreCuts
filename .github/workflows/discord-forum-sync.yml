@@ -1,0 +1,46 @@
+name: Sync GitHub Issues to Discord Forums
+
+on:
+  issues:
+    types: [labeled]
+
+# Grant permission for the workflow to add labels to issues
+permissions:
+  issues: write
+
+jobs:
+  sync-to-discord:
+    runs-on: ubuntu-latest
+    # Prevent execution if the issue already has the 'discord-synced' label
+    if: ${{ !contains(github.event.issue.labels.*.name, 'discord-synced') }}
+    
+    steps:
+      - name: Route to correct Webhook
+        id: setup
+        run: |
+          if [[ "${{ github.event.label.name }}" == "bug" ]]; then
+            echo "WEBHOOK_URL=${{ secrets.DISCORD_BUG_WEBHOOK }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event.label.name }}" == "enhancement" ]]; then
+            echo "WEBHOOK_URL=${{ secrets.DISCORD_FEATURE_WEBHOOK }}" >> $GITHUB_ENV
+          else
+            echo "WEBHOOK_URL=" >> $GITHUB_ENV
+          fi
+
+      - name: Create Thread in Discord
+        # Only run if a valid label was found
+        if: env.WEBHOOK_URL != ''
+        run: |
+          # Using jq to safely escape newlines and quotes in the issue body
+          jq -n \
+            --arg thread_name "#${{ github.event.issue.number }}: ${{ github.event.issue.title }}" \
+            --arg content "A new issue was labeled **${{ github.event.label.name }}**\n\n**Link:** ${{ github.event.issue.html_url }}\n\n${{ github.event.issue.body }}" \
+            '{thread_name: $thread_name, content: $content}' > payload.json
+          
+          curl -H "Content-Type: application/json" -d @payload.json ${{ env.WEBHOOK_URL }}
+
+      - name: Mark Issue as Synced
+        if: env.WEBHOOK_URL != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Automatically add the 'discord-synced' label so this doesn't run again
+        run: gh issue edit ${{ github.event.issue.number }} --repo ${{ github.repository }} --add-label "discord-synced"
