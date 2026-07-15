@@ -39,6 +39,11 @@ class FrameAdapter(
         }
     }
 
+    override fun onViewRecycled(holder: FrameViewHolder) {
+        super.onViewRecycled(holder)
+        holder.imageView.setImageDrawable(null)
+    }
+
     override fun getItemCount(): Int = 15
 
     fun updateFrames(newFrames: List<Bitmap>) {

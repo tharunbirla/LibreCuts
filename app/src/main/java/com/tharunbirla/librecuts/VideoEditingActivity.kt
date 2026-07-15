@@ -4317,10 +4317,16 @@ class VideoEditingActivity : AppCompatActivity() {
                 lm.scrollToPositionWithOffset(0, -(item.trimStartMs * pixelsPerMs).toInt())
             }
 
-            // Extract or load cached frames
             val job = extractFramesForSegment(item.uri, item.durationMs, adapter)
             if (job != null) {
                 activeRenderJobs.add(job)
+                rv.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+                    override fun onViewAttachedToWindow(v: View) {}
+                    override fun onViewDetachedFromWindow(v: View) {
+                        job.cancel()
+                        activeRenderJobs.remove(job)
+                    }
+                })
             }
 
             val trackTrimView = segmentView.findViewById<com.tharunbirla.librecuts.customviews.TrackTrimView>(R.id.segmentTrimTrack)
@@ -4679,6 +4685,13 @@ class VideoEditingActivity : AppCompatActivity() {
         val job = extractFramesForSegment(item.uri, item.durationMs, adapter)
         if (job != null) {
             activeRenderJobs.add(job)
+            recyclerView.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+                override fun onViewAttachedToWindow(v: View) {}
+                override fun onViewDetachedFromWindow(v: View) {
+                    job.cancel()
+                    activeRenderJobs.remove(job)
+                }
+            })
         }
 
         // Configure custom TrackTrimView as the premium Range Slider
@@ -5323,6 +5336,17 @@ class VideoEditingActivity : AppCompatActivity() {
         previewFile?.delete()
         previewFile = null
         updateUIInteractionState()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (::player.isInitialized) {
+            player.pause()
+        }
+        activeRenderJobs.forEach { it.cancel() }
+        activeRenderJobs.clear()
+        frameExtractionJob?.cancel()
+        previewJob?.cancel()
     }
 
     override fun onDestroy() {
