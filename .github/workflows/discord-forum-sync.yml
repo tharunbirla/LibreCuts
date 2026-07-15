@@ -27,7 +27,7 @@ jobs:
           fi
 
       - name: Create Thread in Discord
-        # Only run if a valid label was found
+        # Only run if a valid label was found (bug or enhancement)
         if: env.WEBHOOK_URL != ''
         run: |
           # Using jq to safely escape newlines and quotes in the issue body
