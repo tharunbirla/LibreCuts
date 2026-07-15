@@ -42,5 +42,9 @@ jobs:
         if: env.WEBHOOK_URL != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        # Automatically add the 'discord-synced' label so this doesn't run again
-        run: gh issue edit ${{ github.event.issue.number }} --repo ${{ github.repository }} --add-label "discord-synced"
+        run: |
+          # 1. Create the label in your repo if it doesn't exist yet (the '|| true' stops it from crashing if it already exists)
+          gh label create "discord-synced" --color "0e8a16" --description "Prevents duplicate Discord threads" || true
+          
+          # 2. Automatically add the 'discord-synced' label so this doesn't run again
+          gh issue edit ${{ github.event.issue.number }} --repo ${{ github.repository }} --add-label "discord-synced"
