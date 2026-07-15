@@ -575,11 +575,18 @@ class VideoEditingActivity : AppCompatActivity() {
                     draggableTextOverlay?.commitText()
                 }
                 toolbar.findViewById<View>(R.id.btnTextDelete)?.setBounceClickListener {
-                    draggableTextOverlay?.deactivate()
-                    viewModel.selectedOperationId.value?.let { id ->
-                        viewModel.removeOperation(id)
-                    }
-                    exitTextEditingMode()
+                    MaterialAlertDialogBuilder(this@VideoEditingActivity)
+                        .setTitle("Delete Text")
+                        .setMessage("Are you sure you want to delete this text overlay?")
+                        .setPositiveButton("Delete") { _, _ ->
+                            draggableTextOverlay?.deactivate()
+                            viewModel.selectedOperationId.value?.let { id ->
+                                viewModel.removeOperation(id)
+                            }
+                            exitTextEditingMode()
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
                 }
                 toolbar.findViewById<View>(R.id.btnTextDuplicate)?.setBounceClickListener {
                     duplicateSelectedOverlay()
@@ -688,11 +695,18 @@ class VideoEditingActivity : AppCompatActivity() {
                     draggableImageOverlay?.commitImage()
                 }
                 toolbar.findViewById<View>(R.id.btnImageDelete)?.setBounceClickListener {
-                    draggableImageOverlay?.deactivate()
-                    viewModel.selectedOperationId.value?.let { id ->
-                        viewModel.removeOperation(id)
-                    }
-                    exitImageEditingMode()
+                    MaterialAlertDialogBuilder(this@VideoEditingActivity)
+                        .setTitle("Delete Image")
+                        .setMessage("Are you sure you want to delete this image overlay?")
+                        .setPositiveButton("Delete") { _, _ ->
+                            draggableImageOverlay?.deactivate()
+                            viewModel.selectedOperationId.value?.let { id ->
+                                viewModel.removeOperation(id)
+                            }
+                            exitImageEditingMode()
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
                 }
                 toolbar.findViewById<View>(R.id.btnImageDuplicate)?.setBounceClickListener {
                     duplicateSelectedOverlay()
@@ -729,7 +743,14 @@ class VideoEditingActivity : AppCompatActivity() {
                     }
                 }
                 toolbar.findViewById<ImageButton>(R.id.btnVideoDelete)?.setBounceClickListener {
-                    deleteSelectedVideo()
+                    MaterialAlertDialogBuilder(this@VideoEditingActivity)
+                        .setTitle("Delete Clip")
+                        .setMessage("Are you sure you want to delete this clip from the project?")
+                        .setPositiveButton("Delete") { _, _ ->
+                            deleteSelectedVideo()
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
                 }
                 toolbar.findViewById<ImageButton>(R.id.btnVideoExtractAudio)?.setBounceClickListener {
                     selectedVideoIndex?.let { index ->
@@ -806,10 +827,17 @@ class VideoEditingActivity : AppCompatActivity() {
                     exitAudioEditingMode()
                 }
                 toolbar.findViewById<ImageButton>(R.id.btnAudioDelete)?.setBounceClickListener {
-                    viewModel.selectedOperationId.value?.let { id ->
-                        viewModel.deleteOperation(id)
-                    }
-                    exitAudioEditingMode()
+                    MaterialAlertDialogBuilder(this@VideoEditingActivity)
+                        .setTitle("Delete Audio")
+                        .setMessage("Are you sure you want to delete this audio track?")
+                        .setPositiveButton("Delete") { _, _ ->
+                            viewModel.selectedOperationId.value?.let { id ->
+                                viewModel.deleteOperation(id)
+                            }
+                            exitAudioEditingMode()
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
                 }
                 toolbar.findViewById<ImageButton>(R.id.btnAudioBeats)?.setBounceClickListener {
                     val id = viewModel.selectedOperationId.value ?: return@setBounceClickListener
@@ -1035,7 +1063,14 @@ class VideoEditingActivity : AppCompatActivity() {
                     pickSrtFile()
                 }
                 toolbar.findViewById<Button>(R.id.btnDeleteSrt)?.setBounceClickListener {
-                    removeSubtitles()
+                    MaterialAlertDialogBuilder(this@VideoEditingActivity)
+                        .setTitle("Delete Subtitles")
+                        .setMessage("Are you sure you want to remove the subtitles track?")
+                        .setPositiveButton("Delete") { _, _ ->
+                            removeSubtitles()
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
                 }
                 toolbar.findViewById<Button>(R.id.btnSaveSubtitles)?.setBounceClickListener {
                     exitSubtitlesEditingMode()
