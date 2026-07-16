@@ -836,6 +836,22 @@ class VideoEditingActivity : AppCompatActivity() {
                 toolbar.findViewById<View>(R.id.speedBtn10)?.setBounceClickListener { applySpeedToSegment(1.0f) }
                 toolbar.findViewById<View>(R.id.speedBtn15)?.setBounceClickListener { applySpeedToSegment(1.5f) }
                 toolbar.findViewById<View>(R.id.speedBtn20)?.setBounceClickListener { applySpeedToSegment(2.0f) }
+
+                val slider = toolbar.findViewById<com.google.android.material.slider.Slider>(R.id.sliderCustomSpeed)
+                val tvCustomSpeed = toolbar.findViewById<TextView>(R.id.tvCustomSpeedValue)
+                
+                slider?.addOnChangeListener { _, value, _ ->
+                    val roundedValue = String.format(java.util.Locale.US, "%.1f", value).toFloat()
+                    tvCustomSpeed?.text = "${roundedValue}x"
+                }
+
+                slider?.addOnSliderTouchListener(object : com.google.android.material.slider.Slider.OnSliderTouchListener {
+                    override fun onStartTrackingTouch(slider: com.google.android.material.slider.Slider) {}
+                    override fun onStopTrackingTouch(slider: com.google.android.material.slider.Slider) {
+                        val roundedValue = String.format(java.util.Locale.US, "%.1f", slider.value).toFloat()
+                        applySpeedToSegment(roundedValue)
+                    }
+                })
             }
         } catch (e: Exception) {
             Log.w(TAG, "Speed editing toolbar not found: ${e.message}")
@@ -2704,13 +2720,25 @@ class VideoEditingActivity : AppCompatActivity() {
         speeds.forEach { (s, views) ->
             val bg = toolbar.findViewById<View>(views.first)
             val txt = toolbar.findViewById<TextView>(views.second)
-            if (speed == s) {
+            if (kotlin.math.abs(speed - s) < 0.01f) {
                 bg?.setBackgroundResource(R.drawable.bg_aspect_ratio_selected)
                 txt?.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.colorOnPrimary))
             } else {
                 bg?.setBackgroundResource(R.drawable.bg_aspect_ratio_item)
                 txt?.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.toolTextInactive))
             }
+        }
+        
+        val slider = toolbar.findViewById<com.google.android.material.slider.Slider>(R.id.sliderCustomSpeed)
+        val tvCustomSpeed = toolbar.findViewById<TextView>(R.id.tvCustomSpeedValue)
+        
+        slider?.let {
+            val safeSpeed = speed.coerceIn(it.valueFrom, it.valueTo)
+            if (kotlin.math.abs(it.value - safeSpeed) > 0.01f) {
+                it.value = safeSpeed
+            }
+            val roundedValue = String.format(java.util.Locale.US, "%.1f", safeSpeed).toFloat()
+            tvCustomSpeed?.text = "${roundedValue}x"
         }
     }
 
