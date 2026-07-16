@@ -266,10 +266,20 @@
                     android:layout_weight="1" />
 
                 <LinearLayout
-                    android:layout_width="88dp"
+                    android:layout_width="wrap_content"
                     android:layout_height="40dp"
                     android:orientation="horizontal"
                     android:gravity="end|center_vertical">
+
+                    <ImageButton
+                        android:id="@+id/btnCaptureFrame"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@android:color/transparent"
+                        android:src="@drawable/ic_camera_capture"
+                        android:padding="8dp"
+                        android:scaleType="fitCenter"
+                        app:tint="@color/colorOnSecondary" />
 
                     <ImageButton
                         android:id="@+id/btnMagnet"

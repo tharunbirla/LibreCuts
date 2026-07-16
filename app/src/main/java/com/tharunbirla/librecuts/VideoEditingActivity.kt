@@ -11,6 +11,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import com.tharunbirla.librecuts.utils.setBounceClickListener
 import com.tharunbirla.librecuts.utils.performHapticLight
@@ -288,6 +289,11 @@ class VideoEditingActivity : AppCompatActivity() {
                     viewModel.addMuteAudioOperation()
                 }
             }
+        }
+
+        val btnCaptureFrame = findViewById<ImageButton>(R.id.btnCaptureFrame)
+        btnCaptureFrame.setBounceClickListener {
+            captureCurrentFrame()
         }
 
         val btnMagnet = findViewById<ImageButton>(R.id.btnMagnet)
@@ -1570,6 +1576,131 @@ class VideoEditingActivity : AppCompatActivity() {
     @SuppressLint("InflateParams")
     private fun trimAction() {
         Toast.makeText(this, R.string.toast_drag_the_handles_on_the_timeli, Toast.LENGTH_LONG).show()
+    }
+
+    private fun captureCurrentFrame() {
+        closeActiveEditingModes()
+        val container = findViewById<FrameLayout>(R.id.playerContainer)
+        val tvDuration = findViewById<TextView>(R.id.tvDuration)
+        val tvPreviewBadge = findViewById<TextView>(R.id.tvPreviewBadge)
+        
+        val durationVis = tvDuration?.visibility ?: View.GONE
+        val badgeVis = tvPreviewBadge?.visibility ?: View.GONE
+        
+        tvDuration?.visibility = View.INVISIBLE
+        tvPreviewBadge?.visibility = View.INVISIBLE
+        
+        container.post {
+            if (container.width <= 0 || container.height <= 0) {
+                tvDuration?.visibility = durationVis
+                tvPreviewBadge?.visibility = badgeVis
+                return@post
+            }
+            val bitmap = android.graphics.Bitmap.createBitmap(container.width, container.height, android.graphics.Bitmap.Config.ARGB_8888)
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val location = IntArray(2)
+                container.getLocationInWindow(location)
+                val rect = android.graphics.Rect(location[0], location[1], location[0] + container.width, location[1] + container.height)
+                
+                try {
+                    android.view.PixelCopy.request(window, rect, bitmap, { copyResult ->
+                        tvDuration?.visibility = durationVis
+                        tvPreviewBadge?.visibility = badgeVis
+                        if (copyResult == android.view.PixelCopy.SUCCESS) {
+                            saveBitmapToGallery(bitmap)
+                        } else {
+                            Toast.makeText(this, "Failed to capture frame", Toast.LENGTH_SHORT).show()
+                        }
+                    }, android.os.Handler(android.os.Looper.getMainLooper()))
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    tvDuration?.visibility = durationVis
+                    tvPreviewBadge?.visibility = badgeVis
+                    Toast.makeText(this, "Failed to capture frame", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                val canvas = android.graphics.Canvas(bitmap)
+                val bg = container.background
+                if (bg != null) bg.draw(canvas) else canvas.drawColor(android.graphics.Color.BLACK)
+                
+                val textureView = findTextureView(playerView)
+                if (textureView != null) {
+                    val videoBitmap = textureView.bitmap
+                    if (videoBitmap != null) {
+                        canvas.save()
+                        canvas.translate(playerView.x + textureView.x, playerView.y + textureView.y)
+                        canvas.scale(playerView.scaleX, playerView.scaleY)
+                        canvas.drawBitmap(videoBitmap, 0f, 0f, null)
+                        canvas.restore()
+                    }
+                }
+                
+                val overlays = listOf(R.id.textOverlayView, R.id.imageOverlayView, R.id.cropOverlayView)
+                for (id in overlays) {
+                    val view = container.findViewById<View>(id)
+                    if (view != null && view.visibility == View.VISIBLE) {
+                        canvas.save()
+                        canvas.translate(view.x, view.y)
+                        view.draw(canvas)
+                        canvas.restore()
+                    }
+                }
+                
+                tvDuration?.visibility = durationVis
+                tvPreviewBadge?.visibility = badgeVis
+                saveBitmapToGallery(bitmap)
+            }
+        }
+    }
+
+    private fun findTextureView(viewGroup: android.view.ViewGroup): android.view.TextureView? {
+        for (i in 0 until viewGroup.childCount) {
+            val child = viewGroup.getChildAt(i)
+            if (child is android.view.TextureView) return child
+            if (child is android.view.ViewGroup) {
+                val tv = findTextureView(child)
+                if (tv != null) return tv
+            }
+        }
+        return null
+    }
+
+    private fun saveBitmapToGallery(bitmap: android.graphics.Bitmap) {
+        val filename = "LibreCuts_Frame_${System.currentTimeMillis()}.png"
+        var fos: java.io.OutputStream? = null
+        var imageUri: Uri? = null
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val resolver = contentResolver
+                val contentValues = android.content.ContentValues().apply {
+                    put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                    put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "image/png")
+                    put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_PICTURES + "/LibreCuts")
+                }
+                imageUri = resolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                fos = imageUri?.let { resolver.openOutputStream(it) }
+            } else {
+                val imagesDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_PICTURES)
+                val directory = java.io.File(imagesDir, "LibreCuts")
+                if (!directory.exists()) directory.mkdirs()
+                val image = java.io.File(directory, filename)
+                fos = java.io.FileOutputStream(image)
+                imageUri = Uri.fromFile(image)
+            }
+            
+            fos?.use {
+                bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
+                Toast.makeText(this, "Frame saved to gallery", Toast.LENGTH_SHORT).show()
+            }
+            
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && imageUri != null) {
+                sendBroadcast(Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, imageUri))
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, "Failed to save frame", Toast.LENGTH_SHORT).show()
+        }
     }
 
     @SuppressLint("InflateParams")
