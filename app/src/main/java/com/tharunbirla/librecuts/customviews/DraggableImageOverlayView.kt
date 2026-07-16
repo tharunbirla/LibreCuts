@@ -218,7 +218,10 @@ class DraggableImageOverlayView @JvmOverloads constructor(
                     val source = android.graphics.ImageDecoder.createSource(context.contentResolver, uri)
                     val drawable = android.graphics.ImageDecoder.decodeDrawable(source)
                     imageView.setImageDrawable(drawable)
-                    if (drawable is android.graphics.drawable.Animatable) {
+                    if (drawable is android.graphics.drawable.AnimatedImageDrawable) {
+                        drawable.repeatCount = android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE
+                        drawable.start()
+                    } else if (drawable is android.graphics.drawable.Animatable) {
                         drawable.start()
                     }
                 } catch (e: Exception) {

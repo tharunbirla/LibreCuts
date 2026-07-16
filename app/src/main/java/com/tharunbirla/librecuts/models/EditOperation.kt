@@ -199,7 +199,8 @@ sealed class EditOperation : Serializable {
         val startTimeMs: Long? = null,
         val endTimeMs: Long? = null,
         val id: String = System.nanoTime().toString(),
-        val fileDurationMs: Long? = null
+        val fileDurationMs: Long? = null,
+        val isLooping: Boolean = true
     ) : EditOperation()
 
     data class AddSubtitles(

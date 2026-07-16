@@ -141,7 +141,11 @@ class ImageOverlayView @JvmOverloads constructor(
                 }
                 if (movie != null && movie.duration() > 0) {
                     val relativeTimeMs = (currentPositionMs - start).toInt()
-                    val gifTime = relativeTimeMs % movie.duration()
+                    val gifTime = if (op.isLooping) {
+                        relativeTimeMs % movie.duration()
+                    } else {
+                        Math.min(relativeTimeMs, movie.duration() - 1)
+                    }
                     movie.setTime(gifTime)
 
                     val imgW = op.relativeWidth * videoRect.width()
@@ -171,17 +175,20 @@ class ImageOverlayView @JvmOverloads constructor(
                 }
                 if (retriever != null) {
                     val relativeTimeMs = currentPositionMs - start
-                    val frameTimeUs = relativeTimeMs * 1000
+                    val durationStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
+                    val durationMs = durationStr?.toLongOrNull() ?: 1L
+                    val effectiveRelativeTimeMs = if (op.isLooping && durationMs > 0) relativeTimeMs % durationMs else relativeTimeMs
+                    val frameTimeUs = effectiveRelativeTimeMs * 1000
                     
                     val cacheKey = op.imageUri.toString()
                     val cached = lastFrameCache[cacheKey]
-                    val bitmap = if (cached != null && Math.abs(cached.first - relativeTimeMs) < 33) {
+                    val bitmap = if (cached != null && Math.abs(cached.first - effectiveRelativeTimeMs) < 33) {
                         cached.second
                     } else {
                         try {
                             val newBitmap = retriever.getFrameAtTime(frameTimeUs, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
                             if (newBitmap != null) {
-                                lastFrameCache[cacheKey] = Pair(relativeTimeMs, newBitmap)
+                                lastFrameCache[cacheKey] = Pair(effectiveRelativeTimeMs, newBitmap)
                             }
                             newBitmap
                         } catch (e: Exception) {

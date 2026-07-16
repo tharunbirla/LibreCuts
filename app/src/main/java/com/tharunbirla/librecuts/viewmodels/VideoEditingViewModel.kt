@@ -977,6 +977,7 @@ class VideoEditingViewModel : ViewModel() {
                         val nextLabel = "[v$stageIndex]"
 
                         val path = op.imageUri.path
+                        val isGif = path != null && path.endsWith(".gif", ignoreCase = true)
                         val isVideo = path != null && (path.endsWith(".mp4", ignoreCase = true) ||
                                                        path.endsWith(".mkv", ignoreCase = true) ||
                                                        path.endsWith(".mov", ignoreCase = true) ||
@@ -997,7 +998,8 @@ class VideoEditingViewModel : ViewModel() {
                         stages.add("${scaledImgLabel}rotate=$radians:c=none:ow='rotw($radians)':oh='roth($radians)'${rotatedImgLabel}")
                         // Overlay image/video on the reference video
                         val enablePart = buildEnableExpr(op.startTimeMs, op.endTimeMs)
-                        stages.add("${refVidLabel}${rotatedImgLabel}overlay=x=(W*${op.relativeX})-(w/2):y=(H*${op.relativeY})-(h/2)${enablePart}${nextLabel}")
+                        val shortestPart = if ((isGif || isVideo) && op.isLooping) ":shortest=1" else ""
+                        stages.add("${refVidLabel}${rotatedImgLabel}overlay=x=(W*${op.relativeX})-(w/2):y=(H*${op.relativeY})-(h/2)${shortestPart}${enablePart}${nextLabel}")
 
                         currentLabel = nextLabel
                         stageIndex++
@@ -1191,8 +1193,12 @@ class VideoEditingViewModel : ViewModel() {
                 continue
             }
             val isGif = imagePath.endsWith(".gif", ignoreCase = true)
-            if (isGif) {
-                cmd.append(" -ignore_loop 0 -i \"$imagePath\"")
+            val isVideo = imagePath.endsWith(".mp4", ignoreCase = true) ||
+                          imagePath.endsWith(".mkv", ignoreCase = true) ||
+                          imagePath.endsWith(".mov", ignoreCase = true) ||
+                          imagePath.endsWith(".3gp", ignoreCase = true)
+            if ((isGif || isVideo) && imageOp.isLooping) {
+                cmd.append(" -stream_loop -1 -i \"$imagePath\"")
             } else {
                 cmd.append(" -i \"$imagePath\"")
             }

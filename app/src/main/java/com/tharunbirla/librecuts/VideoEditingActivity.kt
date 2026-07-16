@@ -711,6 +711,24 @@ class VideoEditingActivity : AppCompatActivity() {
                 toolbar.findViewById<View>(R.id.btnImageDuplicate)?.setBounceClickListener {
                     duplicateSelectedOverlay()
                 }
+                toolbar.findViewById<View>(R.id.btnImageLoop)?.setBounceClickListener {
+                    val selectedId = viewModel.selectedOperationId.value
+                    val op = viewModel.project.value?.operations?.find { (it as? EditOperation.AddImageOverlay)?.id == selectedId } as? EditOperation.AddImageOverlay
+                    if (op != null) {
+                        val newIsLooping = !op.isLooping
+                        val actualDuration = op.fileDurationMs ?: 3000L
+                        val newEndTimeMs = if (!newIsLooping) {
+                            Math.min(op.endTimeMs ?: Long.MAX_VALUE, (op.startTimeMs ?: 0L) + actualDuration)
+                        } else {
+                            op.endTimeMs
+                        }
+                        viewModel.updateOperation(op.copy(isLooping = newIsLooping, endTimeMs = newEndTimeMs))
+                        
+                        val color = if (newIsLooping) androidx.core.content.ContextCompat.getColor(this@VideoEditingActivity, R.color.colorPrimary) else androidx.core.content.ContextCompat.getColor(this@VideoEditingActivity, R.color.toolTextInactive)
+                        toolbar.findViewById<android.widget.ImageButton>(R.id.btnImageLoop)?.setColorFilter(color)
+                        toolbar.findViewById<android.widget.TextView>(R.id.tvImageLoop)?.setTextColor(color)
+                    }
+                }
 
                 val slider = toolbar.findViewById<Slider>(R.id.imageRotationSlider)
                 val tvValue = toolbar.findViewById<TextView>(R.id.tvImageRotationValue)
@@ -2139,10 +2157,33 @@ class VideoEditingActivity : AppCompatActivity() {
         isImageEditingActive = true
         imageEditingToolbar?.visibility = View.VISIBLE
         imageEditingToolbar?.let { toolbar ->
-            val slider = toolbar.findViewById<Slider>(R.id.imageRotationSlider)
-            val tvValue = toolbar.findViewById<TextView>(R.id.tvImageRotationValue)
+            val slider = toolbar.findViewById<com.google.android.material.slider.Slider>(R.id.imageRotationSlider)
+            val tvValue = toolbar.findViewById<android.widget.TextView>(R.id.tvImageRotationValue)
             slider?.value = rotation
             tvValue?.text = "${rotation.toInt()}°"
+            
+            val loopContainer = toolbar.findViewById<View>(R.id.btnImageLoopContainer)
+            val btnLoop = toolbar.findViewById<android.widget.ImageButton>(R.id.btnImageLoop)
+            val tvLoop = toolbar.findViewById<android.widget.TextView>(R.id.tvImageLoop)
+            
+            val selectedId = viewModel.selectedOperationId.value
+            val op = viewModel.project.value?.operations?.find { (it as? EditOperation.AddImageOverlay)?.id == selectedId } as? EditOperation.AddImageOverlay
+            
+            val isGif = op?.imageUri?.path?.endsWith(".gif", ignoreCase = true) == true
+            val isVideo = op?.imageUri?.path?.endsWith(".mp4", ignoreCase = true) == true ||
+                          op?.imageUri?.path?.endsWith(".mkv", ignoreCase = true) == true ||
+                          op?.imageUri?.path?.endsWith(".mov", ignoreCase = true) == true ||
+                          op?.imageUri?.path?.endsWith(".3gp", ignoreCase = true) == true
+            
+            if (op != null && (isGif || isVideo)) {
+                loopContainer?.visibility = View.VISIBLE
+                val isLooping = op.isLooping
+                val color = if (isLooping) androidx.core.content.ContextCompat.getColor(this, R.color.colorPrimary) else androidx.core.content.ContextCompat.getColor(this, R.color.toolTextInactive)
+                btnLoop?.setColorFilter(color)
+                tvLoop?.setTextColor(color)
+            } else {
+                loopContainer?.visibility = View.GONE
+            }
         }
         findViewById<LinearLayout>(R.id.editingControlsWrapper)?.visibility = View.GONE
         if (::player.isInitialized && player.isPlaying) {
@@ -4536,7 +4577,8 @@ class VideoEditingActivity : AppCompatActivity() {
                         trackIcon = androidx.core.content.ContextCompat.getDrawable(this@VideoEditingActivity, R.drawable.ic_image_24)
                         activeStartMs = op.startTimeMs ?: 0L
                         activeEndMs = op.endTimeMs ?: totalSequenceDuration
-                        maxSelectionDurationMs = op.fileDurationMs
+                        val actualDuration = op.fileDurationMs ?: 3000L
+                        maxSelectionDurationMs = if (op.isLooping) null else actualDuration
                         setRange(totalSequenceDuration, op.startTimeMs ?: 0L, op.endTimeMs ?: totalSequenceDuration)
                         onTrimChanged = { start, end, _ ->
                             viewModel.updateOperation(op.copy(startTimeMs = start, endTimeMs = end))
