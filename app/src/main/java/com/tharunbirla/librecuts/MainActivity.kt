@@ -318,55 +318,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkForUpdates() {
-        showToast("Checking for updates...")
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val url = URL("https://api.github.com/repos/tharunbirla/LibreCuts/releases/latest")
-                val connection = url.openConnection() as HttpURLConnection
-                connection.requestMethod = "GET"
-                connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
-                
-                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                    val response = connection.inputStream.bufferedReader().use { it.readText() }
-                    val json = JSONObject(response)
-                    val latestVersion = json.getString("tag_name")
-                    val releaseUrl = json.getString("html_url")
-                    
-                    val currentVersion = try {
-                        packageManager.getPackageInfo(packageName, 0).versionName
-                    } catch (e: Exception) {
-                        "1.0-beta4"
-                    }
-                    
-                    withContext(Dispatchers.Main) {
-                        if (latestVersion != "v$currentVersion" && latestVersion != currentVersion) {
-                            showUpdateDialog(latestVersion, releaseUrl)
-                        } else {
-                            showToast("You are on the latest version!")
-                        }
-                    }
-                } else {
-                    withContext(Dispatchers.Main) {
-                        showToast("Failed to check for updates.")
-                    }
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    showToast("Failed to check for updates.")
-                    Log.e("UpdateCheck", "Error", e)
-                }
-            }
-        }
-    }
-
-    private fun showUpdateDialog(latestVersion: String, releaseUrl: String) {
-        MaterialAlertDialogBuilder(this)
-            .setTitle("Update Available")
-            .setMessage("A new version ($latestVersion) is available! Would you like to download it now?")
-            .setPositiveButton("Download") { _, _ ->
-                openUrl(releaseUrl)
-            }
-            .setNegativeButton("Later", null)
-            .show()
+        showToast("Checking for updates in browser...")
+        openUrl("https://github.com/tharunbirla/LibreCuts/releases/latest")
     }
 }
