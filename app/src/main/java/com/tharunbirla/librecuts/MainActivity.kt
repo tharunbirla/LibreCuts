@@ -55,7 +55,7 @@ class MainActivity : AppCompatActivity() {
                     updateExportFolderUI(uri)
                 } catch (e: Exception) {
                     Log.e("FolderSelectionError", "Error securing permission for URI", e)
-                    showToast("Failed to set export folder")
+                    showToast(getString(R.string.toast_failed_to_set_export_folder))
                 }
             }
         }
@@ -102,6 +102,13 @@ class MainActivity : AppCompatActivity() {
             checkForUpdates()
         }
         
+        binding.btnOpenSourceLicenses.setBounceClickListener {
+            com.mikepenz.aboutlibraries.LibsBuilder()
+                .withActivityTitle(getString(R.string.str_open_source_licenses))
+                .withSearchEnabled(true)
+                .start(this)
+        }
+        
         // Initialize Settings UI
         val prefs = getSharedPreferences("librecuts_prefs", MODE_PRIVATE)
         val savedUriString = prefs.getString("export_directory_uri", null)
@@ -135,17 +142,17 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateExportFolderUI(uri: Uri?) {
         if (uri == null) {
-            binding.tvCurrentExportFolder.text = "Default (Movies/LibreCuts)"
+            binding.tvCurrentExportFolder.text = getString(R.string.str_default_movies_librecuts)
         } else {
             try {
                 val path = uri.lastPathSegment?.split(":")?.lastOrNull()
                 if (!path.isNullOrEmpty()) {
                     binding.tvCurrentExportFolder.text = path
                 } else {
-                    binding.tvCurrentExportFolder.text = "Custom Directory"
+                    binding.tvCurrentExportFolder.text = getString(R.string.str_custom_directory)
                 }
             } catch (e: Exception) {
-                binding.tvCurrentExportFolder.text = "Custom Directory"
+                binding.tvCurrentExportFolder.text = getString(R.string.str_custom_directory)
             }
         }
     }

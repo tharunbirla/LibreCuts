@@ -178,7 +178,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_alignParentStart="true"
-                    android:text="Custom Speed"
+                    android:text="@string/str_custom_speed"
                     android:textColor="@color/textColor"
                     android:fontFamily="sans-serif-medium"
                     android:textSize="14sp" />

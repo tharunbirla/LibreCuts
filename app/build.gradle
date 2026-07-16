@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.compose)
 }
 
+apply plugin: 'com.mikepenz.aboutlibraries.plugin'
+
 android {
     namespace 'com.tharunbirla.librecuts'
     compileSdk 34
@@ -86,6 +88,8 @@ dependencies {
     implementation("com.antonkarpenko:ffmpeg-kit-full-gpl:2.1.0")
     implementation 'com.google.android.material:material:1.9.0'
     implementation 'com.airbnb.android:lottie:3.4.0'
+    implementation "com.mikepenz:aboutlibraries-core:11.2.3"
+    implementation "com.mikepenz:aboutlibraries:11.2.3"
     implementation libs.androidx.core.ktx
     implementation libs.androidx.lifecycle.runtime.ktx
     implementation libs.androidx.lifecycle.viewmodel.ktx

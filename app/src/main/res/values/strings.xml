@@ -162,4 +162,12 @@
     <string name="toast_export_quality_set_to_medium">Export quality set to Medium</string>
     <string name="toast_export_quality_set_to_low">Export quality set to Low</string>
     <string name="toast_log_copied">Log copied</string>
+    <string name="str_custom_speed">Custom Speed</string>
+    <string name="str_audio_only">Audio Only</string>
+    <string name="str_export_as_an_mp3_audio_file">Export as an MP3 audio file</string>
+    <string name="str_export_format_set_to_audio_only">Export format set to Audio Only</string>
+    <string name="str_open_source_licenses">Open Source Licenses</string>
+    <string name="str_view_third_party_software_licenses">View third-party software licenses</string>
+    <string name="str_custom_directory">Custom Directory</string>
+    <string name="toast_failed_to_set_export_folder">Failed to set export folder</string>
 </resources>

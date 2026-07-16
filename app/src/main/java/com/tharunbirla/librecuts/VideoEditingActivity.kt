@@ -3592,7 +3592,7 @@ class VideoEditingActivity : AppCompatActivity() {
         layoutAudio.setBounceClickListener {
             viewModel.setExportQuality(com.tharunbirla.librecuts.viewmodels.ExportQuality.AUDIO_ONLY)
             updateSelection(com.tharunbirla.librecuts.viewmodels.ExportQuality.AUDIO_ONLY)
-            Toast.makeText(this, "Export format set to Audio Only", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.str_export_format_set_to_audio_only, Toast.LENGTH_SHORT).show()
             bottomSheetDialog.dismiss()
         }
 
