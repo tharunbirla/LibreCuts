@@ -3389,7 +3389,9 @@ class VideoEditingActivity : AppCompatActivity() {
                 viewModel.startExport()
 
                 val sourceFilePath = tempInputFile.absolutePath
-                tempOutputFile = File(cacheDir, "temp_video_${System.currentTimeMillis()}.mp4")
+                val isAudioOnly = viewModel.exportQuality.value == com.tharunbirla.librecuts.viewmodels.ExportQuality.AUDIO_ONLY
+                val ext = if (isAudioOnly) ".mp3" else ".mp4"
+                tempOutputFile = File(cacheDir, "temp_video_${System.currentTimeMillis()}$ext")
                 val tempOutputPath = tempOutputFile.absolutePath
 
                 // ── THE FIX: pass fontFilePath as the third argument ──────────────
@@ -3505,10 +3507,12 @@ class VideoEditingActivity : AppCompatActivity() {
         val layoutHigh = sheetView.findViewById<LinearLayout>(R.id.layoutQualityHigh)
         val layoutMedium = sheetView.findViewById<LinearLayout>(R.id.layoutQualityMedium)
         val layoutLow = sheetView.findViewById<LinearLayout>(R.id.layoutQualityLow)
+        val layoutAudio = sheetView.findViewById<LinearLayout>(R.id.layoutQualityAudio)
 
         val ivCheckHigh = sheetView.findViewById<ImageView>(R.id.ivCheckHigh)
         val ivCheckMedium = sheetView.findViewById<ImageView>(R.id.ivCheckMedium)
         val ivCheckLow = sheetView.findViewById<ImageView>(R.id.ivCheckLow)
+        val ivCheckAudio = sheetView.findViewById<ImageView>(R.id.ivCheckAudio)
 
         val btnClose = sheetView.findViewById<ImageButton>(R.id.btnCloseSheet)
 
@@ -3516,6 +3520,7 @@ class VideoEditingActivity : AppCompatActivity() {
             ivCheckHigh.visibility = if (selected == com.tharunbirla.librecuts.viewmodels.ExportQuality.HIGH) View.VISIBLE else View.GONE
             ivCheckMedium.visibility = if (selected == com.tharunbirla.librecuts.viewmodels.ExportQuality.MEDIUM) View.VISIBLE else View.GONE
             ivCheckLow.visibility = if (selected == com.tharunbirla.librecuts.viewmodels.ExportQuality.LOW) View.VISIBLE else View.GONE
+            ivCheckAudio.visibility = if (selected == com.tharunbirla.librecuts.viewmodels.ExportQuality.AUDIO_ONLY) View.VISIBLE else View.GONE
 
             layoutHigh.setBackgroundResource(
                 if (selected == com.tharunbirla.librecuts.viewmodels.ExportQuality.HIGH) R.drawable.bg_aspect_ratio_selected else R.drawable.bg_aspect_ratio_item
@@ -3525,6 +3530,9 @@ class VideoEditingActivity : AppCompatActivity() {
             )
             layoutLow.setBackgroundResource(
                 if (selected == com.tharunbirla.librecuts.viewmodels.ExportQuality.LOW) R.drawable.bg_aspect_ratio_selected else R.drawable.bg_aspect_ratio_item
+            )
+            layoutAudio.setBackgroundResource(
+                if (selected == com.tharunbirla.librecuts.viewmodels.ExportQuality.AUDIO_ONLY) R.drawable.bg_aspect_ratio_selected else R.drawable.bg_aspect_ratio_item
             )
         }
 
@@ -3550,6 +3558,13 @@ class VideoEditingActivity : AppCompatActivity() {
             viewModel.setExportQuality(com.tharunbirla.librecuts.viewmodels.ExportQuality.LOW)
             updateSelection(com.tharunbirla.librecuts.viewmodels.ExportQuality.LOW)
             Toast.makeText(this, R.string.toast_export_quality_set_to_low, Toast.LENGTH_SHORT).show()
+            bottomSheetDialog.dismiss()
+        }
+
+        layoutAudio.setBounceClickListener {
+            viewModel.setExportQuality(com.tharunbirla.librecuts.viewmodels.ExportQuality.AUDIO_ONLY)
+            updateSelection(com.tharunbirla.librecuts.viewmodels.ExportQuality.AUDIO_ONLY)
+            Toast.makeText(this, "Export format set to Audio Only", Toast.LENGTH_SHORT).show()
             bottomSheetDialog.dismiss()
         }
 
@@ -5346,6 +5361,11 @@ class VideoEditingActivity : AppCompatActivity() {
     }
 
     private fun saveVideoToGallery(videoFile: File): Uri? {
+        val isAudioOnly = videoFile.name.endsWith(".mp3")
+        val mimeType = if (isAudioOnly) "audio/mpeg" else "video/mp4"
+        val ext = if (isAudioOnly) ".mp3" else ".mp4"
+        val prefix = if (isAudioOnly) "LibreCuts_Audio_" else "LibreCuts_"
+        
         val sharedPreferences = getSharedPreferences("librecuts_prefs", Context.MODE_PRIVATE)
         val customUriString = sharedPreferences.getString("export_directory_uri", null)
         if (customUriString != null) {
@@ -5358,8 +5378,8 @@ class VideoEditingActivity : AppCompatActivity() {
                 val newFileUri = android.provider.DocumentsContract.createDocument(
                     contentResolver,
                     parentUri,
-                    "video/mp4",
-                    "LibreCuts_${System.currentTimeMillis()}.mp4"
+                    mimeType,
+                    "${prefix}${System.currentTimeMillis()}$ext"
                 )
                 if (newFileUri != null) {
                     contentResolver.openOutputStream(newFileUri)?.use { output ->
@@ -5375,11 +5395,16 @@ class VideoEditingActivity : AppCompatActivity() {
         // Fallback or Default to Movies/LibreCuts
         return try {
             val contentValues = android.content.ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, "LibreCuts_${System.currentTimeMillis()}.mp4")
-                put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4")
-                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_MOVIES + "/LibreCuts")
+                put(MediaStore.MediaColumns.DISPLAY_NAME, "${prefix}${System.currentTimeMillis()}$ext")
+                put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                if (isAudioOnly) {
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_MUSIC + "/LibreCuts")
+                } else {
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_MOVIES + "/LibreCuts")
+                }
             }
-            val uri = contentResolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, contentValues)
+            val collectionUri = if (isAudioOnly) MediaStore.Audio.Media.EXTERNAL_CONTENT_URI else MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            val uri = contentResolver.insert(collectionUri, contentValues)
             uri?.let {
                 contentResolver.openOutputStream(it)?.use { output ->
                     videoFile.inputStream().use { input -> input.copyTo(output) }

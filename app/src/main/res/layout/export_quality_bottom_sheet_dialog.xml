@@ -149,6 +149,7 @@
             android:id="@+id/layoutQualityLow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
             android:background="@drawable/bg_aspect_ratio_item"
             android:clickable="true"
             android:focusable="true"
@@ -190,6 +191,54 @@
                 app:tint="@color/colorPrimary"
                 android:visibility="gone" />
         </LinearLayout>
+
+        <!-- Audio Only Option -->
+        <LinearLayout
+            android:id="@+id/layoutQualityAudio"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_aspect_ratio_item"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvQualityAudioTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Audio Only"
+                    android:textColor="@color/textColor"
+                    android:textSize="16sp"
+                    android:fontFamily="sans-serif-medium" />
+
+                <TextView
+                    android:id="@+id/tvQualityAudioDesc"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Export as an MP3 audio file"
+                    android:textColor="@color/iconSecondary"
+                    android:textSize="12sp"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/ivCheckAudio"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_check_24"
+                app:tint="@color/colorPrimary"
+                android:visibility="gone" />
+        </LinearLayout>
+
 
         <!-- Export Directory Option -->
         <TextView

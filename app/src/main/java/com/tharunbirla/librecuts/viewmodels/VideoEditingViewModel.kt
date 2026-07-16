@@ -22,7 +22,8 @@ import java.io.InputStream
 enum class ExportQuality(val bitrate: String, val label: String) {
     HIGH("8M", "High Quality"),
     MEDIUM("4M", "Medium Quality"),
-    LOW("2M", "Low Quality")
+    LOW("2M", "Low Quality"),
+    AUDIO_ONLY("192k", "Audio Only (MP3)")
 }
 
 class VideoEditingViewModel : ViewModel() {
@@ -1527,16 +1528,30 @@ class VideoEditingViewModel : ViewModel() {
                 }
             }
 
-            cmd.append(" -filter_complex \"${filterParts.joinToString(";")}\"")
-            cmd.append(" -map \"$finalVideoLabel\"")
-            if (!audioMuted) {
-                cmd.append(" -map \"$currentAudioLabel\"")
-            } else {
-                cmd.append(" -an")
+            if (_exportQuality.value == ExportQuality.AUDIO_ONLY) {
+                filterParts.add("${finalVideoLabel}nullsink")
             }
-            cmd.append(" -c:v h264_mediacodec -b:v ${_exportQuality.value.bitrate}")
-            if (!audioMuted) {
-                cmd.append(" -c:a aac")
+            cmd.append(" -filter_complex \"${filterParts.joinToString(";")}\"")
+            
+            if (_exportQuality.value == ExportQuality.AUDIO_ONLY) {
+                if (!audioMuted) {
+                    cmd.append(" -map \"$currentAudioLabel\"")
+                    // LibreCuts ffmpeg might have libmp3lame, fallback to libmp3lame or default mp3 encoder
+                    cmd.append(" -c:a libmp3lame -b:a 192k")
+                } else {
+                    cmd.append(" -an")
+                }
+            } else {
+                cmd.append(" -map \"$finalVideoLabel\"")
+                if (!audioMuted) {
+                    cmd.append(" -map \"$currentAudioLabel\"")
+                } else {
+                    cmd.append(" -an")
+                }
+                cmd.append(" -c:v h264_mediacodec -b:v ${_exportQuality.value.bitrate}")
+                if (!audioMuted) {
+                    cmd.append(" -c:a aac")
+                }
             }
 
             if (outputDuration != null) {
@@ -1706,12 +1721,19 @@ class VideoEditingViewModel : ViewModel() {
                 filterComplexParts.add("${finalVideoLabel}format=yuv420p${fmtLabel}")
                 mappedVideoLabel = fmtLabel
             }
+            
+            if (_exportQuality.value == ExportQuality.AUDIO_ONLY && hasVideoFilters) {
+                filterComplexParts.add("${mappedVideoLabel}nullsink")
+            }
+            
             cmd.append(" -filter_complex \"${filterComplexParts.joinToString(";")}\"")
 
-            if (hasVideoFilters) {
-                cmd.append(" -map \"$mappedVideoLabel\"")
-            } else {
-                cmd.append(" -map 0:v")
+            if (_exportQuality.value != ExportQuality.AUDIO_ONLY) {
+                if (hasVideoFilters) {
+                    cmd.append(" -map \"$mappedVideoLabel\"")
+                } else {
+                    cmd.append(" -map 0:v")
+                }
             }
 
             if (effectiveAudioMuted) {
@@ -1721,14 +1743,28 @@ class VideoEditingViewModel : ViewModel() {
             } else {
                 cmd.append(" -map 0:a?")
             }
-        } else if (effectiveAudioMuted) {
-            cmd.append(" -an")
+        } else {
+            if (_exportQuality.value == ExportQuality.AUDIO_ONLY) {
+                cmd.append(" -vn")
+                if (!effectiveAudioMuted) {
+                    cmd.append(" -map 0:a?")
+                }
+            }
+            if (effectiveAudioMuted) {
+                cmd.append(" -an")
+            }
         }
 
         // Codecs
-        cmd.append(" -c:v h264_mediacodec -b:v ${_exportQuality.value.bitrate}")
-        if (!effectiveAudioMuted) {
-            cmd.append(" -c:a aac")
+        if (_exportQuality.value == ExportQuality.AUDIO_ONLY) {
+            if (!effectiveAudioMuted) {
+                cmd.append(" -c:a libmp3lame -b:a 192k")
+            }
+        } else {
+            cmd.append(" -c:v h264_mediacodec -b:v ${_exportQuality.value.bitrate}")
+            if (!effectiveAudioMuted) {
+                cmd.append(" -c:a aac")
+            }
         }
 
         if (outputDuration != null) {
