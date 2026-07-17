@@ -168,4 +168,12 @@
     <string name="toast_export_quality_set_to_medium">Mittlere Exportqualität gewählt</string>
     <string name="toast_export_quality_set_to_low">Niedrige Exportqualität gewählt</string>
     <string name="toast_log_copied">Protokoll kopiert</string>
+    <string name="str_subtitles_srt">Untertitel (.srt)</string>
+    <string name="str_v1_0_beta4">v1.0-beta4</string>
+    <string name="str_version_1_0">Version 1.0</string>
+    <string name="str_video_export_folder">Video Exportverzeichnis</string>
+    <string name="str_audio_export_folder">Audio Exportordner</string>
+    <string name="str_snapshot_export_folder">Schnappschuss Exportordner</string>
+    <string name="str_default_music_librecuts">Standard (Music/LibreCuts)</string>
+    <string name="str_default_pictures_librecuts">Standard (Pictures/LibreCuts)</string>
 </resources>
