@@ -27,4 +27,7 @@
     <string name="please_wait">Palun oota, sinu video on töötlemisel.</string>
     <string name="select_aspect_ratio">Vali kuvasuhe</string>
     <string name="str_export_settings">Ekspordi seadistused</string>
+    <string name="str_loop">Korda</string>
+    <string name="split">Poolita</string>
+    <string name="loading_tag">Kinnita turvavöö! Sinu video laeb</string>
 </resources>
