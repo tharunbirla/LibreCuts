@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="str_loop">Loop</string>
     <string name="app_name">LibreCuts</string>
@@ -11,7 +12,7 @@
     <string name="delete">Delete</string>
     <string name="trim_video">Trim video</string>
     <string name="save_video">Save the video to device</string>
-    <string name="add_overly">Add overly to video</string>
+    <string name="add_overly">Add overlay to video</string>
     <string name="add_text">Add text to the video</string>
     <string name="add_audio">Add audio to the music</string>
     <string name="crop_video">Crop the video</string>
@@ -60,7 +61,7 @@
     <string name="str_edit_text">Edit Text</string>
     <string name="str_enter_text_here">Enter text here</string>
     <string name="str_font_size">Font size</string>
-    <string name="str_saving_video">Saving video...</string>
+    <string name="str_saving_video">Saving video…</string>
     <string name="str_please_don_t_close_the_app">Please don\'t close the app</string>
     <string name="str_0">0%</string>
     <string name="str_color_filters">Color Filters</string>
@@ -134,7 +135,7 @@
     <string name="toast_snapping_disabled">Snapping disabled</string>
     <string name="toast_log_copied_to_clipboard">Log copied to clipboard</string>
     <string name="toast_beats_cleared">Beats cleared</string>
-    <string name="toast_analyzing_beats">Analyzing beats...</string>
+    <string name="toast_analyzing_beats">Analyzing beats…</string>
     <string name="toast_no_clear_beats_found">No clear beats found.</string>
     <string name="toast_drag_the_handles_on_the_timeli">Drag the handles on the timeline\'s main video track to trim.</string>
     <string name="toast_failed_to_start_recording">Failed to start recording</string>
