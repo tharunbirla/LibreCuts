@@ -390,7 +390,7 @@ class VideoEditingActivity : AppCompatActivity() {
         customVideoSeeker = findViewById(R.id.customVideoSeeker)
         timeRulerView = findViewById(R.id.timeRulerView)
         loadingScreen = findViewById(R.id.loadingScreen)
-        loadingScreen.visibility = View.VISIBLE
+        showLoading(getString(R.string.loading), getString(R.string.loading_tag))
         isImportLoading = true
         exportScreen = findViewById(R.id.exportScreen)
         exportScreen.findViewById<View>(R.id.btnCancelExport)?.setBounceClickListener {
@@ -1277,9 +1277,9 @@ class VideoEditingActivity : AppCompatActivity() {
                 } else {
                     val emptyStateVisible = findViewById<View>(R.id.emptyProjectState)?.visibility == View.VISIBLE
                     if (isImportLoading || (!isVideoLoaded && !emptyStateVisible)) {
-                        loadingScreen.visibility = View.VISIBLE
+                        showLoading(getString(R.string.loading), getString(R.string.loading_tag))
                     } else {
-                        loadingScreen.visibility = View.GONE
+                        hideLoading()
                     }
                 }
 
@@ -2722,9 +2722,16 @@ class VideoEditingActivity : AppCompatActivity() {
         }
     }
 
-    private fun showLoading(message: String) {
+    private fun showLoading(message: String, subtitle: String? = null) {
         val tvLoadingTitle = loadingScreen.findViewById<TextView>(R.id.tvLoadingTitle)
+        val tvLoadingSubtitle = loadingScreen.findViewById<TextView>(R.id.tvLoadingSubtitle)
         tvLoadingTitle?.text = message
+        if (subtitle != null) {
+            tvLoadingSubtitle?.text = subtitle
+            tvLoadingSubtitle?.visibility = View.VISIBLE
+        } else {
+            tvLoadingSubtitle?.visibility = View.GONE
+        }
         loadingScreen.visibility = View.VISIBLE
     }
 
@@ -3209,7 +3216,7 @@ class VideoEditingActivity : AppCompatActivity() {
                 findViewById<View>(R.id.btnTimelineAdd)?.visibility = View.VISIBLE
                 findViewById<View>(R.id.customVideoSeeker)?.visibility = View.VISIBLE
                 
-                loadingScreen.visibility = View.VISIBLE
+                showLoading(getString(R.string.loading), getString(R.string.loading_tag))
                 isImportLoading = true
                 isVideoLoaded = false
                 videoUri = uri
@@ -5343,7 +5350,7 @@ class VideoEditingActivity : AppCompatActivity() {
 
         activeExtractionCount++
         if (isImportLoading) {
-            loadingScreen.visibility = View.VISIBLE
+            showLoading(getString(R.string.loading), getString(R.string.loading_tag))
         }
 
         return lifecycleScope.launch(Dispatchers.IO) {
