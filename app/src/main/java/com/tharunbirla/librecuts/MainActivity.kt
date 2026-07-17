@@ -52,7 +52,43 @@ class MainActivity : AppCompatActivity() {
 
                     val prefs = getSharedPreferences("librecuts_prefs", MODE_PRIVATE)
                     prefs.edit().putString("export_directory_uri", uri.toString()).apply()
-                    updateExportFolderUI(uri)
+                    updateExportFolderUI(uri, binding.tvCurrentExportFolder, R.string.str_default_movies_librecuts)
+                } catch (e: Exception) {
+                    Log.e("FolderSelectionError", "Error securing permission for URI", e)
+                    showToast(getString(R.string.toast_failed_to_set_export_folder))
+                }
+            }
+        }
+
+    private val selectAudioFolderLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
+            if (uri != null) {
+                try {
+                    val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                            Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    contentResolver.takePersistableUriPermission(uri, takeFlags)
+
+                    val prefs = getSharedPreferences("librecuts_prefs", MODE_PRIVATE)
+                    prefs.edit().putString("export_audio_directory_uri", uri.toString()).apply()
+                    updateExportFolderUI(uri, binding.tvCurrentAudioExportFolder, R.string.str_default_music_librecuts)
+                } catch (e: Exception) {
+                    Log.e("FolderSelectionError", "Error securing permission for URI", e)
+                    showToast(getString(R.string.toast_failed_to_set_export_folder))
+                }
+            }
+        }
+
+    private val selectSnapshotFolderLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
+            if (uri != null) {
+                try {
+                    val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                            Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    contentResolver.takePersistableUriPermission(uri, takeFlags)
+
+                    val prefs = getSharedPreferences("librecuts_prefs", MODE_PRIVATE)
+                    prefs.edit().putString("export_snapshot_directory_uri", uri.toString()).apply()
+                    updateExportFolderUI(uri, binding.tvCurrentSnapshotExportFolder, R.string.str_default_pictures_librecuts)
                 } catch (e: Exception) {
                     Log.e("FolderSelectionError", "Error securing permission for URI", e)
                     showToast(getString(R.string.toast_failed_to_set_export_folder))
@@ -97,6 +133,12 @@ class MainActivity : AppCompatActivity() {
         binding.btnChangeExportFolder.setBounceClickListener {
             selectFolderLauncher.launch(null)
         }
+        binding.btnChangeAudioExportFolder.setBounceClickListener {
+            selectAudioFolderLauncher.launch(null)
+        }
+        binding.btnChangeSnapshotExportFolder.setBounceClickListener {
+            selectSnapshotFolderLauncher.launch(null)
+        }
         
         binding.btnCheckForUpdates.setBounceClickListener {
             checkForUpdates()
@@ -113,9 +155,23 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("librecuts_prefs", MODE_PRIVATE)
         val savedUriString = prefs.getString("export_directory_uri", null)
         if (savedUriString != null) {
-            updateExportFolderUI(Uri.parse(savedUriString))
+            updateExportFolderUI(Uri.parse(savedUriString), binding.tvCurrentExportFolder, R.string.str_default_movies_librecuts)
         } else {
-            updateExportFolderUI(null)
+            updateExportFolderUI(null, binding.tvCurrentExportFolder, R.string.str_default_movies_librecuts)
+        }
+
+        val savedAudioUriString = prefs.getString("export_audio_directory_uri", null)
+        if (savedAudioUriString != null) {
+            updateExportFolderUI(Uri.parse(savedAudioUriString), binding.tvCurrentAudioExportFolder, R.string.str_default_music_librecuts)
+        } else {
+            updateExportFolderUI(null, binding.tvCurrentAudioExportFolder, R.string.str_default_music_librecuts)
+        }
+
+        val savedSnapshotUriString = prefs.getString("export_snapshot_directory_uri", null)
+        if (savedSnapshotUriString != null) {
+            updateExportFolderUI(Uri.parse(savedSnapshotUriString), binding.tvCurrentSnapshotExportFolder, R.string.str_default_pictures_librecuts)
+        } else {
+            updateExportFolderUI(null, binding.tvCurrentSnapshotExportFolder, R.string.str_default_pictures_librecuts)
         }
 
         // Setup GitHub button listeners
@@ -140,19 +196,19 @@ class MainActivity : AppCompatActivity() {
         handleIntent(intent)
     }
 
-    private fun updateExportFolderUI(uri: Uri?) {
+    private fun updateExportFolderUI(uri: Uri?, textView: TextView, defaultStringResId: Int) {
         if (uri == null) {
-            binding.tvCurrentExportFolder.text = getString(R.string.str_default_movies_librecuts)
+            textView.text = getString(defaultStringResId)
         } else {
             try {
                 val path = uri.lastPathSegment?.split(":")?.lastOrNull()
                 if (!path.isNullOrEmpty()) {
-                    binding.tvCurrentExportFolder.text = path
+                    textView.text = path
                 } else {
-                    binding.tvCurrentExportFolder.text = getString(R.string.str_custom_directory)
+                    textView.text = getString(R.string.str_custom_directory)
                 }
             } catch (e: Exception) {
-                binding.tvCurrentExportFolder.text = getString(R.string.str_custom_directory)
+                textView.text = getString(R.string.str_custom_directory)
             }
         }
     }

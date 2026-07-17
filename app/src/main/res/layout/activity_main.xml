@@ -118,7 +118,7 @@
                     android:textSize="18sp"
                     android:layout_marginBottom="16dp" />
 
-                <!-- Export Folder Setting -->
+                <!-- Video Export Folder Setting -->
                 <LinearLayout
                     android:id="@+id/btnChangeExportFolder"
                     android:layout_width="match_parent"
@@ -132,7 +132,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/str_export_folder"
+                        android:text="@string/str_video_export_folder"
                         android:textColor="@color/textColor"
                         android:textSize="16sp"
                         android:textStyle="bold" />
@@ -143,6 +143,76 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
                         android:text="@string/str_default_movies_librecuts"
+                        android:textColor="@color/iconSecondary"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/outline"
+                    android:layout_marginVertical="4dp" />
+
+                <!-- Audio Export Folder Setting -->
+                <LinearLayout
+                    android:id="@+id/btnChangeAudioExportFolder"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingVertical="12dp">
+                    
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/str_audio_export_folder"
+                        android:textColor="@color/textColor"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                    
+                    <TextView
+                        android:id="@+id/tvCurrentAudioExportFolder"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/str_default_music_librecuts"
+                        android:textColor="@color/iconSecondary"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/outline"
+                    android:layout_marginVertical="4dp" />
+
+                <!-- Snapshot Export Folder Setting -->
+                <LinearLayout
+                    android:id="@+id/btnChangeSnapshotExportFolder"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingVertical="12dp">
+                    
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/str_snapshot_export_folder"
+                        android:textColor="@color/textColor"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                    
+                    <TextView
+                        android:id="@+id/tvCurrentSnapshotExportFolder"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/str_default_pictures_librecuts"
                         android:textColor="@color/iconSecondary"
                         android:textSize="13sp" />
                 </LinearLayout>

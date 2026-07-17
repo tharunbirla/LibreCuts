@@ -135,6 +135,13 @@ class FFmpegRenderEngine(private val context: Context) {
                     val failLog = session.getFailStackTrace()
                         ?: session.getAllLogsAsString().takeIf { it.isNotBlank() }
                         ?: "FFmpeg exited with code ${returnCode?.getValue()} (check logcat tag '$TAG' for [ffmpeg] lines)"
+                        
+                    if (command.contains("h264_mediacodec")) {
+                        Log.w(TAG, "Hardware encoder h264_mediacodec failed. Falling back to software encoder libx264. Error: $failLog")
+                        val fallbackCommand = command.replace("h264_mediacodec", "libx264")
+                        return@withContext executeCommand(fallbackCommand)
+                    }
+
                     Log.e(TAG, "FFmpeg error: $failLog")
                     RenderResult.Failure(error = failLog, session = session)
                 }
@@ -265,6 +272,13 @@ class FFmpegRenderEngine(private val context: Context) {
                     val failLog = session.getFailStackTrace()
                         ?: session.getAllLogsAsString().takeIf { it.isNotBlank() }
                         ?: "FFmpeg exited with code ${returnCode?.getValue()} (see logcat tag '$TAG' for [ffmpeg] lines)"
+                        
+                    if (ffmpegCommand.contains("h264_mediacodec")) {
+                        Log.w(TAG, "Hardware encoder h264_mediacodec failed. Falling back to software encoder libx264. Error: $failLog")
+                        val fallbackCommand = ffmpegCommand.replace("h264_mediacodec", "libx264")
+                        return@withContext exportFinal(fallbackCommand, totalDurationSecs, onProgress)
+                    }
+
                     Log.e(TAG, "FFmpeg error: $failLog")
                     RenderResult.Failure(error = failLog, session = session)
                 }
@@ -342,7 +356,7 @@ class FFmpegRenderEngine(private val context: Context) {
     ): RenderResult {
         val startSecs = startMs / 1000.0
         val durationSecs = (endMs - startMs) / 1000.0
-        val command = "-y -ss $startSecs -i \"$sourceFilePath\" -to $durationSecs -filter:v \"reverse,format=yuv420p\" -filter:a \"areverse\" -c:v h264_mediacodec -c:a aac \"$outputFilePath\""
+        val command = "-y -ss $startSecs -i \"$sourceFilePath\" -to $durationSecs -filter:v \"reverse,format=yuv420p\" -filter:a \"areverse\" -c:v libx264 -c:a aac \"$outputFilePath\""
         return executeCommand(command)
     }
 

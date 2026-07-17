@@ -171,4 +171,9 @@
     <string name="str_view_third_party_software_licenses">View third-party software licenses</string>
     <string name="str_custom_directory">Custom Directory</string>
     <string name="toast_failed_to_set_export_folder">Failed to set export folder</string>
+    <string name="str_video_export_folder">Video Export Folder</string>
+    <string name="str_audio_export_folder">Audio Export Folder</string>
+    <string name="str_snapshot_export_folder">Snapshot Export Folder</string>
+    <string name="str_default_music_librecuts">Default (Music/LibreCuts)</string>
+    <string name="str_default_pictures_librecuts">Default (Pictures/LibreCuts)</string>
 </resources>

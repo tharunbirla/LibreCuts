@@ -1687,22 +1687,46 @@ class VideoEditingActivity : AppCompatActivity() {
         var fos: java.io.OutputStream? = null
         var imageUri: Uri? = null
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val resolver = contentResolver
-                val contentValues = android.content.ContentValues().apply {
-                    put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, filename)
-                    put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "image/png")
-                    put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_PICTURES + "/LibreCuts")
+            val sharedPreferences = getSharedPreferences("librecuts_prefs", Context.MODE_PRIVATE)
+            val customUriString = sharedPreferences.getString("export_snapshot_directory_uri", null)
+            
+            if (customUriString != null) {
+                try {
+                    val treeUri = Uri.parse(customUriString)
+                    val parentUri = android.provider.DocumentsContract.buildDocumentUriUsingTree(
+                        treeUri,
+                        android.provider.DocumentsContract.getTreeDocumentId(treeUri)
+                    )
+                    imageUri = android.provider.DocumentsContract.createDocument(
+                        contentResolver,
+                        parentUri,
+                        "image/png",
+                        filename
+                    )
+                    fos = imageUri?.let { contentResolver.openOutputStream(it) }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error saving snapshot to custom directory: ${e.message}, falling back to default", e)
                 }
-                imageUri = resolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-                fos = imageUri?.let { resolver.openOutputStream(it) }
-            } else {
-                val imagesDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_PICTURES)
-                val directory = java.io.File(imagesDir, "LibreCuts")
-                if (!directory.exists()) directory.mkdirs()
-                val image = java.io.File(directory, filename)
-                fos = java.io.FileOutputStream(image)
-                imageUri = Uri.fromFile(image)
+            }
+            
+            if (fos == null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val resolver = contentResolver
+                    val contentValues = android.content.ContentValues().apply {
+                        put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                        put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "image/png")
+                        put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_PICTURES + "/LibreCuts")
+                    }
+                    imageUri = resolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                    fos = imageUri?.let { resolver.openOutputStream(it) }
+                } else {
+                    val imagesDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_PICTURES)
+                    val directory = java.io.File(imagesDir, "LibreCuts")
+                    if (!directory.exists()) directory.mkdirs()
+                    val image = java.io.File(directory, filename)
+                    fos = java.io.FileOutputStream(image)
+                    imageUri = Uri.fromFile(image)
+                }
             }
             
             fos?.use {
@@ -3361,7 +3385,9 @@ class VideoEditingActivity : AppCompatActivity() {
                     contentResolver.takePersistableUriPermission(treeUri, takeFlags)
 
                     val sharedPreferences = getSharedPreferences("librecuts_prefs", Context.MODE_PRIVATE)
-                    sharedPreferences.edit().putString("export_directory_uri", treeUri.toString()).apply()
+                    val isAudioOnly = viewModel.exportQuality.value == com.tharunbirla.librecuts.viewmodels.ExportQuality.AUDIO_ONLY
+                    val prefKey = if (isAudioOnly) "export_audio_directory_uri" else "export_directory_uri"
+                    sharedPreferences.edit().putString(prefKey, treeUri.toString()).apply()
 
                     val activeTitle = activeDirectoryTitleView
                     val activePath = activeDirectoryPathView
@@ -3568,38 +3594,6 @@ class VideoEditingActivity : AppCompatActivity() {
         val currentQuality = viewModel.exportQuality.value
         updateSelection(currentQuality)
 
-        layoutHigh.setBounceClickListener {
-            viewModel.setExportQuality(com.tharunbirla.librecuts.viewmodels.ExportQuality.HIGH)
-            updateSelection(com.tharunbirla.librecuts.viewmodels.ExportQuality.HIGH)
-            Toast.makeText(this, R.string.toast_export_quality_set_to_high, Toast.LENGTH_SHORT).show()
-            bottomSheetDialog.dismiss()
-        }
-
-        layoutMedium.setBounceClickListener {
-            viewModel.setExportQuality(com.tharunbirla.librecuts.viewmodels.ExportQuality.MEDIUM)
-            updateSelection(com.tharunbirla.librecuts.viewmodels.ExportQuality.MEDIUM)
-            Toast.makeText(this, R.string.toast_export_quality_set_to_medium, Toast.LENGTH_SHORT).show()
-            bottomSheetDialog.dismiss()
-        }
-
-        layoutLow.setBounceClickListener {
-            viewModel.setExportQuality(com.tharunbirla.librecuts.viewmodels.ExportQuality.LOW)
-            updateSelection(com.tharunbirla.librecuts.viewmodels.ExportQuality.LOW)
-            Toast.makeText(this, R.string.toast_export_quality_set_to_low, Toast.LENGTH_SHORT).show()
-            bottomSheetDialog.dismiss()
-        }
-
-        layoutAudio.setBounceClickListener {
-            viewModel.setExportQuality(com.tharunbirla.librecuts.viewmodels.ExportQuality.AUDIO_ONLY)
-            updateSelection(com.tharunbirla.librecuts.viewmodels.ExportQuality.AUDIO_ONLY)
-            Toast.makeText(this, R.string.str_export_format_set_to_audio_only, Toast.LENGTH_SHORT).show()
-            bottomSheetDialog.dismiss()
-        }
-
-        btnClose.setBounceClickListener {
-            bottomSheetDialog.dismiss()
-        }
-
         val layoutExportDirectory = sheetView.findViewById<LinearLayout>(R.id.layoutExportDirectory)
         val tvExportDirectoryTitle = sheetView.findViewById<TextView>(R.id.tvExportDirectoryTitle)
         val tvExportDirectoryPath = sheetView.findViewById<TextView>(R.id.tvExportDirectoryPath)
@@ -3607,6 +3601,42 @@ class VideoEditingActivity : AppCompatActivity() {
         activeDirectoryTitleView = tvExportDirectoryTitle
         activeDirectoryPathView = tvExportDirectoryPath
         updateExportDirectoryUi(tvExportDirectoryTitle, tvExportDirectoryPath)
+
+        layoutHigh.setBounceClickListener {
+            viewModel.setExportQuality(com.tharunbirla.librecuts.viewmodels.ExportQuality.HIGH)
+            updateSelection(com.tharunbirla.librecuts.viewmodels.ExportQuality.HIGH)
+            updateExportDirectoryUi(tvExportDirectoryTitle, tvExportDirectoryPath)
+            Toast.makeText(this, R.string.toast_export_quality_set_to_high, Toast.LENGTH_SHORT).show()
+            bottomSheetDialog.dismiss()
+        }
+
+        layoutMedium.setBounceClickListener {
+            viewModel.setExportQuality(com.tharunbirla.librecuts.viewmodels.ExportQuality.MEDIUM)
+            updateSelection(com.tharunbirla.librecuts.viewmodels.ExportQuality.MEDIUM)
+            updateExportDirectoryUi(tvExportDirectoryTitle, tvExportDirectoryPath)
+            Toast.makeText(this, R.string.toast_export_quality_set_to_medium, Toast.LENGTH_SHORT).show()
+            bottomSheetDialog.dismiss()
+        }
+
+        layoutLow.setBounceClickListener {
+            viewModel.setExportQuality(com.tharunbirla.librecuts.viewmodels.ExportQuality.LOW)
+            updateSelection(com.tharunbirla.librecuts.viewmodels.ExportQuality.LOW)
+            updateExportDirectoryUi(tvExportDirectoryTitle, tvExportDirectoryPath)
+            Toast.makeText(this, R.string.toast_export_quality_set_to_low, Toast.LENGTH_SHORT).show()
+            bottomSheetDialog.dismiss()
+        }
+
+        layoutAudio.setBounceClickListener {
+            viewModel.setExportQuality(com.tharunbirla.librecuts.viewmodels.ExportQuality.AUDIO_ONLY)
+            updateSelection(com.tharunbirla.librecuts.viewmodels.ExportQuality.AUDIO_ONLY)
+            updateExportDirectoryUi(tvExportDirectoryTitle, tvExportDirectoryPath)
+            Toast.makeText(this, R.string.str_export_format_set_to_audio_only, Toast.LENGTH_SHORT).show()
+            bottomSheetDialog.dismiss()
+        }
+
+        btnClose.setBounceClickListener {
+            bottomSheetDialog.dismiss()
+        }
 
         layoutExportDirectory.setBounceClickListener {
             val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
@@ -3631,10 +3661,16 @@ class VideoEditingActivity : AppCompatActivity() {
                 
                 withContext(kotlinx.coroutines.Dispatchers.IO) {
                     val sharedPreferences = getSharedPreferences("librecuts_prefs", Context.MODE_PRIVATE)
-                    val customUriString = sharedPreferences.getString("export_directory_uri", null)
+                    val isAudioOnly = viewModel.exportQuality.value == com.tharunbirla.librecuts.viewmodels.ExportQuality.AUDIO_ONLY
+                    val prefKey = if (isAudioOnly) "export_audio_directory_uri" else "export_directory_uri"
+                    val customUriString = sharedPreferences.getString(prefKey, null)
                     val sourceFile = File(tempInputFile.absolutePath)
                     val totalSize = sourceFile.length()
                     
+                    val mimeType = if (isAudioOnly) "audio/mpeg" else "video/mp4"
+                    val ext = if (isAudioOnly) ".mp3" else ".mp4"
+                    val prefix = if (isAudioOnly) "LibreCuts_Audio_" else "LibreCuts_"
+
                     if (customUriString != null) {
                         try {
                             val treeUri = Uri.parse(customUriString)
@@ -3645,8 +3681,8 @@ class VideoEditingActivity : AppCompatActivity() {
                             customFileUri = android.provider.DocumentsContract.createDocument(
                                 contentResolver,
                                 parentUri,
-                                "video/mp4",
-                                "LibreCuts_${System.currentTimeMillis()}.mp4"
+                                mimeType,
+                                "${prefix}${System.currentTimeMillis()}$ext"
                             )
                         } catch (e: Exception) {
                             Log.e(TAG, "Failed to create SAF file: ${e.message}, falling back to default", e)
@@ -3656,10 +3692,11 @@ class VideoEditingActivity : AppCompatActivity() {
                     val outputStream = if (customFileUri != null) {
                         contentResolver.openOutputStream(customFileUri!!)
                     } else {
-                        // Default fallback: Create Downloads/LibreCuts directory
-                        val outputDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LibreCuts")
+                        // Default fallback
+                        val defaultDir = if (isAudioOnly) Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC) else Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                        val outputDir = File(defaultDir, "LibreCuts")
                         if (!outputDir.exists()) outputDir.mkdirs()
-                        val file = File(outputDir, "video_${System.currentTimeMillis()}.mp4")
+                        val file = File(outputDir, "${prefix}${System.currentTimeMillis()}$ext")
                         outputFile = file
                         java.io.FileOutputStream(file)
                     }
@@ -3751,7 +3788,10 @@ class VideoEditingActivity : AppCompatActivity() {
 
     private fun updateExportDirectoryUi(titleView: TextView, pathView: TextView) {
         val sharedPreferences = getSharedPreferences("librecuts_prefs", Context.MODE_PRIVATE)
-        val customUriString = sharedPreferences.getString("export_directory_uri", null)
+        val isAudioOnly = viewModel.exportQuality.value == com.tharunbirla.librecuts.viewmodels.ExportQuality.AUDIO_ONLY
+        val prefKey = if (isAudioOnly) "export_audio_directory_uri" else "export_directory_uri"
+        val customUriString = sharedPreferences.getString(prefKey, null)
+        
         if (customUriString != null) {
             val customUri = Uri.parse(customUriString)
             val displayName = getDocumentFolderName(customUri) ?: "Custom Folder"
@@ -3759,7 +3799,7 @@ class VideoEditingActivity : AppCompatActivity() {
             pathView.text = customUri.path ?: customUriString
         } else {
             titleView.text = "LibreCuts (Default)"
-            pathView.text = "Movies/LibreCuts"
+            pathView.text = if (isAudioOnly) "Music/LibreCuts" else "Movies/LibreCuts"
         }
     }
 
@@ -5395,7 +5435,8 @@ class VideoEditingActivity : AppCompatActivity() {
         val prefix = if (isAudioOnly) "LibreCuts_Audio_" else "LibreCuts_"
         
         val sharedPreferences = getSharedPreferences("librecuts_prefs", Context.MODE_PRIVATE)
-        val customUriString = sharedPreferences.getString("export_directory_uri", null)
+        val prefKey = if (isAudioOnly) "export_audio_directory_uri" else "export_directory_uri"
+        val customUriString = sharedPreferences.getString(prefKey, null)
         if (customUriString != null) {
             try {
                 val treeUri = Uri.parse(customUriString)
