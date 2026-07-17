@@ -1,3 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="add_video">Lisa video</string>
+    <string name="create_engaging_videos">Vaba. Avatud lähtekoodiga. Piirideta loovus!</string>
+    <string name="home">Avaleht</string>
+    <string name="export">Ekspordi</string>
+    <string name="delete">Kustuta</string>
+    <string name="save_video">Salvesta video seadmesse</string>
+    <string name="add_overly">Lisa videole ülekate</string>
+    <string name="add_text">Lisa videole tekst</string>
+    <string name="add_audio">Lisa heliribale muusika</string>
+    <string name="crop_video">Kadreeri videot</string>
+    <string name="merge_video">Lisa veel üks video või pilt</string>
+    <string name="loading">Impordin videot…</string>
+    <string name="default_time_stamp">00:00 / 00:00</string>
+    <string name="trim_your_video">Lõika oma videot</string>
+    <string name="cancel">Katkesta</string>
+    <string name="trim_video">Lõika videot</string>
+    <string name="trim">Lõika/kärbi</string>
+    <string name="str_trim_video">Lõika videot</string>
+    <string name="str_trim_audio">Lõika heliriba</string>
+    <string name="app_name">LibreCuts</string>
+    <string name="effects">Efektid</string>
+    <string name="keep_right_portion">Eemalda vasakult</string>
+    <string name="keep_left_portion">Eemalda paremalt</string>
+    <string name="done">Valmis</string>
+    <string name="please_wait">Palun oota, sinu video on töötlemisel.</string>
+    <string name="select_aspect_ratio">Vali kuvasuhe</string>
+    <string name="str_export_settings">Ekspordi seadistused</string>
+    <string name="str_loop">Korda</string>
+    <string name="split">Poolita</string>
+    <string name="loading_tag">Kinnita turvavöö! Sinu video laeb</string>
 </resources>
