@@ -5,6 +5,10 @@ plugins {
 
 apply plugin: 'com.mikepenz.aboutlibraries.plugin'
 
+aboutLibraries {
+    excludeFields = ["generated"]
+}
+
 android {
     namespace 'com.tharunbirla.librecuts'
     compileSdk 34
