@@ -1,0 +1,12 @@
+<ul>
+  <li>Added in-app language selection.</li>
+  <li>Added audio-only MP3 export functionality.</li>
+  <li>Added video snapshot capture feature.</li>
+  <li>Added custom speed slider for granular video speed control.</li>
+  <li>Added loop functionality for GIF and video overlays.</li>
+  <li>Implemented FFmpeg hardware fallback to software encoding to fix export crashes.</li>
+  <li>Removed Jetpack Compose dependencies for a leaner view-based app.</li>
+  <li>Fixed memory leaks and improved loading state management.</li>
+  <li>Added confirmation dialogs before deletions to prevent accidental data loss.</li>
+  <li>Updated multiple translations (German, Estonian).</li>
+</ul>

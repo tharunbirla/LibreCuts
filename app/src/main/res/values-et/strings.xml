@@ -108,7 +108,7 @@
     <string name="str_default_movies_librecuts">Vaikimisi (Movies/LibreCuts)</string>
     <string name="str_check_for_updates">Otsi värskendusi</string>
     <string name="str_manually_check_for_the_latest">Otsi uusimat versiooni käsitsi</string>
-    <string name="str_v1_0_beta4">v1.0-beta4</string>
+    <string name="str_v1_0_beta4">v1.0-beta5</string>
     <string name="str_a_privacy_friendly_open_source">Privaatsussõbralik ja avatud lähtekoodiga videotöötlusrakendus Androidile.\nEkspordi vesimärgita videoid otse oma seadmesse.</string>
     <string name="str_support_amp_feedback">Tugi ja tagasiside</string>
     <string name="str_librecuts_is_open_source_help">LibreCuts on avatud lähtekoodiga. Aita meil rakendust täiustada, lisades projektile GitHubis tärni või teavitades vigadest.</string>
