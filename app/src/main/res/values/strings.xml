@@ -176,4 +176,6 @@
     <string name="str_snapshot_export_folder">Snapshot Export Folder</string>
     <string name="str_default_music_librecuts">Default (Music/LibreCuts)</string>
     <string name="str_default_pictures_librecuts">Default (Pictures/LibreCuts)</string>
+    <string name="str_app_language">App Language</string>
+    <string name="str_system_default">System Default</string>
 </resources>

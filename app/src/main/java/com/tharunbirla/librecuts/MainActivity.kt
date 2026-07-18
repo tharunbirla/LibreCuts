@@ -17,6 +17,8 @@ import androidx.core.content.ContextCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.os.Parcelable
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.tharunbirla.librecuts.databinding.ActivityMainBinding
 import com.tharunbirla.librecuts.utils.ErrorCode
@@ -139,6 +141,9 @@ class MainActivity : AppCompatActivity() {
         binding.btnChangeSnapshotExportFolder.setBounceClickListener {
             selectSnapshotFolderLauncher.launch(null)
         }
+        binding.btnChangeLanguage.setBounceClickListener {
+            showLanguageDialog()
+        }
         
         binding.btnCheckForUpdates.setBounceClickListener {
             checkForUpdates()
@@ -173,6 +178,8 @@ class MainActivity : AppCompatActivity() {
         } else {
             updateExportFolderUI(null, binding.tvCurrentSnapshotExportFolder, R.string.str_default_pictures_librecuts)
         }
+
+        updateLanguageUI()
 
         // Setup GitHub button listeners
         binding.btnStarGithub.setBounceClickListener {
@@ -211,6 +218,73 @@ class MainActivity : AppCompatActivity() {
                 textView.text = getString(R.string.str_custom_directory)
             }
         }
+    }
+
+    private fun updateLanguageUI() {
+        val currentLocales = AppCompatDelegate.getApplicationLocales()
+        if (currentLocales.isEmpty) {
+            binding.tvCurrentLanguage.text = getString(R.string.str_system_default)
+        } else {
+            when (currentLocales.get(0)?.language) {
+                "en" -> binding.tvCurrentLanguage.text = "English"
+                "de" -> binding.tvCurrentLanguage.text = "Deutsch"
+                "et" -> binding.tvCurrentLanguage.text = "Eesti"
+                else -> binding.tvCurrentLanguage.text = currentLocales.get(0)?.displayLanguage
+            }
+        }
+    }
+
+    private fun showLanguageDialog() {
+        val dialog = BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.language_bottom_sheet_dialog, null)
+        dialog.setContentView(view)
+
+        val currentLocales = AppCompatDelegate.getApplicationLocales()
+        val currentLanguageCode = if (currentLocales.isEmpty) "" else currentLocales.get(0)?.language ?: ""
+
+        val ivCheckLangSystem = view.findViewById<android.widget.ImageView>(R.id.ivCheckLangSystem)
+        val ivCheckLangEn = view.findViewById<android.widget.ImageView>(R.id.ivCheckLangEn)
+        val ivCheckLangDe = view.findViewById<android.widget.ImageView>(R.id.ivCheckLangDe)
+        val ivCheckLangEt = view.findViewById<android.widget.ImageView>(R.id.ivCheckLangEt)
+
+        when (currentLanguageCode) {
+            "en" -> ivCheckLangEn.visibility = View.VISIBLE
+            "de" -> ivCheckLangDe.visibility = View.VISIBLE
+            "et" -> ivCheckLangEt.visibility = View.VISIBLE
+            else -> ivCheckLangSystem.visibility = View.VISIBLE
+        }
+
+        view.findViewById<View>(R.id.btnCloseSheet).setBounceClickListener {
+            dialog.dismiss()
+        }
+
+        fun setLanguage(code: String) {
+            val appLocale = if (code.isEmpty()) {
+                LocaleListCompat.getEmptyLocaleList()
+            } else {
+                LocaleListCompat.forLanguageTags(code)
+            }
+            AppCompatDelegate.setApplicationLocales(appLocale)
+            dialog.dismiss()
+        }
+
+        view.findViewById<View>(R.id.layoutLangSystem).setBounceClickListener {
+            setLanguage("")
+        }
+
+        view.findViewById<View>(R.id.layoutLangEn).setBounceClickListener {
+            setLanguage("en")
+        }
+
+        view.findViewById<View>(R.id.layoutLangDe).setBounceClickListener {
+            setLanguage("de")
+        }
+
+        view.findViewById<View>(R.id.layoutLangEt).setBounceClickListener {
+            setLanguage("et")
+        }
+
+        dialog.show()
     }
 
     private fun switchTab(tabIndex: Int) {
