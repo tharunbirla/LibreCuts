@@ -200,7 +200,9 @@ sealed class EditOperation : Serializable {
         val endTimeMs: Long? = null,
         val id: String = System.nanoTime().toString(),
         val fileDurationMs: Long? = null,
-        val isLooping: Boolean = true
+        val isLooping: Boolean = true,
+        val chromaKeyColor: String? = null,
+        val chromaKeySimilarity: Float = 0.1f
     ) : EditOperation()
 
     data class AddSubtitles(

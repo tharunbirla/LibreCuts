@@ -112,6 +112,34 @@
                 android:textColor="@color/toolTextInactive"/>
         </LinearLayout>
 
+        <!-- Chroma Key -->
+        <LinearLayout
+            android:id="@+id/btnImageChromaKeyContainer"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center">
+            <ImageButton
+                android:id="@+id/btnImageChromaKey"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/tool_button_inactive"
+                android:src="@drawable/ic_color_lens_24"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                app:tint="@color/toolTextInactive" />
+            <TextView
+                android:id="@+id/tvImageChromaKey"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Chroma Key"
+                android:textSize="11sp"
+                android:fontFamily="sans-serif-medium"
+                android:textColor="@color/toolTextInactive"/>
+        </LinearLayout>
+
         <!-- Loop -->
         <LinearLayout
             android:id="@+id/btnImageLoopContainer"

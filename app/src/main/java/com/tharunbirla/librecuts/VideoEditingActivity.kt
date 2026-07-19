@@ -717,6 +717,9 @@ class VideoEditingActivity : AppCompatActivity() {
                 toolbar.findViewById<View>(R.id.btnImageDuplicate)?.setBounceClickListener {
                     duplicateSelectedOverlay()
                 }
+                toolbar.findViewById<View>(R.id.btnImageChromaKey)?.setBounceClickListener {
+                    showChromaKeyDialog()
+                }
                 toolbar.findViewById<View>(R.id.btnImageLoop)?.setBounceClickListener {
                     val selectedId = viewModel.selectedOperationId.value
                     val op = viewModel.project.value?.operations?.find { (it as? EditOperation.AddImageOverlay)?.id == selectedId } as? EditOperation.AddImageOverlay
@@ -6049,6 +6052,178 @@ class VideoEditingActivity : AppCompatActivity() {
         return targets.toList().sorted()
     }
 
+    private fun showChromaKeyDialog() {
+        val selectedId = viewModel.selectedOperationId.value ?: return
+        val op = viewModel.project.value?.operations?.find { (it as? EditOperation.AddImageOverlay)?.id == selectedId } as? EditOperation.AddImageOverlay ?: return
+
+        val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.chroma_key_bottom_sheet_dialog, null)
+        bottomSheet.setContentView(view)
+
+        val pickerList = view.findViewById<LinearLayout>(R.id.chromaColorPickerList)
+        val slider = view.findViewById<com.google.android.material.slider.Slider>(R.id.chromaIntensitySlider)
+        val btnClear = view.findViewById<Button>(R.id.btnChromaClear)
+        val btnApply = view.findViewById<Button>(R.id.btnChromaApply)
+
+        var selectedColor = op.chromaKeyColor
+        slider.value = op.chromaKeySimilarity.coerceIn(0.01f, 0.5f)
+
+        val originalColor = op.chromaKeyColor
+        val originalSimilarity = op.chromaKeySimilarity
+
+        fun updatePreview() {
+            draggableImageOverlay?.setChromaKey(selectedColor, slider.value)
+        }
+        
+        slider.addOnChangeListener { _, _, _ -> updatePreview() }
+
+        val colors = listOf("#00FF00", "#0000FF", "#FFFFFF", "#000000", "#FF00FF")
+        val density = resources.displayMetrics.density
+        val sizePx = (36 * density).toInt()
+        val marginPx = (8 * density).toInt()
+
+
+        
+        // Quick hack: updateColorSelection rebuilds views but needs itself. 
+        // We'll wrap in a recursive-like listener manually.
+        fun refreshColors() {
+            pickerList.removeAllViews()
+            val pickBtn = ImageView(this).apply {
+                layoutParams = LinearLayout.LayoutParams(sizePx, sizePx).apply {
+                    setMargins(marginPx, 0, marginPx, 0)
+                }
+                setImageResource(R.drawable.ic_color_picker_24)
+                setColorFilter(android.graphics.Color.WHITE)
+                setBackgroundResource(R.drawable.tool_button_inactive)
+                setPadding((4*density).toInt(), (4*density).toInt(), (4*density).toInt(), (4*density).toInt())
+                setBounceClickListener {
+                    bottomSheet.hide()
+                    Toast.makeText(this@VideoEditingActivity, "Tap a color on the image to pick it", Toast.LENGTH_SHORT).show()
+                    draggableImageOverlay?.isColorPickingMode = true
+                    draggableImageOverlay?.onColorPicked = { hex ->
+                        selectedColor = hex
+                        updatePreview()
+                        draggableImageOverlay?.isColorPickingMode = false
+                        bottomSheet.show()
+                        refreshColors()
+                    }
+                }
+            }
+            pickerList.addView(pickBtn)
+            val colorsToShow = mutableListOf<String>()
+            if (selectedColor != null && !colors.contains(selectedColor)) {
+                colorsToShow.add(selectedColor!!)
+            }
+            colorsToShow.addAll(colors)
+
+            for (colorHex in colorsToShow) {
+                val colorContainer = FrameLayout(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(sizePx, sizePx).apply {
+                        setMargins(marginPx, 0, marginPx, 0)
+                    }
+                    val shapeView = View(this@VideoEditingActivity).apply {
+                        val shape = android.graphics.drawable.GradientDrawable().apply {
+                            shape = android.graphics.drawable.GradientDrawable.OVAL
+                            setColor(android.graphics.Color.parseColor(colorHex))
+                            if (colorHex == selectedColor) {
+                                setStroke((3 * density).toInt(), android.graphics.Color.parseColor("#007AFF"))
+                            } else {
+                                if (colorHex == "#FFFFFF" || colorHex == "#000000") {
+                                    setStroke(1, android.graphics.Color.GRAY)
+                                }
+                            }
+                        }
+                        background = shape
+                    }
+                    addView(shapeView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+
+                    if (colorHex == selectedColor) {
+                        val editIcon = ImageView(this@VideoEditingActivity).apply {
+                            setImageResource(R.drawable.ic_color_edit_24)
+                            val pad = (6 * density).toInt()
+                            setPadding(pad, pad, pad, pad)
+                            val lum = androidx.core.graphics.ColorUtils.calculateLuminance(android.graphics.Color.parseColor(colorHex))
+                            setColorFilter(if (lum > 0.5) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+                        }
+                        addView(editIcon, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+                    }
+
+                    setBounceClickListener {
+                        if (selectedColor == colorHex) {
+                            showCustomColorPicker(colorHex) { newHex ->
+                                selectedColor = newHex
+                                updatePreview()
+                                refreshColors()
+                            }
+                        } else {
+                            selectedColor = colorHex
+                            updatePreview()
+                            refreshColors()
+                        }
+                    }
+                }
+                pickerList.addView(colorContainer)
+            }
+        }
+        refreshColors()
+        
+        var applied = false
+
+        btnClear.setOnClickListener {
+            applied = true
+            viewModel.updateOperation(op.copy(chromaKeyColor = null))
+            draggableImageOverlay?.setChromaKey(null, 0.1f)
+            bottomSheet.dismiss()
+        }
+
+        btnApply.setOnClickListener {
+            applied = true
+            if (selectedColor != null) {
+                viewModel.updateOperation(op.copy(
+                    chromaKeyColor = selectedColor,
+                    chromaKeySimilarity = slider.value
+                ))
+            }
+            bottomSheet.dismiss()
+        }
+
+        bottomSheet.setOnDismissListener {
+            if (!applied) {
+                draggableImageOverlay?.setChromaKey(originalColor, originalSimilarity)
+            }
+            draggableImageOverlay?.isColorPickingMode = false
+        }
+        bottomSheet.show()
+    }
+
+    private fun showCustomColorPicker(initialHex: String, onColorPicked: (String) -> Unit) {
+        val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.dialog_custom_color_picker, null)
+        bottomSheet.setContentView(view)
+
+        val preview = view.findViewById<View>(R.id.colorPickerPreview)
+        val hsvPicker = view.findViewById<com.tharunbirla.librecuts.customviews.HSVColorPickerView>(R.id.hsvColorPicker)
+        val btnCancel = view.findViewById<Button>(R.id.btnCancelCustomColor)
+        val btnApply = view.findViewById<Button>(R.id.btnApplyCustomColor)
+
+        var currentColor = android.graphics.Color.parseColor(initialHex)
+        preview.setBackgroundColor(currentColor)
+
+        hsvPicker.setColor(currentColor)
+        hsvPicker.onColorChanged = { newColor ->
+            currentColor = newColor
+            preview.setBackgroundColor(currentColor)
+        }
+
+        btnCancel.setOnClickListener { bottomSheet.dismiss() }
+        btnApply.setOnClickListener {
+            val hex = String.format("#%06X", 0xFFFFFF and currentColor)
+            onColorPicked(hex)
+            bottomSheet.dismiss()
+        }
+        bottomSheet.show()
+    }
+
     companion object {
         private const val TAG = "VideoEditingActivity"
         private const val PICK_VIDEO_REQUEST = 1
@@ -6058,5 +6233,6 @@ class VideoEditingActivity : AppCompatActivity() {
         private const val PICK_DIRECTORY_REQUEST = 5
     }
 }
+
 
 

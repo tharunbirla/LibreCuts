@@ -527,7 +527,9 @@ class VideoEditingViewModel : ViewModel() {
         rotationAngle: Float,
         startTimeMs: Long? = null,
         endTimeMs: Long? = null,
-        fileDurationMs: Long? = null
+        fileDurationMs: Long? = null,
+        chromaKeyColor: String? = null,
+        chromaKeySimilarity: Float = 0.1f
     ) {
         addOperation(
             EditOperation.AddImageOverlay(
@@ -539,7 +541,9 @@ class VideoEditingViewModel : ViewModel() {
                 rotationAngle = rotationAngle,
                 startTimeMs = startTimeMs,
                 endTimeMs = endTimeMs,
-                fileDurationMs = fileDurationMs
+                fileDurationMs = fileDurationMs,
+                chromaKeyColor = chromaKeyColor,
+                chromaKeySimilarity = chromaKeySimilarity
             )
         )
     }
@@ -995,8 +999,17 @@ class VideoEditingViewModel : ViewModel() {
                             stages.add("${rgbaImgLabel}${currentLabel}scale2ref=w=main_w*${op.relativeWidth}:h=main_h*${op.relativeHeight}${scaledImgLabel}${refVidLabel}")
                         }
 
+                        var currentOverlayLabel = scaledImgLabel
+                        if (op.chromaKeyColor != null) {
+                            val colorkeyLabel = "[colorkey_$stageIndex]"
+                            val color = formatColorForFFmpeg(op.chromaKeyColor)
+                            // colorkey=color=0xRRGGBB:similarity=0.1:blend=0.1
+                            stages.add("${currentOverlayLabel}colorkey=${color}:${op.chromaKeySimilarity}:0.1${colorkeyLabel}")
+                            currentOverlayLabel = colorkeyLabel
+                        }
+
                         // Rotate image/video overlay (c=none preserves transparent background, ow/oh prevent cropping)
-                        stages.add("${scaledImgLabel}rotate=$radians:c=none:ow='rotw($radians)':oh='roth($radians)'${rotatedImgLabel}")
+                        stages.add("${currentOverlayLabel}rotate=$radians:c=none:ow='rotw($radians)':oh='roth($radians)'${rotatedImgLabel}")
                         // Overlay image/video on the reference video
                         val enablePart = buildEnableExpr(op.startTimeMs, op.endTimeMs)
                         val shortestPart = if ((isGif || isVideo) && op.isLooping) ":shortest=1" else ""

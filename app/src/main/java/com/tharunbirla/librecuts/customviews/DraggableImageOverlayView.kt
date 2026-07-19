@@ -15,6 +15,13 @@ import android.view.ScaleGestureDetector
 import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.appcompat.widget.AppCompatImageView
+import android.graphics.Bitmap
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class DraggableImageOverlayView @JvmOverloads constructor(
     context: Context,
@@ -45,6 +52,16 @@ class DraggableImageOverlayView @JvmOverloads constructor(
     private var isDragging = false
     private var dragOffsetX = 0f
     private var dragOffsetY = 0f
+
+    // ── Chroma Key Picker State ──
+    var isColorPickingMode = false
+    var onColorPicked: ((colorHex: String) -> Unit)? = null
+    
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var originalBitmapForChroma: Bitmap? = null
+    private var currentChromaColor: String? = null
+    private var currentChromaSimilarity: Float = 0.1f
+    private var chromaJob: Job? = null
 
     private val guidelinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#FF2A6D")
@@ -170,6 +187,9 @@ class DraggableImageOverlayView @JvmOverloads constructor(
     fun activate(uri: Uri, aspect: Float = 1.0f) {
         isEditingActive = true
         imageUri = uri
+        originalBitmapForChroma?.recycle()
+        originalBitmapForChroma = null
+        currentChromaColor = null
         imageAspectRatio = aspect
         relativeX = 0.5f
         relativeY = 0.5f
@@ -188,6 +208,10 @@ class DraggableImageOverlayView @JvmOverloads constructor(
     fun activateForEdit(op: com.tharunbirla.librecuts.models.EditOperation.AddImageOverlay) {
         isEditingActive = true
         imageUri = op.imageUri
+        originalBitmapForChroma?.recycle()
+        originalBitmapForChroma = null
+        currentChromaColor = op.chromaKeyColor
+        currentChromaSimilarity = op.chromaKeySimilarity
         val videoRatio = if (videoHeight > 0) videoWidth.toFloat() / videoHeight else 1.0f
         imageAspectRatio = if (op.relativeHeight > 0) op.relativeWidth * videoRatio / op.relativeHeight else 1.0f
         relativeX = op.relativeX
@@ -201,6 +225,9 @@ class DraggableImageOverlayView @JvmOverloads constructor(
         visibility = VISIBLE
         post {
             updateImageViewSizeAndPosition()
+            if (currentChromaColor != null) {
+                applyChromaKey()
+            }
         }
     }
 
@@ -289,6 +316,9 @@ class DraggableImageOverlayView @JvmOverloads constructor(
 
                 // Check if touch is inside the image bounds
                 if (touchX in imgLeft..imgRight && touchY in imgTop..imgBottom) {
+                    if (isColorPickingMode) {
+                        return true
+                    }
                     isDragging = true
                     dragOffsetX = touchX - imageView.x
                     dragOffsetY = touchY - imageView.y
@@ -312,6 +342,10 @@ class DraggableImageOverlayView @JvmOverloads constructor(
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                if (isColorPickingMode) {
+                    pickColorAt(event.x, event.y)
+                    return true
+                }
                 isDragging = true
                 dragOffsetX = event.x - imageView.x
                 dragOffsetY = event.y - imageView.y
@@ -368,6 +402,114 @@ class DraggableImageOverlayView @JvmOverloads constructor(
             }
         }
         return super.onTouchEvent(event)
+    }
+
+    private fun pickColorAt(x: Float, y: Float) {
+        try {
+            val bmpToUse = originalBitmapForChroma ?: run {
+                imageView.isDrawingCacheEnabled = true
+                imageView.buildDrawingCache(true)
+                val c = imageView.getDrawingCache(true)?.copy(Bitmap.Config.ARGB_8888, true)
+                imageView.isDrawingCacheEnabled = false
+                c
+            }
+            if (bmpToUse != null) {
+                // map coordinates
+                val localX = (x - imageView.x).toInt().coerceIn(0, bmpToUse.width - 1)
+                val localY = (y - imageView.y).toInt().coerceIn(0, bmpToUse.height - 1)
+                val pixelColor = bmpToUse.getPixel(localX, localY)
+                val hexColor = String.format("#%06X", 0xFFFFFF and pixelColor)
+                isColorPickingMode = false
+                onColorPicked?.invoke(hexColor)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("DraggableImage", "Error picking color: ${e.message}")
+            isColorPickingMode = false
+        }
+    }
+
+    fun setChromaKey(colorHex: String?, similarity: Float) {
+        currentChromaColor = colorHex
+        currentChromaSimilarity = similarity
+        applyChromaKey()
+    }
+    
+    private fun applyChromaKey() {
+        if (currentChromaColor == null) {
+            chromaJob?.cancel()
+            originalBitmapForChroma?.recycle()
+            originalBitmapForChroma = null
+            imageUri?.let { loadOverlayMedia(it) }
+            return
+        }
+        
+        chromaJob?.cancel()
+        chromaJob = scope.launch {
+            if (originalBitmapForChroma == null) {
+                imageView.isDrawingCacheEnabled = true
+                imageView.buildDrawingCache(true)
+                val cache = imageView.getDrawingCache(true)
+                if (cache != null) {
+                    originalBitmapForChroma = cache.copy(Bitmap.Config.ARGB_8888, true)
+                }
+                imageView.isDrawingCacheEnabled = false
+            }
+            val base = originalBitmapForChroma ?: return@launch
+            
+            val sim = currentChromaSimilarity
+            val colorHex = currentChromaColor!!
+            
+            val result = withContext(Dispatchers.Default) {
+                try {
+                    val color = android.graphics.Color.parseColor(colorHex)
+                    val targetR = android.graphics.Color.red(color)
+                    val targetG = android.graphics.Color.green(color)
+                    val targetB = android.graphics.Color.blue(color)
+                    
+                    val width = base.width
+                    val height = base.height
+                    val pixels = IntArray(width * height)
+                    base.getPixels(pixels, 0, width, 0, 0, width, height)
+                    
+                    val maxDistSq = 255f * 255f * 3f
+                    val simSq = sim * sim * maxDistSq
+                    val blendSq = 0.1f * 0.1f * maxDistSq
+                    
+                    for (i in pixels.indices) {
+                        val p = pixels[i]
+                        val a = (p shr 24) and 0xFF
+                        if (a == 0) continue
+                        
+                        val r = (p shr 16) and 0xFF
+                        val g = (p shr 8) and 0xFF
+                        val b = p and 0xFF
+                        
+                        val diffR = r - targetR
+                        val diffG = g - targetG
+                        val diffB = b - targetB
+                        val distSq = (diffR * diffR + diffG * diffG + diffB * diffB).toFloat()
+                        
+                        if (distSq < simSq) {
+                            if (blendSq > 0 && distSq > simSq - blendSq) {
+                                val alphaMult = (distSq - (simSq - blendSq)) / blendSq
+                                val newA = (a * alphaMult).toInt().coerceIn(0, 255)
+                                pixels[i] = (newA shl 24) or (r shl 16) or (g shl 8) or b
+                            } else {
+                                pixels[i] = 0
+                            }
+                        }
+                    }
+                    val keyed = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                    keyed.setPixels(pixels, 0, width, 0, 0, width, height)
+                    keyed
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            if (result != null) {
+                imageView.setImageBitmap(result)
+            }
+        }
     }
 
     // ── Drawing ───────────────────────────────────────────────────────────────
