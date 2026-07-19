@@ -97,7 +97,13 @@ class FFmpegRenderEngine(private val context: Context) {
             } else {
                 Log.d(TAG, "Font already in cache: ${fontFile.absolutePath}")
             }
-            fontFile.absolutePath
+            
+            val fontMap = mutableMapOf<String, String>()
+            val alias = fileName.substringBeforeLast('.')
+            fontMap[alias] = fileName
+            FFmpegKitConfig.setFontDirectory(context, context.cacheDir.absolutePath, fontMap)
+            
+            alias
         } catch (e: Exception) {
             Log.e(TAG, "Failed to copy font to cache: ${e.message}", e)
             null
@@ -132,8 +138,8 @@ class FFmpegRenderEngine(private val context: Context) {
                     // getFailStackTrace() is non-null only on Java exceptions, not FFmpeg process errors.
                     // getAllLogsAsString() returns "" (empty, not null) when log callback is active
                     // — use takeIf { isNotBlank() } so the ?: fallback actually fires.
-                    val failLog = session.getFailStackTrace()
-                        ?: session.getAllLogsAsString().takeIf { it.isNotBlank() }
+                    val failLog = session.getFailStackTrace()?.takeIf { it.isNotBlank() }
+                        ?: session.getAllLogsAsString()?.takeIf { it.isNotBlank() }
                         ?: "FFmpeg exited with code ${returnCode?.getValue()} (check logcat tag '$TAG' for [ffmpeg] lines)"
                         
                     if (command.contains("h264_mediacodec")) {
@@ -269,8 +275,8 @@ class FFmpegRenderEngine(private val context: Context) {
                         session = session
                     )
                 } else {
-                    val failLog = session.getFailStackTrace()
-                        ?: session.getAllLogsAsString().takeIf { it.isNotBlank() }
+                    val failLog = session.getFailStackTrace()?.takeIf { it.isNotBlank() }
+                        ?: session.getAllLogsAsString()?.takeIf { it.isNotBlank() }
                         ?: "FFmpeg exited with code ${returnCode?.getValue()} (see logcat tag '$TAG' for [ffmpeg] lines)"
                         
                     if (ffmpegCommand.contains("h264_mediacodec")) {

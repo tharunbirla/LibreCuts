@@ -2083,7 +2083,15 @@ class VideoEditingActivity : AppCompatActivity() {
             type = "*/*"
             addCategory(Intent.CATEGORY_OPENABLE)
         }
-        startActivityForResult(Intent.createChooser(intent, "Select SRT Subtitle File"), PICK_SRT_REQUEST)
+        try {
+            startActivityForResult(Intent.createChooser(intent, "Select SRT Subtitle File"), PICK_SRT_REQUEST)
+        } catch (e: android.content.ActivityNotFoundException) {
+            try {
+                startActivityForResult(intent, PICK_SRT_REQUEST)
+            } catch (e2: android.content.ActivityNotFoundException) {
+                Toast.makeText(this, "No app found to handle this action", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun removeSubtitles() {
@@ -2203,7 +2211,15 @@ class VideoEditingActivity : AppCompatActivity() {
             putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "video/*"))
             addCategory(Intent.CATEGORY_OPENABLE)
         }
-        startActivityForResult(Intent.createChooser(intent, "Select Image, GIF, or Video Overlay"), PICK_IMAGE_REQUEST)
+        try {
+            startActivityForResult(Intent.createChooser(intent, "Select Image, GIF, or Video Overlay"), PICK_IMAGE_REQUEST)
+        } catch (e: android.content.ActivityNotFoundException) {
+            try {
+                startActivityForResult(intent, PICK_IMAGE_REQUEST)
+            } catch (e2: android.content.ActivityNotFoundException) {
+                Toast.makeText(this, "No app found to handle this action", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun showImageOverlayConfig(imageUri: Uri) {
@@ -3190,7 +3206,15 @@ class VideoEditingActivity : AppCompatActivity() {
             addCategory(Intent.CATEGORY_OPENABLE)
             putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
         }
-        startActivityForResult(Intent.createChooser(intent, "Select Video"), PICK_VIDEO_REQUEST)
+        try {
+            startActivityForResult(Intent.createChooser(intent, "Select Video"), PICK_VIDEO_REQUEST)
+        } catch (e: android.content.ActivityNotFoundException) {
+            try {
+                startActivityForResult(intent, PICK_VIDEO_REQUEST)
+            } catch (e2: android.content.ActivityNotFoundException) {
+                Toast.makeText(this, "No app found to handle this action", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun openFilePickerMain() {
@@ -3199,7 +3223,15 @@ class VideoEditingActivity : AppCompatActivity() {
             addCategory(Intent.CATEGORY_OPENABLE)
             putExtra(Intent.EXTRA_ALLOW_MULTIPLE, false)
         }
-        mainFilePickerLauncher.launch(Intent.createChooser(intent, "Select Video"))
+        try {
+            mainFilePickerLauncher.launch(Intent.createChooser(intent, "Select Video"))
+        } catch (e: android.content.ActivityNotFoundException) {
+            try {
+                mainFilePickerLauncher.launch(intent)
+            } catch (e2: android.content.ActivityNotFoundException) {
+                Toast.makeText(this, "No app found to handle this action", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private val mainFilePickerLauncher = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) { result ->
@@ -3415,7 +3447,15 @@ class VideoEditingActivity : AppCompatActivity() {
             type = "audio/*"
             addCategory(Intent.CATEGORY_OPENABLE)
         }
-        startActivityForResult(Intent.createChooser(intent, "Select Audio"), PICK_AUDIO_REQUEST)
+        try {
+            startActivityForResult(Intent.createChooser(intent, "Select Audio"), PICK_AUDIO_REQUEST)
+        } catch (e: android.content.ActivityNotFoundException) {
+            try {
+                startActivityForResult(intent, PICK_AUDIO_REQUEST)
+            } catch (e2: android.content.ActivityNotFoundException) {
+                Toast.makeText(this, "No app found to handle this action", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     /**
@@ -3647,7 +3687,11 @@ class VideoEditingActivity : AppCompatActivity() {
 
         layoutExportDirectory.setBounceClickListener {
             val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
-            startActivityForResult(intent, PICK_DIRECTORY_REQUEST)
+            try {
+                startActivityForResult(intent, PICK_DIRECTORY_REQUEST)
+            } catch (e: android.content.ActivityNotFoundException) {
+                Toast.makeText(this, R.string.toast_failed_to_select_folder, Toast.LENGTH_SHORT).show()
+            }
         }
 
         bottomSheetDialog.setOnDismissListener {
