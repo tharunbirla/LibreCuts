@@ -214,7 +214,7 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="@drawable/tool_button_inactive"
-                android:src="@drawable/ic_audio_24"
+                android:src="@drawable/ic_audio_extract_24"
                 android:padding="12dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />

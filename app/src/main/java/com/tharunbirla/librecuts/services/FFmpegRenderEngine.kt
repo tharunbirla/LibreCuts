@@ -1,6 +1,7 @@
 package com.tharunbirla.librecuts.services
 
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import com.antonkarpenko.ffmpegkit.FFmpegKit
 import com.antonkarpenko.ffmpegkit.FFmpegKitConfig
@@ -479,6 +480,33 @@ class FFmpegRenderEngine(private val context: Context) {
      * was accidentally left unquoted — producing errors like:
      *   "Unable to find a suitable output format for '/data/user/0/com.tharunb'"
      */
+    suspend fun generateVideoFromImage(
+        imageUri: Uri,
+        durationMs: Long,
+        outputPath: String
+    ): RenderResult {
+        val imagePath = FFmpegKitConfig.getSafParameterForRead(context, imageUri)
+        val durationSecs = durationMs / 1000f
+        
+        // Use a standard frame rate (e.g., 30 fps), loop the image, add a silent audio track, and output as standard mp4
+        // The scale filter ensures the width and height are divisible by 2, which is required by libx264
+        val command = "-f image2 -loop 1 -framerate 30 -i \"$imagePath\" -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -c:v libx264 -t $durationSecs -pix_fmt yuv420p -c:a aac -shortest \"$outputPath\""
+        return executeCommand(command)
+    }
+
+    suspend fun generateVideoFromGif(
+        gifUri: Uri,
+        durationMs: Long,
+        outputPath: String
+    ): RenderResult {
+        val gifPath = FFmpegKitConfig.getSafParameterForRead(context, gifUri)
+        val durationSecs = durationMs / 1000f
+        
+        // ignore_loop 0 loops the gif infinitely. We then add a silent audio track and limit duration.
+        val command = "-f gif -ignore_loop 0 -i \"$gifPath\" -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -c:v libx264 -t $durationSecs -pix_fmt yuv420p -c:a aac -shortest \"$outputPath\""
+        return executeCommand(command)
+    }
+
     private fun extractOutputPath(command: String): String {
         // Try quoted path first (preferred — all new commands use this)
         val quotedRegex = """"([^"]*)"\s*$""".toRegex()

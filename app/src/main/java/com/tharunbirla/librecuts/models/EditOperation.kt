@@ -202,7 +202,8 @@ sealed class EditOperation : Serializable {
         val fileDurationMs: Long? = null,
         val isLooping: Boolean = true,
         val chromaKeyColor: String? = null,
-        val chromaKeySimilarity: Float = 0.1f
+        val chromaKeySimilarity: Float = 0.1f,
+        val opacity: Float = 1.0f
     ) : EditOperation()
 
     data class AddSubtitles(

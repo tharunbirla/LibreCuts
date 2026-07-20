@@ -7,6 +7,7 @@
 
     <!-- Rotation Slider Row -->
     <LinearLayout
+        android:id="@+id/imageRotationSliderRow"
         android:layout_width="match_parent"
         android:layout_height="56dp"
         android:layout_marginHorizontal="16dp"
@@ -47,24 +48,76 @@
             android:fontFamily="sans-serif-medium" />
     </LinearLayout>
 
-    <!-- Toolbar Row -->
+    <!-- Opacity Slider Row -->
     <LinearLayout
+        android:id="@+id/imageOpacitySliderRow"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="8dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_bottom_nav_floating"
+        android:paddingHorizontal="16dp"
+        android:elevation="12dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_opacity_24"
+            app:tint="@color/iconSecondary" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/imageOpacitySlider"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:valueFrom="0.0"
+            android:valueTo="100.0"
+            android:value="100.0"
+            android:stepSize="1.0"
+            app:thumbColor="@color/colorPrimary"
+            app:trackColorActive="@color/colorPrimary" />
+
+        <TextView
+            android:id="@+id/tvImageOpacityValue"
+            android:layout_width="48dp"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:text="@string/str_100"
+            android:textColor="@color/textColor"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif-medium" />
+    </LinearLayout>
+
+    <!-- Toolbar Row -->
+    <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
         android:layout_marginBottom="24dp"
-        android:orientation="horizontal"
-        android:gravity="center"
+        android:scrollbars="none"
         android:background="@drawable/bg_bottom_nav_floating"
-        android:paddingVertical="12dp"
-        android:paddingHorizontal="8dp"
-        android:elevation="12dp">
+        android:elevation="12dp"
+        android:clipToOutline="true"
+        android:requiresFadingEdge="horizontal"
+        android:fadingEdgeLength="32dp"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:paddingVertical="12dp"
+            android:paddingHorizontal="8dp">
 
         <!-- Cancel -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="72dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:orientation="vertical"
             android:gravity="center">
             <ImageButton
@@ -88,9 +141,8 @@
 
         <!-- Duplicate -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="72dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:orientation="vertical"
             android:gravity="center">
             <ImageButton
@@ -115,9 +167,8 @@
         <!-- Chroma Key -->
         <LinearLayout
             android:id="@+id/btnImageChromaKeyContainer"
-            android:layout_width="0dp"
+            android:layout_width="72dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:orientation="vertical"
             android:gravity="center">
             <ImageButton
@@ -140,12 +191,39 @@
                 android:textColor="@color/toolTextInactive"/>
         </LinearLayout>
 
+        <!-- Opacity -->
+        <LinearLayout
+            android:id="@+id/btnImageOpacityContainer"
+            android:layout_width="72dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center">
+            <ImageButton
+                android:id="@+id/btnImageOpacity"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/tool_button_inactive"
+                android:src="@drawable/ic_opacity_24"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                app:tint="@color/toolTextInactive" />
+            <TextView
+                android:id="@+id/tvImageOpacity"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/str_opacity"
+                android:textSize="11sp"
+                android:fontFamily="sans-serif-medium"
+                android:textColor="@color/toolTextInactive"/>
+        </LinearLayout>
+
+
         <!-- Loop -->
         <LinearLayout
             android:id="@+id/btnImageLoopContainer"
-            android:layout_width="0dp"
+            android:layout_width="72dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:orientation="vertical"
             android:gravity="center"
             android:visibility="gone">
@@ -171,9 +249,8 @@
 
         <!-- Delete -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="72dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:orientation="vertical"
             android:gravity="center">
             <ImageButton
@@ -196,9 +273,8 @@
         </LinearLayout>
         <!-- Done -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="72dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:orientation="vertical"
             android:gravity="center">
             <ImageButton
@@ -220,6 +296,7 @@
                 android:textColor="@color/colorPrimary"/>
         </LinearLayout>
 
-    </LinearLayout>
+        </LinearLayout>
+    </HorizontalScrollView>
 
 </LinearLayout>

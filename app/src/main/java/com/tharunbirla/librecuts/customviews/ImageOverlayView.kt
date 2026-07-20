@@ -332,9 +332,12 @@ class ImageOverlayView @JvmOverloads constructor(
             centerY + imgH / 2f
         )
         
+        val oldAlpha = paint.alpha
+        paint.alpha = (op.opacity * 255).toInt().coerceIn(0, 255)
         canvas.save()
         canvas.rotate(op.rotationAngle, centerX, centerY)
         canvas.drawBitmap(bitmap, null, dstRect, paint)
         canvas.restore()
+        paint.alpha = oldAlpha
     }
 }

@@ -30,7 +30,7 @@ class DraggableImageOverlayView @JvmOverloads constructor(
 ) : FrameLayout(context, attrs, defStyleAttr) {
 
     // ── Public callbacks ──────────────────────────────────────────────────────
-    var onImageCommitted: ((uri: Uri, relativeX: Float, relativeY: Float, relativeWidth: Float, relativeHeight: Float, rotationAngle: Float) -> Unit)? = null
+    var onImageCommitted: ((uri: Uri, relativeX: Float, relativeY: Float, relativeWidth: Float, relativeHeight: Float, rotationAngle: Float, opacity: Float) -> Unit)? = null
 
     // ── State ─────────────────────────────────────────────────────────────────
     private var isEditingActive = false
@@ -39,6 +39,7 @@ class DraggableImageOverlayView @JvmOverloads constructor(
     private var relativeWidth = 0.3f
     private var relativeHeight = 0.3f
     private var rotationAngle = 0f
+    private var opacity = 1.0f
     
     private var videoWidth = 0
     private var videoHeight = 0
@@ -199,6 +200,8 @@ class DraggableImageOverlayView @JvmOverloads constructor(
         val videoRatio = if (videoHeight > 0) videoWidth.toFloat() / videoHeight else 1.0f
         relativeHeight = relativeWidth * videoRatio / aspect
         rotationAngle = 0f
+        opacity = 1.0f
+        imageView.alpha = opacity
 
         loadOverlayMedia(uri)
         visibility = VISIBLE
@@ -221,9 +224,11 @@ class DraggableImageOverlayView @JvmOverloads constructor(
         relativeWidth = op.relativeWidth
         relativeHeight = op.relativeHeight
         rotationAngle = op.rotationAngle
+        opacity = op.opacity
 
         loadOverlayMedia(op.imageUri)
         imageView.rotation = rotationAngle
+        imageView.alpha = opacity
         visibility = VISIBLE
         post {
             updateImageViewSizeAndPosition()
@@ -286,11 +291,17 @@ class DraggableImageOverlayView @JvmOverloads constructor(
         invalidate()
     }
 
+    fun setOpacity(value: Float) {
+        opacity = value
+        imageView.alpha = opacity
+        invalidate()
+    }
+
     fun commitImage() {
         val uri = imageUri
         if (uri != null) {
             updateRelativePosition()
-            onImageCommitted?.invoke(uri, relativeX, relativeY, relativeWidth, relativeHeight, rotationAngle)
+            onImageCommitted?.invoke(uri, relativeX, relativeY, relativeWidth, relativeHeight, rotationAngle, opacity)
         }
         deactivate()
     }

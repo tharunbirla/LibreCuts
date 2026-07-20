@@ -2,31 +2,14 @@
 <resources>
     <string name="str_loop">Loop</string>
     <string name="app_name">LibreCuts</string>
-    <string name="add_video">Add Video</string>
-    <string name="create_engaging_videos">Free. Open-Source. Limitless Creativity!</string>
-    <string name="home">Home</string>
     <string name="trim">Trim</string>
     <string name="split">Split</string>
-    <string name="effects">Effects</string>
     <string name="export">Export</string>
     <string name="delete">Delete</string>
-    <string name="trim_video">Trim video</string>
-    <string name="save_video">Save the video to device</string>
-    <string name="add_overly">Add overlay to video</string>
-    <string name="add_text">Add text to the video</string>
-    <string name="add_audio">Add audio to the music</string>
-    <string name="crop_video">Crop the video</string>
-    <string name="merge_video">Add another video or image</string>
     <string name="loading">Importing Video…</string>
-    <string name="default_time_stamp">00:00 / 00:00</string>
-    <string name="trim_your_video">Trim your video</string>
     <string name="cancel">Cancel</string>
-    <string name="keep_right_portion">Remove left</string>
-    <string name="keep_left_portion">Remove right</string>
     <string name="loading_tag">Buckle up! Your video is loading</string>
     <string name="done">Done</string>
-    <string name="please_wait">Please wait, your video is being processed.</string>
-    <string name="select_aspect_ratio">Select Aspect Ratio</string>
     <string name="str_export_settings">Export Settings</string>
     <string name="str_high_quality_1080p_original">High Quality (1080p/Original)</string>
     <string name="str_best_visual_quality_larger_fil">Best visual quality, larger file size</string>
@@ -42,7 +25,6 @@
     <string name="str_import_video">Import Video</string>
     <string name="str_text">Text</string>
     <string name="str_overlay">Overlay</string>
-    <string name="str_stickers">Stickers</string>
     <string name="str_audio">Audio</string>
     <string name="str_voice">Voice</string>
     <string name="str_subtitles">Subtitles</string>
@@ -58,14 +40,10 @@
     <string name="str_extract">Extract</string>
     <string name="str_freeze">Freeze</string>
     <string name="str_reverse">Reverse</string>
-    <string name="str_edit_text">Edit Text</string>
-    <string name="str_enter_text_here">Enter text here</string>
-    <string name="str_font_size">Font size</string>
     <string name="str_saving_video">Saving video…</string>
     <string name="str_please_don_t_close_the_app">Please don\'t close the app</string>
     <string name="str_0">0%</string>
     <string name="str_color_filters">Color Filters</string>
-    <string name="str_trim_audio">Trim Audio</string>
     <string name="str_00_00_00_00_00_00">00:00 - 00:00 (00:00)</string>
     <string name="str_keyboard">Keyboard</string>
     <string name="str_color">Color</string>
@@ -98,7 +76,6 @@
     <string name="str_voice_over">Voice Over</string>
     <string name="str_record_live_commentary_while_t">Record live commentary while the video plays.</string>
     <string name="str_tap_to_start_recording">Tap to start recording</string>
-    <string name="str_choose_a_sticker">Choose a Sticker</string>
     <string name="str_new_project">NEW PROJECT</string>
     <string name="str_tap_to_select_media">Tap to select media</string>
     <string name="str_free_open_source_nlimitless_cr">free. open-source.\nlimitless creativity.</string>
@@ -178,4 +155,6 @@
     <string name="str_default_pictures_librecuts">Default (Pictures/LibreCuts)</string>
     <string name="str_app_language">App Language</string>
     <string name="str_system_default">System Default</string>
+    <string name="str_opacity">Opacity</string>
+    <string name="str_reset">Reset</string>
 </resources>

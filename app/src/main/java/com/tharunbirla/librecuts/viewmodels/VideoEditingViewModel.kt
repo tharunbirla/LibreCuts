@@ -529,7 +529,8 @@ class VideoEditingViewModel : ViewModel() {
         endTimeMs: Long? = null,
         fileDurationMs: Long? = null,
         chromaKeyColor: String? = null,
-        chromaKeySimilarity: Float = 0.1f
+        chromaKeySimilarity: Float = 0.1f,
+        opacity: Float = 1.0f
     ) {
         addOperation(
             EditOperation.AddImageOverlay(
@@ -543,7 +544,8 @@ class VideoEditingViewModel : ViewModel() {
                 endTimeMs = endTimeMs,
                 fileDurationMs = fileDurationMs,
                 chromaKeyColor = chromaKeyColor,
-                chromaKeySimilarity = chromaKeySimilarity
+                chromaKeySimilarity = chromaKeySimilarity,
+                opacity = opacity
             )
         )
     }
@@ -1008,6 +1010,12 @@ class VideoEditingViewModel : ViewModel() {
                             currentOverlayLabel = colorkeyLabel
                         }
 
+                        if (op.opacity < 1.0f) {
+                            val opacityLabel = "[opacity_$stageIndex]"
+                            stages.add("${currentOverlayLabel}format=rgba,colorchannelmixer=aa=${op.opacity}${opacityLabel}")
+                            currentOverlayLabel = opacityLabel
+                        }
+
                         // Rotate image/video overlay (c=none preserves transparent background, ow/oh prevent cropping)
                         stages.add("${currentOverlayLabel}rotate=$radians:c=none:ow='rotw($radians)':oh='roth($radians)'${rotatedImgLabel}")
                         // Overlay image/video on the reference video
@@ -1178,7 +1186,17 @@ class VideoEditingViewModel : ViewModel() {
                     val videoPath = resolveUriToPath(item.uri) ?: item.uri.toString()
                     val startSecs = item.trimStartMs / 1000.0
                     val duration = (item.trimEndMs - item.trimStartMs) / 1000.0
-                    cmd.append(" -ss $startSecs -t $duration -i \"$videoPath\"")
+                    
+                    val isImage = videoPath.endsWith(".png", ignoreCase = true) || 
+                                  videoPath.endsWith(".jpg", ignoreCase = true) || 
+                                  videoPath.endsWith(".jpeg", ignoreCase = true) ||
+                                  videoPath.endsWith(".webp", ignoreCase = true)
+                    
+                    if (isImage) {
+                        cmd.append(" -loop 1 -t $duration -i \"$videoPath\"")
+                    } else {
+                        cmd.append(" -ss $startSecs -t $duration -i \"$videoPath\"")
+                    }
                 }
                 mergeVideoIndices.add(inputIndex)
                 inputIndex++
@@ -1273,15 +1291,23 @@ class VideoEditingViewModel : ViewModel() {
             for ((idx, item) in mergeOp.items.withIndex()) {
                 val path = item.uri.path ?: item.uri.toString()
                 hasAudioArray[idx + 1] = try {
-                    val r = android.media.MediaMetadataRetriever()
-                    try {
-                        r.setDataSource(path)
-                        val h = r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO)
-                        h == "yes"
-                    } finally {
-                        r.release()
+                    val isImage = path.endsWith(".png", ignoreCase = true) || 
+                                  path.endsWith(".jpg", ignoreCase = true) || 
+                                  path.endsWith(".jpeg", ignoreCase = true) ||
+                                  path.endsWith(".webp", ignoreCase = true)
+                    if (isImage) {
+                        false
+                    } else {
+                        val r = android.media.MediaMetadataRetriever()
+                        try {
+                            r.setDataSource(path)
+                            val h = r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO)
+                            h == "yes"
+                        } finally {
+                            r.release()
+                        }
                     }
-                } catch (e: Exception) { true }
+                } catch (e: Exception) { false }
                 durationsArray[idx + 1] = item.trimmedDurationMs / 1000.0
             }
 

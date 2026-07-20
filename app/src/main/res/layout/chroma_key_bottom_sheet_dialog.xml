@@ -21,27 +21,45 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginBottom="16dp">
+        android:layout_marginBottom="8dp">
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="Color: "
-            android:textColor="@color/textColor" />
+            android:text="Key Color"
+            android:textColor="@color/textColor"
+            android:textStyle="bold"/>
 
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:scrollbars="none">
+        <ImageView
+            android:id="@+id/btnChromaEyedropper"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="16dp"
+            android:src="@drawable/ic_color_picker_24"
+            android:background="@drawable/tool_button_inactive"
+            android:padding="8dp"
+            app:tint="@color/textColor" />
 
-            <LinearLayout
-                android:id="@+id/chromaColorPickerList"
-                android:layout_width="wrap_content"
-                android:layout_height="48dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical" />
-        </HorizontalScrollView>
+        <androidx.cardview.widget.CardView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/outline">
+            <View
+                android:id="@+id/chromaColorPreview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#00FF00" />
+        </androidx.cardview.widget.CardView>
     </LinearLayout>
+
+    <com.tharunbirla.librecuts.customviews.HSVColorPickerView
+        android:id="@+id/hsvChromaColorPicker"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:layout_marginBottom="16dp" />
 
     <LinearLayout
         android:layout_width="match_parent"
