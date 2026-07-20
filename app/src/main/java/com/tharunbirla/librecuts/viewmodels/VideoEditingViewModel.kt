@@ -810,15 +810,15 @@ class VideoEditingViewModel : ViewModel() {
 
     /** Build a crop filter expression for an aspect ratio. */
     private fun buildCropFilterExpr(op: EditOperation.Crop): String? = when (op.aspectRatio) {
-        "16:9" -> "crop=iw:iw*9/16"
-        "9:16" -> "crop=ih*9/16:ih"
-        "1:1"  -> "crop=min(iw\\,ih):min(iw\\,ih)"
+        "16:9" -> "crop='trunc(min(iw,ih*16/9)/2)*2':'trunc(min(ih,iw*9/16)/2)*2',setsar=1"
+        "9:16" -> "crop='trunc(min(iw,ih*9/16)/2)*2':'trunc(min(ih,iw*16/9)/2)*2',setsar=1"
+        "1:1"  -> "crop='trunc(min(iw,ih)/2)*2':'trunc(min(iw,ih)/2)*2',setsar=1"
         "Custom" -> {
             val w = String.format(java.util.Locale.US, "trunc(iw*%.4f/2)*2", op.wFraction)
             val h = String.format(java.util.Locale.US, "trunc(ih*%.4f/2)*2", op.hFraction)
             val x = String.format(java.util.Locale.US, "trunc(iw*%.4f/2)*2", op.xFraction)
             val y = String.format(java.util.Locale.US, "trunc(ih*%.4f/2)*2", op.yFraction)
-            "crop=w=$w:h=$h:x=min($x\\,iw-($w)):y=min($y\\,ih-($h))"
+            "crop=w=$w:h=$h:x='min($x,iw-($w))':y='min($y,ih-($h))',setsar=1"
         }
         else   -> null
     }
