@@ -59,8 +59,10 @@ class DraggableImageOverlayView @JvmOverloads constructor(
     
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var originalBitmapForChroma: Bitmap? = null
-    private var currentChromaColor: String? = null
-    private var currentChromaSimilarity: Float = 0.1f
+    var currentChromaColor: String? = null
+        private set
+    var currentChromaSimilarity: Float = 0.1f
+        private set
     private var chromaJob: Job? = null
 
     private val guidelinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {

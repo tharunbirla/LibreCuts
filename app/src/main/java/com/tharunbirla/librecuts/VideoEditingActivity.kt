@@ -646,6 +646,8 @@ class VideoEditingActivity : AppCompatActivity() {
                         val fileDuration = getOverlayFileDurationMs(uri)
                         val duration = fileDuration ?: 3000L
                         val end = minOf(start + duration, getTotalSequenceDuration())
+                        val chromaColor = draggableImageOverlay?.currentChromaColor
+                        val chromaSim = draggableImageOverlay?.currentChromaSimilarity ?: 0.1f
                         viewModel.addImageOverlayOperation(
                             imageUri = uri,
                             relativeX = relX,
@@ -655,7 +657,9 @@ class VideoEditingActivity : AppCompatActivity() {
                             rotationAngle = rotationAngle,
                             startTimeMs = start,
                             endTimeMs = end,
-                            fileDurationMs = fileDuration
+                            fileDurationMs = fileDuration,
+                            chromaKeyColor = chromaColor,
+                            chromaKeySimilarity = chromaSim
                         )
                     }
                     viewModel.selectOperation(null)
@@ -6053,8 +6057,12 @@ class VideoEditingActivity : AppCompatActivity() {
     }
 
     private fun showChromaKeyDialog() {
-        val selectedId = viewModel.selectedOperationId.value ?: return
-        val op = viewModel.project.value?.operations?.find { (it as? EditOperation.AddImageOverlay)?.id == selectedId } as? EditOperation.AddImageOverlay ?: return
+        val selectedId = viewModel.selectedOperationId.value
+        val op = if (selectedId != null) {
+            viewModel.project.value?.operations?.find { (it as? EditOperation.AddImageOverlay)?.id == selectedId } as? EditOperation.AddImageOverlay
+        } else null
+
+        if (op == null && draggableImageOverlay?.visibility != View.VISIBLE) return
 
         val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
         val view = layoutInflater.inflate(R.layout.chroma_key_bottom_sheet_dialog, null)
@@ -6065,11 +6073,11 @@ class VideoEditingActivity : AppCompatActivity() {
         val btnClear = view.findViewById<Button>(R.id.btnChromaClear)
         val btnApply = view.findViewById<Button>(R.id.btnChromaApply)
 
-        var selectedColor = op.chromaKeyColor
-        slider.value = op.chromaKeySimilarity.coerceIn(0.01f, 0.5f)
+        var selectedColor = op?.chromaKeyColor ?: draggableImageOverlay?.currentChromaColor
+        slider.value = (op?.chromaKeySimilarity ?: draggableImageOverlay?.currentChromaSimilarity ?: 0.1f).coerceIn(0.01f, 0.5f)
 
-        val originalColor = op.chromaKeyColor
-        val originalSimilarity = op.chromaKeySimilarity
+        val originalColor = op?.chromaKeyColor ?: draggableImageOverlay?.currentChromaColor
+        val originalSimilarity = op?.chromaKeySimilarity ?: draggableImageOverlay?.currentChromaSimilarity ?: 0.1f
 
         fun updatePreview() {
             draggableImageOverlay?.setChromaKey(selectedColor, slider.value)
@@ -6171,14 +6179,16 @@ class VideoEditingActivity : AppCompatActivity() {
 
         btnClear.setOnClickListener {
             applied = true
-            viewModel.updateOperation(op.copy(chromaKeyColor = null))
+            if (op != null) {
+                viewModel.updateOperation(op.copy(chromaKeyColor = null))
+            }
             draggableImageOverlay?.setChromaKey(null, 0.1f)
             bottomSheet.dismiss()
         }
 
         btnApply.setOnClickListener {
             applied = true
-            if (selectedColor != null) {
+            if (op != null && selectedColor != null) {
                 viewModel.updateOperation(op.copy(
                     chromaKeyColor = selectedColor,
                     chromaKeySimilarity = slider.value
