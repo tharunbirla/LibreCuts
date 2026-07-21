@@ -47,6 +47,7 @@
             android:name=".VideoEditingActivity"
             android:exported="true"
             android:theme="@style/Editor"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|smallestScreenSize"
             android:windowSoftInputMode="adjustResize" />
 
         <activity

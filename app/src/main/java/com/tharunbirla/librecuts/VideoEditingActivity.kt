@@ -3447,7 +3447,7 @@ class VideoEditingActivity : AppCompatActivity() {
                     "Check that assets/fonts/Roboto-Regular.ttf exists.")
         }
 
-        exportJob = lifecycleScope.launch {
+        exportJob = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.Job()).launch {
             var tempOutputFile: File? = null
             var concatFile: File? = null
             try {
@@ -3668,7 +3668,7 @@ class VideoEditingActivity : AppCompatActivity() {
     }
 
     private fun exportVideoFile(uri: Uri) {
-        exportJob = lifecycleScope.launch {
+        exportJob = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main + kotlinx.coroutines.Job()).launch {
             var outputFile: File? = null
             var customFileUri: Uri? = null
             try {
@@ -4260,6 +4260,8 @@ class VideoEditingActivity : AppCompatActivity() {
                     loadingScreen.visibility = View.GONE
                     finish()
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 showError("Error initializing video: ${e.message}")
                 isImportLoading = false
