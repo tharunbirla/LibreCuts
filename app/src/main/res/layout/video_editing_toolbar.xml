@@ -4,8 +4,8 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="16dp"
-    android:layout_marginTop="16dp"
-    android:layout_marginBottom="24dp"
+    android:layout_marginTop="8dp"
+    android:layout_marginBottom="12dp"
     android:scrollbars="none"
     android:background="@drawable/bg_bottom_nav_floating"
     android:elevation="12dp"
@@ -19,22 +19,22 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center"
-        android:paddingVertical="12dp"
+        android:paddingVertical="8dp"
         android:paddingHorizontal="8dp">
 
         <!-- Cancel -->
         <LinearLayout
-            android:layout_width="72dp"
+            android:layout_width="60dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnVideoCancel"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_close_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />
             <TextView
@@ -49,17 +49,17 @@
 
         <!-- Trim -->
         <LinearLayout
-            android:layout_width="72dp"
+            android:layout_width="60dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnVideoTrim"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_trim_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />
             <TextView
@@ -74,17 +74,17 @@
 
         <!-- Split -->
         <LinearLayout
-            android:layout_width="72dp"
+            android:layout_width="60dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnVideoSplit"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_cut_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />
             <TextView
@@ -100,17 +100,17 @@
         <!-- Mute Clip -->
         <LinearLayout
             android:id="@+id/btnVideoMuteContainer"
-            android:layout_width="72dp"
+            android:layout_width="60dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnVideoMute"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_volume_up_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />
             <TextView
@@ -127,17 +127,17 @@
         <!-- Color Filters / LUTs -->
         <LinearLayout
             android:id="@+id/btnVideoFilterContainer"
-            android:layout_width="72dp"
+            android:layout_width="60dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnVideoFilter"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_palette_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />
             <TextView
@@ -153,17 +153,17 @@
         <!-- Adjust -->
         <LinearLayout
             android:id="@+id/btnVideoAdjustContainer"
-            android:layout_width="72dp"
+            android:layout_width="60dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnVideoAdjust"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_page_info_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />
             <TextView
@@ -179,17 +179,17 @@
         <!-- Speed -->
         <LinearLayout
             android:id="@+id/btnVideoSpeedContainer"
-            android:layout_width="72dp"
+            android:layout_width="60dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnVideoSpeed"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_speed_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />
             <TextView
@@ -205,17 +205,17 @@
         <!-- Extract Audio -->
         <LinearLayout
             android:id="@+id/btnVideoExtractAudioContainer"
-            android:layout_width="72dp"
+            android:layout_width="60dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnVideoExtractAudio"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_audio_extract_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />
             <TextView
@@ -231,17 +231,17 @@
         <!-- Freeze Frame -->
         <LinearLayout
             android:id="@+id/btnVideoFreezeFrameContainer"
-            android:layout_width="72dp"
+            android:layout_width="60dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnVideoFreezeFrame"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_freeze_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />
             <TextView
@@ -257,17 +257,17 @@
         <!-- Reverse -->
         <LinearLayout
             android:id="@+id/btnVideoReverseContainer"
-            android:layout_width="72dp"
+            android:layout_width="60dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnVideoReverse"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_fast_rewind_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />
             <TextView
@@ -283,17 +283,17 @@
         <!-- Delete -->
         <LinearLayout
             android:id="@+id/btnVideoDeleteContainer"
-            android:layout_width="72dp"
+            android:layout_width="60dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnVideoDelete"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_delete_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/colorPrimary" />
             <TextView

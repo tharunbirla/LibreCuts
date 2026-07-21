@@ -3,24 +3,24 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/surfaceContainerHigh"
+    android:background="@drawable/bg_bottom_sheet"
     android:orientation="vertical"
-    android:paddingBottom="48dp"
+    android:paddingBottom="24dp"
     android:paddingTop="12dp">
 
     <View
         android:layout_width="32dp"
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="24dp"
+        android:layout_marginBottom="16dp"
         android:alpha="0.4"
         android:background="@color/outlineVariant" />
 
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp"
-        android:paddingHorizontal="24dp">
+        android:layout_marginBottom="16dp"
+        android:paddingHorizontal="16dp">
 
         <TextView
             android:id="@+id/tvTitleQuality"
@@ -39,6 +39,7 @@
             android:layout_alignParentEnd="true"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_close_24"
+            android:padding="8dp"
             app:tint="@color/activeTool" />
     </RelativeLayout>
 
@@ -46,206 +47,152 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingHorizontal="24dp">
+        android:paddingHorizontal="16dp">
 
-        <!-- High Quality Option -->
-        <LinearLayout
-            android:id="@+id/layoutQualityHigh"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:background="@drawable/bg_aspect_ratio_item"
-            android:clickable="true"
-            android:focusable="true"
-            android:foreground="?attr/selectableItemBackground"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="16dp">
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/tvQualityHighTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/str_high_quality_1080p_original"
-                    android:textColor="@color/textColor"
-                    android:textSize="16sp"
-                    android:fontFamily="sans-serif-medium" />
-
-                <TextView
-                    android:id="@+id/tvQualityHighDesc"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/str_best_visual_quality_larger_fil"
-                    android:textColor="@color/iconSecondary"
-                    android:textSize="12sp"
-                    android:layout_marginTop="4dp" />
-            </LinearLayout>
-
-            <ImageView
-                android:id="@+id/ivCheckHigh"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_check_24"
-                app:tint="@color/colorPrimary"
-                android:visibility="gone" />
-        </LinearLayout>
-
-        <!-- Medium Quality Option -->
-        <LinearLayout
-            android:id="@+id/layoutQualityMedium"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:background="@drawable/bg_aspect_ratio_item"
-            android:clickable="true"
-            android:focusable="true"
-            android:foreground="?attr/selectableItemBackground"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="16dp">
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/tvQualityMediumTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/str_medium_quality_default"
-                    android:textColor="@color/textColor"
-                    android:textSize="16sp"
-                    android:fontFamily="sans-serif-medium" />
-
-                <TextView
-                    android:id="@+id/tvQualityMediumDesc"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/str_balanced_quality_and_file_size"
-                    android:textColor="@color/iconSecondary"
-                    android:textSize="12sp"
-                    android:layout_marginTop="4dp" />
-            </LinearLayout>
-
-            <ImageView
-                android:id="@+id/ivCheckMedium"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_check_24"
-                app:tint="@color/colorPrimary"
-                android:visibility="gone" />
-        </LinearLayout>
-
-        <!-- Low Quality Option -->
-        <LinearLayout
-            android:id="@+id/layoutQualityLow"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:background="@drawable/bg_aspect_ratio_item"
-            android:clickable="true"
-            android:focusable="true"
-            android:foreground="?attr/selectableItemBackground"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="16dp">
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/tvQualityLowTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/str_low_quality_fastest"
-                    android:textColor="@color/textColor"
-                    android:textSize="16sp"
-                    android:fontFamily="sans-serif-medium" />
-
-                <TextView
-                    android:id="@+id/tvQualityLowDesc"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/str_smallest_file_size_fastest_exp"
-                    android:textColor="@color/iconSecondary"
-                    android:textSize="12sp"
-                    android:layout_marginTop="4dp" />
-            </LinearLayout>
-
-            <ImageView
-                android:id="@+id/ivCheckLow"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_check_24"
-                app:tint="@color/colorPrimary"
-                android:visibility="gone" />
-        </LinearLayout>
-
-        <!-- Audio Only Option -->
-        <LinearLayout
-            android:id="@+id/layoutQualityAudio"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_aspect_ratio_item"
-            android:clickable="true"
-            android:focusable="true"
-            android:foreground="?attr/selectableItemBackground"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="16dp">
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/tvQualityAudioTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/str_audio_only"
-                    android:textColor="@color/textColor"
-                    android:textSize="16sp"
-                    android:fontFamily="sans-serif-medium" />
-
-                <TextView
-                    android:id="@+id/tvQualityAudioDesc"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/str_export_as_an_mp3_audio_file"
-                    android:textColor="@color/iconSecondary"
-                    android:textSize="12sp"
-                    android:layout_marginTop="4dp" />
-            </LinearLayout>
-
-            <ImageView
-                android:id="@+id/ivCheckAudio"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@drawable/ic_check_24"
-                app:tint="@color/colorPrimary"
-                android:visibility="gone" />
-        </LinearLayout>
-
-
-        <!-- Export Directory Option -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="12dp"
+            android:text="Resolution"
+            android:textColor="@color/textColor"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif-medium"
+            android:alpha="0.7"
+            android:layout_marginBottom="8dp"/>
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none"
+            android:clipToPadding="false"
+            android:layout_marginBottom="16dp">
+            
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/cgResolution"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:singleSelection="true"
+                app:selectionRequired="true"
+                app:singleLine="true">
+                
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipRes360"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="360p" />
+                    
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipRes480"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="480p" />
+                    
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipRes720"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="720p" />
+                    
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipRes1080"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1080p" />
+                    
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipRes1440"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1440p (2K)" />
+                    
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipRes2160"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="2160p (4K)" />
+            </com.google.android.material.chip.ChipGroup>
+        </HorizontalScrollView>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Frame Rate (FPS)"
+            android:textColor="@color/textColor"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif-medium"
+            android:alpha="0.7"
+            android:layout_marginBottom="8dp"/>
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none"
+            android:clipToPadding="false"
+            android:layout_marginBottom="16dp">
+            
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/cgFps"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:singleSelection="true"
+                app:selectionRequired="true"
+                app:singleLine="true">
+                
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipFps24"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="24" />
+                    
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipFps25"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="25" />
+                    
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipFps30"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="30" />
+                    
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipFps50"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="50" />
+                    
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipFps60"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="60" />
+            </com.google.android.material.chip.ChipGroup>
+        </HorizontalScrollView>
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchAudioOnly"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Export as Audio Only (MP3)"
+            android:textColor="@color/textColor"
+            android:fontFamily="sans-serif-medium"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
             android:text="@string/str_export_location"
             android:textColor="@color/textColor"
             android:textSize="14sp"
@@ -262,7 +209,7 @@
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:padding="16dp">
+            android:padding="12dp">
 
             <ImageView
                 android:layout_width="24dp"

@@ -15,12 +15,12 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="64dp"
+            android:layout_height="52dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:background="@color/background"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp">
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp">
 
             <ImageButton
                 android:id="@+id/btnHome"
@@ -40,11 +40,11 @@
 
             <ImageButton
                 android:id="@+id/btnUndo"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:src="@drawable/ic_undo_24"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="Undo"
                 android:layout_marginEnd="8dp"
@@ -53,11 +53,11 @@
 
             <ImageButton
                 android:id="@+id/btnRedo"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:src="@drawable/ic_redo_24"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="Redo"
                 android:layout_marginEnd="16dp"
@@ -66,11 +66,11 @@
 
             <ImageButton
                 android:id="@+id/btnPreview"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:src="@drawable/ic_preview_24"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="Preview Render"
                 android:layout_marginEnd="16dp"
@@ -80,7 +80,7 @@
             <LinearLayout
                 android:id="@+id/layoutSaveSplit"
                 android:layout_width="120dp"
-                android:layout_height="40dp"
+                android:layout_height="32dp"
                 android:orientation="horizontal"
                 android:background="@drawable/bg_split_save_button"
                 android:clipToOutline="true"
@@ -204,8 +204,8 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:background="@color/surfaceContainerHigh"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp">
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -306,8 +306,8 @@
             <FrameLayout
                 android:id="@+id/timelineContainer"
                 android:layout_width="match_parent"
-                android:layout_height="180dp"
-                android:layout_marginHorizontal="16dp">
+                android:layout_height="140dp"
+                android:layout_marginHorizontal="8dp">
 
                 <HorizontalScrollView
                     android:id="@+id/timelineHorizontalScroll"
@@ -350,7 +350,7 @@
                                 <FrameLayout
                                     android:id="@+id/sequenceTrackContainer"
                                     android:layout_width="wrap_content"
-                                    android:layout_height="64dp"
+                                    android:layout_height="52dp"
                                     android:layout_marginBottom="4dp"
                                     android:clipChildren="false">
                                 </FrameLayout>
@@ -419,11 +419,11 @@
                     android:focusable="true">
                     
                     <ImageView
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
                         android:src="@drawable/ic_add_24"
                         android:background="@drawable/circle_primary_container"
-                        android:padding="12dp"
+                        android:padding="8dp"
                         app:tint="@color/colorOnPrimary" />
                         
                     <TextView
@@ -449,7 +449,7 @@
 
             <View
                 android:id="@+id/timelineDivider"
-                android:layout_width="48dp"
+                android:layout_width="40dp"
                 android:layout_height="4dp"
                 android:layout_gravity="center_horizontal"
                 android:background="@color/outlineVariant"
@@ -464,7 +464,7 @@
             layout="@layout/text_editing_toolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="8dp"
             android:visibility="gone" />
 
         <!-- Image Editing Toolbar (inline mode, hidden by default) -->
@@ -473,7 +473,7 @@
             layout="@layout/image_editing_toolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="8dp"
             android:visibility="gone" />
 
         <!-- Video Editing Toolbar (inline mode, hidden by default) -->
@@ -482,7 +482,7 @@
             layout="@layout/video_editing_toolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="8dp"
             android:visibility="gone" />
 
         <!-- Audio Editing Toolbar (inline mode, hidden by default) -->
@@ -491,7 +491,7 @@
             layout="@layout/audio_editing_toolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="8dp"
             android:visibility="gone" />
 
         <!-- Crop Editing Toolbar (inline mode, hidden by default) -->
@@ -500,7 +500,7 @@
             layout="@layout/crop_editing_toolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="8dp"
             android:visibility="gone" />
 
         <!-- Speed Editing Toolbar (inline mode, hidden by default) -->
@@ -509,7 +509,7 @@
             layout="@layout/speed_editing_toolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="8dp"
             android:visibility="gone" />
 
         <!-- Subtitles Editing Toolbar (inline mode, hidden by default) -->
@@ -518,16 +518,16 @@
             layout="@layout/subtitles_editing_toolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="8dp"
             android:visibility="gone" />
 
         <HorizontalScrollView
             android:id="@+id/editingControlsScroll"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16dp"
-            android:layout_marginBottom="24dp"
-            android:layout_marginTop="16dp"
+            android:layout_marginHorizontal="8dp"
+            android:layout_marginBottom="12dp"
+            android:layout_marginTop="8dp"
             android:scrollbars="none"
             android:background="@drawable/bg_bottom_nav_floating"
             android:elevation="12dp"
@@ -542,21 +542,21 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center"
-                android:paddingVertical="12dp"
+                android:paddingVertical="8dp"
                 android:paddingHorizontal="8dp">
 
                 <LinearLayout
-                    android:layout_width="72dp"
+                    android:layout_width="60dp"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:gravity="center">
                     <ImageButton
                         android:id="@+id/btnText"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
                         android:background="@drawable/tool_button_inactive"
                         android:src="@drawable/ic_text_24"
-                        android:padding="12dp"
+                        android:padding="8dp"
                         android:scaleType="fitCenter"
                         app:tint="@color/toolTextInactive" />
                     <TextView
@@ -570,17 +570,17 @@
                 </LinearLayout>
 
                 <LinearLayout
-                    android:layout_width="72dp"
+                    android:layout_width="60dp"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:gravity="center">
                     <ImageButton
                         android:id="@+id/btnMediaOverlay"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
                         android:background="@drawable/tool_button_inactive"
                         android:src="@drawable/ic_layers_24"
-                        android:padding="12dp"
+                        android:padding="8dp"
                         android:scaleType="fitCenter"
                         app:tint="@color/toolTextInactive" />
                     <TextView
@@ -596,17 +596,17 @@
 
 
                 <LinearLayout
-                    android:layout_width="72dp"
+                    android:layout_width="60dp"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:gravity="center">
                     <ImageButton
                         android:id="@+id/btnAudio"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
                         android:background="@drawable/tool_button_inactive"
                         android:src="@drawable/ic_audio_24"
-                        android:padding="12dp"
+                        android:padding="8dp"
                         android:scaleType="fitCenter"
                         app:tint="@color/toolTextInactive" />
                     <TextView
@@ -620,17 +620,17 @@
                 </LinearLayout>
 
                 <LinearLayout
-                    android:layout_width="72dp"
+                    android:layout_width="60dp"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:gravity="center">
                     <ImageButton
                         android:id="@+id/btnVoiceOver"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
                         android:background="@drawable/tool_button_inactive"
                         android:src="@drawable/ic_mic_24"
-                        android:padding="12dp"
+                        android:padding="8dp"
                         android:scaleType="fitCenter"
                         app:tint="@color/toolTextInactive" />
                     <TextView
@@ -644,17 +644,17 @@
                 </LinearLayout>
 
                 <LinearLayout
-                    android:layout_width="72dp"
+                    android:layout_width="60dp"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:gravity="center">
                     <ImageButton
                         android:id="@+id/btnSubtitles"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
                         android:background="@drawable/tool_button_inactive"
                         android:src="@drawable/ic_closed_caption_24"
-                        android:padding="12dp"
+                        android:padding="8dp"
                         android:scaleType="fitCenter"
                         app:tint="@color/toolTextInactive" />
                     <TextView
@@ -668,17 +668,17 @@
                 </LinearLayout>
 
                 <LinearLayout
-                    android:layout_width="72dp"
+                    android:layout_width="60dp"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:gravity="center">
                     <ImageButton
                         android:id="@+id/btnCrop"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
                         android:background="@drawable/tool_button_inactive"
                         android:src="@drawable/ic_crop_24"
-                        android:padding="12dp"
+                        android:padding="8dp"
                         android:scaleType="fitCenter"
                         app:tint="@color/toolTextInactive" />
                     <TextView

@@ -19,12 +19,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 
-enum class ExportQuality(val bitrate: String, val label: String) {
-    HIGH("8M", "High Quality"),
-    MEDIUM("4M", "Medium Quality"),
-    LOW("2M", "Low Quality"),
-    AUDIO_ONLY("192k", "Audio Only (MP3)")
-}
+// ExportQuality enum removed in favor of individual parameters
 
 class VideoEditingViewModel : ViewModel() {
 
@@ -36,7 +31,9 @@ class VideoEditingViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(VideoEditingUiState())
     private val _undoStack = MutableStateFlow<List<VideoProject>>(emptyList())
     private val _redoStack = MutableStateFlow<List<VideoProject>>(emptyList())
-    private val _exportQuality = MutableStateFlow(ExportQuality.MEDIUM)
+    private val _exportResolution = MutableStateFlow(1080)
+    private val _exportFps = MutableStateFlow(30)
+    private val _exportAudioOnly = MutableStateFlow(false)
     private val _selectedOperationId = MutableStateFlow<String?>(null)
 
     val project: StateFlow<VideoProject?> = _project.asStateFlow()
@@ -44,10 +41,14 @@ class VideoEditingViewModel : ViewModel() {
     val selectedOperationId: StateFlow<String?> = _selectedOperationId.asStateFlow()
     val undoStack: StateFlow<List<VideoProject>> = _undoStack.asStateFlow()
     val redoStack: StateFlow<List<VideoProject>> = _redoStack.asStateFlow()
-    val exportQuality: StateFlow<ExportQuality> = _exportQuality.asStateFlow()
+    val exportResolution: StateFlow<Int> = _exportResolution.asStateFlow()
+    val exportFps: StateFlow<Int> = _exportFps.asStateFlow()
+    val exportAudioOnly: StateFlow<Boolean> = _exportAudioOnly.asStateFlow()
 
-    fun setExportQuality(quality: ExportQuality) {
-        _exportQuality.value = quality
+    fun setExportSettings(resolution: Int, fps: Int, audioOnly: Boolean) {
+        _exportResolution.value = resolution
+        _exportFps.value = fps
+        _exportAudioOnly.value = audioOnly
     }
 
     val operations: StateFlow<List<EditOperation>>
@@ -1461,7 +1462,7 @@ class VideoEditingViewModel : ViewModel() {
             )
             filterParts.addAll(sourceVideoStages)
             val finalVideoLabel = "[fmtv]"
-            filterParts.add("${tempVideoLabel}format=yuv420p$finalVideoLabel")
+            filterParts.add("${tempVideoLabel}scale=-2:${_exportResolution.value},fps=${_exportFps.value},format=yuv420p$finalVideoLabel")
 
             if (audioMuted) {
                 filterParts.add("${currentAudioLabel}anullsink")
@@ -1567,12 +1568,12 @@ class VideoEditingViewModel : ViewModel() {
                 }
             }
 
-            if (_exportQuality.value == ExportQuality.AUDIO_ONLY) {
+            if (_exportAudioOnly.value) {
                 filterParts.add("${finalVideoLabel}nullsink")
             }
             cmd.append(" -filter_complex \"${filterParts.joinToString(";")}\"")
             
-            if (_exportQuality.value == ExportQuality.AUDIO_ONLY) {
+            if (_exportAudioOnly.value) {
                 if (!audioMuted) {
                     cmd.append(" -map \"$currentAudioLabel\"")
                     // LibreCuts ffmpeg might have libmp3lame, fallback to libmp3lame or default mp3 encoder
@@ -1587,7 +1588,17 @@ class VideoEditingViewModel : ViewModel() {
                 } else {
                     cmd.append(" -an")
                 }
-                cmd.append(" -c:v h264_mediacodec -b:v ${_exportQuality.value.bitrate}")
+                
+                val bitrate = when (_exportResolution.value) {
+                    2160 -> "30M"
+                    1440 -> "16M"
+                    1080 -> "8M"
+                    720 -> "5M"
+                    480 -> "2M"
+                    else -> "1M"
+                }
+                cmd.append(" -c:v h264_mediacodec -b:v $bitrate")
+                
                 if (!audioMuted) {
                     cmd.append(" -c:a aac")
                 }
@@ -1757,17 +1768,17 @@ class VideoEditingViewModel : ViewModel() {
             var mappedVideoLabel = finalVideoLabel
             if (hasVideoFilters) {
                 val fmtLabel = "[fmtv]"
-                filterComplexParts.add("${finalVideoLabel}format=yuv420p${fmtLabel}")
+                filterComplexParts.add("${finalVideoLabel}scale=-2:${_exportResolution.value},fps=${_exportFps.value},format=yuv420p${fmtLabel}")
                 mappedVideoLabel = fmtLabel
             }
             
-            if (_exportQuality.value == ExportQuality.AUDIO_ONLY && hasVideoFilters) {
+            if (_exportAudioOnly.value && hasVideoFilters) {
                 filterComplexParts.add("${mappedVideoLabel}nullsink")
             }
             
             cmd.append(" -filter_complex \"${filterComplexParts.joinToString(";")}\"")
 
-            if (_exportQuality.value != ExportQuality.AUDIO_ONLY) {
+            if (!_exportAudioOnly.value) {
                 if (hasVideoFilters) {
                     cmd.append(" -map \"$mappedVideoLabel\"")
                 } else {
@@ -1783,7 +1794,7 @@ class VideoEditingViewModel : ViewModel() {
                 cmd.append(" -map 0:a?")
             }
         } else {
-            if (_exportQuality.value == ExportQuality.AUDIO_ONLY) {
+            if (_exportAudioOnly.value) {
                 cmd.append(" -vn")
                 if (!effectiveAudioMuted) {
                     cmd.append(" -map 0:a?")
@@ -1795,12 +1806,26 @@ class VideoEditingViewModel : ViewModel() {
         }
 
         // Codecs
-        if (_exportQuality.value == ExportQuality.AUDIO_ONLY) {
+        if (_exportAudioOnly.value) {
             if (!effectiveAudioMuted) {
                 cmd.append(" -c:a libmp3lame -b:a 192k")
             }
         } else {
-            cmd.append(" -c:v h264_mediacodec -b:v ${_exportQuality.value.bitrate}")
+            val bitrate = when (_exportResolution.value) {
+                2160 -> "30M"
+                1440 -> "16M"
+                1080 -> "8M"
+                720 -> "5M"
+                480 -> "2M"
+                else -> "1M"
+            }
+            // If there are no video filters, we still need to apply the scale and fps output params
+            if (!hasVideoFilters) {
+                cmd.append(" -c:v h264_mediacodec -b:v $bitrate -vf scale=-2:${_exportResolution.value} -r ${_exportFps.value}")
+            } else {
+                cmd.append(" -c:v h264_mediacodec -b:v $bitrate")
+            }
+            
             if (!effectiveAudioMuted) {
                 cmd.append(" -c:a aac")
             }

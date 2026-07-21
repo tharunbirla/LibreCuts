@@ -3388,7 +3388,7 @@ class VideoEditingActivity : AppCompatActivity() {
                     contentResolver.takePersistableUriPermission(treeUri, takeFlags)
 
                     val sharedPreferences = getSharedPreferences("librecuts_prefs", Context.MODE_PRIVATE)
-                    val isAudioOnly = viewModel.exportQuality.value == com.tharunbirla.librecuts.viewmodels.ExportQuality.AUDIO_ONLY
+                    val isAudioOnly = viewModel.exportAudioOnly.value
                     val prefKey = if (isAudioOnly) "export_audio_directory_uri" else "export_directory_uri"
                     sharedPreferences.edit().putString(prefKey, treeUri.toString()).apply()
 
@@ -3454,7 +3454,7 @@ class VideoEditingActivity : AppCompatActivity() {
                 viewModel.startExport()
 
                 val sourceFilePath = tempInputFile.absolutePath
-                val isAudioOnly = viewModel.exportQuality.value == com.tharunbirla.librecuts.viewmodels.ExportQuality.AUDIO_ONLY
+                val isAudioOnly = viewModel.exportAudioOnly.value
                 val ext = if (isAudioOnly) ".mp3" else ".mp4"
                 tempOutputFile = File(cacheDir, "temp_video_${System.currentTimeMillis()}$ext")
                 val tempOutputPath = tempOutputFile.absolutePath
@@ -3569,41 +3569,36 @@ class VideoEditingActivity : AppCompatActivity() {
         val bottomSheetDialog = BottomSheetDialog(this)
         val sheetView = layoutInflater.inflate(R.layout.export_quality_bottom_sheet_dialog, null)
 
-        val layoutHigh = sheetView.findViewById<LinearLayout>(R.id.layoutQualityHigh)
-        val layoutMedium = sheetView.findViewById<LinearLayout>(R.id.layoutQualityMedium)
-        val layoutLow = sheetView.findViewById<LinearLayout>(R.id.layoutQualityLow)
-        val layoutAudio = sheetView.findViewById<LinearLayout>(R.id.layoutQualityAudio)
-
-        val ivCheckHigh = sheetView.findViewById<ImageView>(R.id.ivCheckHigh)
-        val ivCheckMedium = sheetView.findViewById<ImageView>(R.id.ivCheckMedium)
-        val ivCheckLow = sheetView.findViewById<ImageView>(R.id.ivCheckLow)
-        val ivCheckAudio = sheetView.findViewById<ImageView>(R.id.ivCheckAudio)
-
+        val cgResolution = sheetView.findViewById<com.google.android.material.chip.ChipGroup>(R.id.cgResolution)
+        val cgFps = sheetView.findViewById<com.google.android.material.chip.ChipGroup>(R.id.cgFps)
+        val switchAudioOnly = sheetView.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchAudioOnly)
         val btnClose = sheetView.findViewById<ImageButton>(R.id.btnCloseSheet)
 
-        fun updateSelection(selected: com.tharunbirla.librecuts.viewmodels.ExportQuality) {
-            ivCheckHigh.visibility = if (selected == com.tharunbirla.librecuts.viewmodels.ExportQuality.HIGH) View.VISIBLE else View.GONE
-            ivCheckMedium.visibility = if (selected == com.tharunbirla.librecuts.viewmodels.ExportQuality.MEDIUM) View.VISIBLE else View.GONE
-            ivCheckLow.visibility = if (selected == com.tharunbirla.librecuts.viewmodels.ExportQuality.LOW) View.VISIBLE else View.GONE
-            ivCheckAudio.visibility = if (selected == com.tharunbirla.librecuts.viewmodels.ExportQuality.AUDIO_ONLY) View.VISIBLE else View.GONE
+        // Initialize state
+        val currentRes = viewModel.exportResolution.value
+        val currentFps = viewModel.exportFps.value
+        val isAudioOnly = viewModel.exportAudioOnly.value
 
-            layoutHigh.setBackgroundResource(
-                if (selected == com.tharunbirla.librecuts.viewmodels.ExportQuality.HIGH) R.drawable.bg_aspect_ratio_selected else R.drawable.bg_aspect_ratio_item
-            )
-            layoutMedium.setBackgroundResource(
-                if (selected == com.tharunbirla.librecuts.viewmodels.ExportQuality.MEDIUM) R.drawable.bg_aspect_ratio_selected else R.drawable.bg_aspect_ratio_item
-            )
-            layoutLow.setBackgroundResource(
-                if (selected == com.tharunbirla.librecuts.viewmodels.ExportQuality.LOW) R.drawable.bg_aspect_ratio_selected else R.drawable.bg_aspect_ratio_item
-            )
-            layoutAudio.setBackgroundResource(
-                if (selected == com.tharunbirla.librecuts.viewmodels.ExportQuality.AUDIO_ONLY) R.drawable.bg_aspect_ratio_selected else R.drawable.bg_aspect_ratio_item
-            )
+        when (currentRes) {
+            360 -> cgResolution.check(R.id.chipRes360)
+            480 -> cgResolution.check(R.id.chipRes480)
+            720 -> cgResolution.check(R.id.chipRes720)
+            1080 -> cgResolution.check(R.id.chipRes1080)
+            1440 -> cgResolution.check(R.id.chipRes1440)
+            2160 -> cgResolution.check(R.id.chipRes2160)
+            else -> cgResolution.check(R.id.chipRes1080)
         }
 
-        // Initialize state
-        val currentQuality = viewModel.exportQuality.value
-        updateSelection(currentQuality)
+        when (currentFps) {
+            24 -> cgFps.check(R.id.chipFps24)
+            25 -> cgFps.check(R.id.chipFps25)
+            30 -> cgFps.check(R.id.chipFps30)
+            50 -> cgFps.check(R.id.chipFps50)
+            60 -> cgFps.check(R.id.chipFps60)
+            else -> cgFps.check(R.id.chipFps30)
+        }
+
+        switchAudioOnly.isChecked = isAudioOnly
 
         val layoutExportDirectory = sheetView.findViewById<LinearLayout>(R.id.layoutExportDirectory)
         val tvExportDirectoryTitle = sheetView.findViewById<TextView>(R.id.tvExportDirectoryTitle)
@@ -3613,37 +3608,31 @@ class VideoEditingActivity : AppCompatActivity() {
         activeDirectoryPathView = tvExportDirectoryPath
         updateExportDirectoryUi(tvExportDirectoryTitle, tvExportDirectoryPath)
 
-        layoutHigh.setBounceClickListener {
-            viewModel.setExportQuality(com.tharunbirla.librecuts.viewmodels.ExportQuality.HIGH)
-            updateSelection(com.tharunbirla.librecuts.viewmodels.ExportQuality.HIGH)
+        fun saveSettings() {
+            val res = when (cgResolution.checkedChipId) {
+                R.id.chipRes360 -> 360
+                R.id.chipRes480 -> 480
+                R.id.chipRes720 -> 720
+                R.id.chipRes1080 -> 1080
+                R.id.chipRes1440 -> 1440
+                R.id.chipRes2160 -> 2160
+                else -> 1080
+            }
+            val fps = when (cgFps.checkedChipId) {
+                R.id.chipFps24 -> 24
+                R.id.chipFps25 -> 25
+                R.id.chipFps30 -> 30
+                R.id.chipFps50 -> 50
+                R.id.chipFps60 -> 60
+                else -> 30
+            }
+            viewModel.setExportSettings(res, fps, switchAudioOnly.isChecked)
             updateExportDirectoryUi(tvExportDirectoryTitle, tvExportDirectoryPath)
-            Toast.makeText(this, R.string.toast_export_quality_set_to_high, Toast.LENGTH_SHORT).show()
-            bottomSheetDialog.dismiss()
         }
 
-        layoutMedium.setBounceClickListener {
-            viewModel.setExportQuality(com.tharunbirla.librecuts.viewmodels.ExportQuality.MEDIUM)
-            updateSelection(com.tharunbirla.librecuts.viewmodels.ExportQuality.MEDIUM)
-            updateExportDirectoryUi(tvExportDirectoryTitle, tvExportDirectoryPath)
-            Toast.makeText(this, R.string.toast_export_quality_set_to_medium, Toast.LENGTH_SHORT).show()
-            bottomSheetDialog.dismiss()
-        }
-
-        layoutLow.setBounceClickListener {
-            viewModel.setExportQuality(com.tharunbirla.librecuts.viewmodels.ExportQuality.LOW)
-            updateSelection(com.tharunbirla.librecuts.viewmodels.ExportQuality.LOW)
-            updateExportDirectoryUi(tvExportDirectoryTitle, tvExportDirectoryPath)
-            Toast.makeText(this, R.string.toast_export_quality_set_to_low, Toast.LENGTH_SHORT).show()
-            bottomSheetDialog.dismiss()
-        }
-
-        layoutAudio.setBounceClickListener {
-            viewModel.setExportQuality(com.tharunbirla.librecuts.viewmodels.ExportQuality.AUDIO_ONLY)
-            updateSelection(com.tharunbirla.librecuts.viewmodels.ExportQuality.AUDIO_ONLY)
-            updateExportDirectoryUi(tvExportDirectoryTitle, tvExportDirectoryPath)
-            Toast.makeText(this, R.string.str_export_format_set_to_audio_only, Toast.LENGTH_SHORT).show()
-            bottomSheetDialog.dismiss()
-        }
+        cgResolution.setOnCheckedStateChangeListener { _, _ -> saveSettings() }
+        cgFps.setOnCheckedStateChangeListener { _, _ -> saveSettings() }
+        switchAudioOnly.setOnCheckedChangeListener { _, _ -> saveSettings() }
 
         btnClose.setBounceClickListener {
             bottomSheetDialog.dismiss()
@@ -3676,7 +3665,7 @@ class VideoEditingActivity : AppCompatActivity() {
                 
                 withContext(kotlinx.coroutines.Dispatchers.IO) {
                     val sharedPreferences = getSharedPreferences("librecuts_prefs", Context.MODE_PRIVATE)
-                    val isAudioOnly = viewModel.exportQuality.value == com.tharunbirla.librecuts.viewmodels.ExportQuality.AUDIO_ONLY
+                    val isAudioOnly = viewModel.exportAudioOnly.value
                     val prefKey = if (isAudioOnly) "export_audio_directory_uri" else "export_directory_uri"
                     val customUriString = sharedPreferences.getString(prefKey, null)
                     val sourceFile = File(tempInputFile.absolutePath)
@@ -3803,7 +3792,7 @@ class VideoEditingActivity : AppCompatActivity() {
 
     private fun updateExportDirectoryUi(titleView: TextView, pathView: TextView) {
         val sharedPreferences = getSharedPreferences("librecuts_prefs", Context.MODE_PRIVATE)
-        val isAudioOnly = viewModel.exportQuality.value == com.tharunbirla.librecuts.viewmodels.ExportQuality.AUDIO_ONLY
+        val isAudioOnly = viewModel.exportAudioOnly.value
         val prefKey = if (isAudioOnly) "export_audio_directory_uri" else "export_directory_uri"
         val customUriString = sharedPreferences.getString(prefKey, null)
         

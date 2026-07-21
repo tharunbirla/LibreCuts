@@ -60,7 +60,7 @@
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:padding="16dp">
+            android:padding="12dp">
 
             <TextView
                 android:layout_width="0dp"
@@ -92,7 +92,7 @@
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:padding="16dp">
+            android:padding="12dp">
 
             <TextView
                 android:layout_width="0dp"
@@ -124,7 +124,7 @@
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:padding="16dp">
+            android:padding="12dp">
 
             <TextView
                 android:layout_width="0dp"
@@ -156,7 +156,7 @@
             android:foreground="?attr/selectableItemBackground"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:padding="16dp">
+            android:padding="12dp">
 
             <TextView
                 android:layout_width="0dp"

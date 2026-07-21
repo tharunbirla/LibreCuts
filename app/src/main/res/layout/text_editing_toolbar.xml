@@ -11,7 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="56dp"
         android:scrollbars="none"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="8dp"
         android:layout_marginBottom="8dp"
         android:layout_marginHorizontal="16dp"
         android:background="@drawable/bg_bottom_nav_floating"
@@ -31,11 +31,11 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginBottom="24dp"
+        android:layout_marginBottom="12dp"
         android:orientation="horizontal"
         android:gravity="center"
         android:background="@drawable/bg_bottom_nav_floating"
-        android:paddingVertical="12dp"
+        android:paddingVertical="8dp"
         android:paddingHorizontal="8dp"
         android:elevation="12dp">
 
@@ -48,11 +48,11 @@
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnTextCancel"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_close_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />
             <TextView
@@ -74,11 +74,11 @@
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnTextKeyboardTab"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_keyboard_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/colorPrimary" />
             <TextView
@@ -100,11 +100,11 @@
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnTextPaletteTab"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_palette_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />
             <TextView
@@ -126,11 +126,11 @@
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnTextDuplicate"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_copy_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />
             <TextView
@@ -152,11 +152,11 @@
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnTextDelete"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_delete_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="#F44336" />
             <TextView
@@ -178,11 +178,11 @@
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnTextDone"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_check_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/colorPrimary" />
             <TextView

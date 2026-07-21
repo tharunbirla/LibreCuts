@@ -10,7 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_marginHorizontal="16dp"
+        android:layout_marginHorizontal="12dp"
         android:layout_marginBottom="24dp"
         android:background="@drawable/bg_bottom_nav_floating"
         android:padding="24dp"
@@ -19,7 +19,7 @@
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp">
+            android:layout_marginBottom="4dp">
             
             <TextView
                 android:layout_width="wrap_content"

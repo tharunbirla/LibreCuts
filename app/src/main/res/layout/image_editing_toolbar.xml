@@ -11,7 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="56dp"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="8dp"
         android:layout_marginBottom="8dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
@@ -39,7 +39,7 @@
 
         <TextView
             android:id="@+id/tvImageRotationValue"
-            android:layout_width="48dp"
+            android:layout_width="40dp"
             android:layout_height="wrap_content"
             android:gravity="end"
             android:text="@string/str_0_1"
@@ -54,7 +54,7 @@
         android:layout_width="match_parent"
         android:layout_height="56dp"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="8dp"
         android:layout_marginBottom="8dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
@@ -83,7 +83,7 @@
 
         <TextView
             android:id="@+id/tvImageOpacityValue"
-            android:layout_width="48dp"
+            android:layout_width="40dp"
             android:layout_height="wrap_content"
             android:gravity="end"
             android:text="@string/str_100"
@@ -97,7 +97,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginBottom="24dp"
+        android:layout_marginBottom="12dp"
         android:scrollbars="none"
         android:background="@drawable/bg_bottom_nav_floating"
         android:elevation="12dp"
@@ -111,22 +111,22 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center"
-            android:paddingVertical="12dp"
+            android:paddingVertical="8dp"
             android:paddingHorizontal="8dp">
 
         <!-- Cancel -->
         <LinearLayout
-            android:layout_width="72dp"
+            android:layout_width="60dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnImageCancel"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_close_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />
             <TextView
@@ -141,17 +141,17 @@
 
         <!-- Duplicate -->
         <LinearLayout
-            android:layout_width="72dp"
+            android:layout_width="60dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnImageDuplicate"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_copy_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />
             <TextView
@@ -167,17 +167,17 @@
         <!-- Chroma Key -->
         <LinearLayout
             android:id="@+id/btnImageChromaKeyContainer"
-            android:layout_width="72dp"
+            android:layout_width="60dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnImageChromaKey"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_color_lens_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />
             <TextView
@@ -194,17 +194,17 @@
         <!-- Opacity -->
         <LinearLayout
             android:id="@+id/btnImageOpacityContainer"
-            android:layout_width="72dp"
+            android:layout_width="60dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnImageOpacity"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_opacity_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />
             <TextView
@@ -222,18 +222,18 @@
         <!-- Loop -->
         <LinearLayout
             android:id="@+id/btnImageLoopContainer"
-            android:layout_width="72dp"
+            android:layout_width="60dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center"
             android:visibility="gone">
             <ImageButton
                 android:id="@+id/btnImageLoop"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_loop_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/toolTextInactive" />
             <TextView
@@ -249,17 +249,17 @@
 
         <!-- Delete -->
         <LinearLayout
-            android:layout_width="72dp"
+            android:layout_width="60dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnImageDelete"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_delete_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="#F44336" />
             <TextView
@@ -273,17 +273,17 @@
         </LinearLayout>
         <!-- Done -->
         <LinearLayout
-            android:layout_width="72dp"
+            android:layout_width="60dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center">
             <ImageButton
                 android:id="@+id/btnImageDone"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:background="@drawable/tool_button_inactive"
                 android:src="@drawable/ic_check_24"
-                android:padding="12dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 app:tint="@color/colorPrimary" />
             <TextView
