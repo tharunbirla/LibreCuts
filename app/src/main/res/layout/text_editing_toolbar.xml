@@ -26,173 +26,207 @@
             android:paddingHorizontal="16dp" />
     </HorizontalScrollView>
 
+    <!-- Format Settings Container -->
+    <include layout="@layout/text_format_settings"
+        android:id="@+id/formatSettingsContainer"
+        android:visibility="gone" />
+
     <!-- Toolbar Row -->
-    <LinearLayout
+    <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
         android:layout_marginBottom="12dp"
-        android:orientation="horizontal"
-        android:gravity="center"
+        android:scrollbars="none"
         android:background="@drawable/bg_bottom_nav_floating"
-        android:paddingVertical="8dp"
-        android:paddingHorizontal="8dp"
-        android:elevation="12dp">
+        android:elevation="12dp"
+        android:clipToOutline="true"
+        android:requiresFadingEdge="horizontal"
+        android:fadingEdgeLength="32dp"
+        android:fillViewport="true">
 
-        <!-- Cancel -->
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center">
-            <ImageButton
-                android:id="@+id/btnTextCancel"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:background="@drawable/tool_button_inactive"
-                android:src="@drawable/ic_close_24"
-                android:padding="8dp"
-                android:scaleType="fitCenter"
-                app:tint="@color/toolTextInactive" />
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="@string/cancel"
-                android:textSize="11sp"
-                android:fontFamily="sans-serif-medium"
-                android:textColor="@color/toolTextInactive"/>
-        </LinearLayout>
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:paddingVertical="8dp"
+            android:paddingHorizontal="8dp">
 
-        <!-- Keyboard -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center">
-            <ImageButton
-                android:id="@+id/btnTextKeyboardTab"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:background="@drawable/tool_button_inactive"
-                android:src="@drawable/ic_keyboard_24"
-                android:padding="8dp"
-                android:scaleType="fitCenter"
-                app:tint="@color/colorPrimary" />
-            <TextView
-                android:layout_width="wrap_content"
+            <!-- Cancel -->
+            <LinearLayout
+                android:layout_width="60dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="@string/str_keyboard"
-                android:textSize="11sp"
-                android:fontFamily="sans-serif-medium"
-                android:textColor="@color/colorPrimary"/>
-        </LinearLayout>
+                android:orientation="vertical"
+                android:gravity="center">
+                <ImageButton
+                    android:id="@+id/btnTextCancel"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/tool_button_inactive"
+                    android:src="@drawable/ic_close_24"
+                    android:padding="8dp"
+                    android:scaleType="fitCenter"
+                    app:tint="@color/toolTextInactive" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/cancel"
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/toolTextInactive" />
+            </LinearLayout>
 
-        <!-- Color Palette -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center">
-            <ImageButton
-                android:id="@+id/btnTextPaletteTab"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:background="@drawable/tool_button_inactive"
-                android:src="@drawable/ic_palette_24"
-                android:padding="8dp"
-                android:scaleType="fitCenter"
-                app:tint="@color/toolTextInactive" />
-            <TextView
-                android:layout_width="wrap_content"
+            <!-- Keyboard -->
+            <LinearLayout
+                android:layout_width="60dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="@string/str_color"
-                android:textSize="11sp"
-                android:fontFamily="sans-serif-medium"
-                android:textColor="@color/toolTextInactive"/>
-        </LinearLayout>
+                android:orientation="vertical"
+                android:gravity="center">
+                <ImageButton
+                    android:id="@+id/btnTextKeyboardTab"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/tool_button_inactive"
+                    android:src="@drawable/ic_keyboard_24"
+                    android:padding="8dp"
+                    android:scaleType="fitCenter"
+                    app:tint="@color/colorPrimary" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/str_keyboard"
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/colorPrimary" />
+            </LinearLayout>
 
-        <!-- Duplicate -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center">
-            <ImageButton
-                android:id="@+id/btnTextDuplicate"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:background="@drawable/tool_button_inactive"
-                android:src="@drawable/ic_copy_24"
-                android:padding="8dp"
-                android:scaleType="fitCenter"
-                app:tint="@color/toolTextInactive" />
-            <TextView
-                android:layout_width="wrap_content"
+            <!-- Color Palette -->
+            <LinearLayout
+                android:layout_width="60dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="@string/str_duplicate"
-                android:textSize="11sp"
-                android:fontFamily="sans-serif-medium"
-                android:textColor="@color/toolTextInactive"/>
-        </LinearLayout>
+                android:orientation="vertical"
+                android:gravity="center">
+                <ImageButton
+                    android:id="@+id/btnTextPaletteTab"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/tool_button_inactive"
+                    android:src="@drawable/ic_palette_24"
+                    android:padding="8dp"
+                    android:scaleType="fitCenter"
+                    app:tint="@color/toolTextInactive" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/str_color"
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/toolTextInactive" />
+            </LinearLayout>
 
-        <!-- Delete -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center">
-            <ImageButton
-                android:id="@+id/btnTextDelete"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:background="@drawable/tool_button_inactive"
-                android:src="@drawable/ic_delete_24"
-                android:padding="8dp"
-                android:scaleType="fitCenter"
-                app:tint="#F44336" />
-            <TextView
-                android:layout_width="wrap_content"
+            <!-- Format Settings -->
+            <LinearLayout
+                android:layout_width="60dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="@string/delete"
-                android:textSize="11sp"
-                android:fontFamily="sans-serif-medium"
-                android:textColor="#F44336"/>
-        </LinearLayout>
+                android:orientation="vertical"
+                android:gravity="center">
+                <ImageButton
+                    android:id="@+id/btnTextFormatTab"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/tool_button_inactive"
+                    android:src="@drawable/ic_format_24"
+                    android:padding="8dp"
+                    android:scaleType="fitCenter"
+                    app:tint="@color/toolTextInactive" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Format"
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/toolTextInactive" />
+            </LinearLayout>
 
-        <!-- Done -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center">
-            <ImageButton
-                android:id="@+id/btnTextDone"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:background="@drawable/tool_button_inactive"
-                android:src="@drawable/ic_check_24"
-                android:padding="8dp"
-                android:scaleType="fitCenter"
-                app:tint="@color/colorPrimary" />
-            <TextView
-                android:layout_width="wrap_content"
+            <!-- Duplicate -->
+            <LinearLayout
+                android:layout_width="60dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="@string/done"
-                android:textSize="11sp"
-                android:fontFamily="sans-serif-medium"
-                android:textColor="@color/colorPrimary"/>
+                android:orientation="vertical"
+                android:gravity="center">
+                <ImageButton
+                    android:id="@+id/btnTextDuplicate"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/tool_button_inactive"
+                    android:src="@drawable/ic_copy_24"
+                    android:padding="8dp"
+                    android:scaleType="fitCenter"
+                    app:tint="@color/toolTextInactive" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/str_duplicate"
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/toolTextInactive" />
+            </LinearLayout>
+
+            <!-- Delete -->
+            <LinearLayout
+                android:layout_width="60dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center">
+                <ImageButton
+                    android:id="@+id/btnTextDelete"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/tool_button_inactive"
+                    android:src="@drawable/ic_delete_24"
+                    android:padding="8dp"
+                    android:scaleType="fitCenter"
+                    app:tint="#F44336" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/delete"
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="#F44336" />
+            </LinearLayout>
+
+            <!-- Done -->
+            <LinearLayout
+                android:layout_width="60dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center">
+                <ImageButton
+                    android:id="@+id/btnTextDone"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/tool_button_inactive"
+                    android:src="@drawable/ic_check_24"
+                    android:padding="8dp"
+                    android:scaleType="fitCenter"
+                    app:tint="@color/colorPrimary" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/done"
+                    android:textSize="11sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/colorPrimary" />
+            </LinearLayout>
         </LinearLayout>
-    </LinearLayout>
+    </HorizontalScrollView>
 </LinearLayout>

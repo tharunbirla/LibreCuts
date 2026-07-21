@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.RectF
+import android.graphics.Typeface
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.AttributeSet
@@ -39,7 +40,7 @@ class DraggableTextOverlayView @JvmOverloads constructor(
 
     // ── Public callbacks ──────────────────────────────────────────────────────
     /** Called when the user commits the text (taps Done). */
-    var onTextCommitted: ((text: String, fontSize: Int, relativeX: Float, relativeY: Float, color: String) -> Unit)? = null
+    var onTextCommitted: ((text: String, fontSize: Int, relativeX: Float, relativeY: Float, color: String, fontPath: String?, opacity: Float, borderThickness: Int, borderColor: String, textAlign: String, letterSpacing: Float, lineSpacing: Float) -> Unit)? = null
 
     /** Called when the text content changes (for live preview feedback). */
     var onTextChanged: ((text: String) -> Unit)? = null
@@ -52,6 +53,14 @@ class DraggableTextOverlayView @JvmOverloads constructor(
     private var videoWidth = 0
     private var videoHeight = 0
     private var currentColorString = "#FFFFFF"
+
+    private var currentOpacity = 1.0f
+    private var currentBorderThickness = 0
+    private var currentBorderColor = "#000000"
+    private var currentTextAlign = "center"
+    private var currentLetterSpacing = 0f
+    private var currentLineSpacing = 0f
+    private var currentFontPath: String? = null
 
     private val scaleDetector = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScale(detector: ScaleGestureDetector): Boolean {
@@ -203,6 +212,7 @@ class DraggableTextOverlayView @JvmOverloads constructor(
         relativeX = 0.5f
         relativeY = 0.5f
         currentColorString = "#FFFFFF"
+        currentFontPath = null
 
         editText.setText(initialText)
         editText.setTextColor(Color.WHITE)
@@ -224,7 +234,15 @@ class DraggableTextOverlayView @JvmOverloads constructor(
         relativeX = op.relativeX ?: 0.5f
         relativeY = op.relativeY ?: 0.5f
         currentColorString = op.color
+        currentOpacity = op.opacity
+        currentBorderThickness = op.borderThickness
+        currentBorderColor = op.borderColor
+        currentTextAlign = op.textAlign
+        currentLetterSpacing = op.letterSpacing
+        currentLineSpacing = op.lineSpacing
+        currentFontPath = op.fontPath
 
+        setFontPath(op.fontPath)
         editText.setText(op.text)
         try {
             editText.setTextColor(Color.parseColor(op.color))
@@ -260,7 +278,10 @@ class DraggableTextOverlayView @JvmOverloads constructor(
         if (text.isNotEmpty()) {
             // Compute final relative position from EditText's current layout position
             updateRelativePosition()
-            onTextCommitted?.invoke(text, currentFontSize, relativeX, relativeY, currentColorString)
+            onTextCommitted?.invoke(
+                text, currentFontSize, relativeX, relativeY, currentColorString,
+                currentFontPath, currentOpacity, currentBorderThickness, currentBorderColor, currentTextAlign, currentLetterSpacing, currentLineSpacing
+            )
         }
         deactivate()
     }
@@ -273,6 +294,59 @@ class DraggableTextOverlayView @JvmOverloads constructor(
         currentFontSize = size.coerceIn(8, 500)
         updateFontSizeOnScreen()
         invalidate()
+    }
+
+    fun setFontPath(fontPath: String?) {
+        currentFontPath = fontPath
+        try {
+            editText.typeface = if (fontPath.isNullOrBlank()) Typeface.DEFAULT else Typeface.createFromFile(fontPath)
+        } catch (e: Exception) {
+            editText.typeface = Typeface.DEFAULT
+        }
+    }
+
+    // New format setters
+    fun setOpacity(opacity: Float) {
+        currentOpacity = opacity.coerceIn(0f, 1f)
+        try {
+            val colorInt = Color.parseColor(currentColorString)
+            editText.setTextColor(Color.argb((currentOpacity * 255).toInt(), Color.red(colorInt), Color.green(colorInt), Color.blue(colorInt)))
+        } catch (e: Exception) {}
+        invalidate()
+    }
+
+    fun setBorderThickness(thickness: Int) {
+        currentBorderThickness = thickness.coerceAtLeast(0)
+        val borderColor = try {
+            Color.parseColor(currentBorderColor)
+        } catch (e: Exception) {
+            Color.BLACK
+        }
+
+        if (currentBorderThickness > 0) {
+            editText.setShadowLayer((currentBorderThickness * 1.2f).coerceAtLeast(1f), 0f, 0f, borderColor)
+        } else {
+            editText.setShadowLayer(4f, 2f, 2f, Color.BLACK)
+        }
+    }
+
+    fun setLetterSpacing(spacing: Float) {
+        currentLetterSpacing = spacing
+        editText.letterSpacing = spacing
+    }
+
+    fun setLineSpacing(spacing: Float) {
+        currentLineSpacing = spacing
+        editText.setLineSpacing(spacing, 1f)
+    }
+
+    fun setTextAlign(align: String) {
+        currentTextAlign = align
+        when (align) {
+            "left", "L" -> editText.gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            "right", "R" -> editText.gravity = Gravity.END or Gravity.CENTER_VERTICAL
+            else -> editText.gravity = Gravity.CENTER
+        }
     }
 
     /** Increase font size by a step. */

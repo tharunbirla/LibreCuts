@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@drawable/bg_bottom_nav_floating"
+    android:elevation="12dp"
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginBottom="8dp">
+
+    <!-- Fonts -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+        <TextView
+            android:layout_width="100dp"
+            android:layout_height="wrap_content"
+            android:text="Font"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp" />
+        <Spinner
+            android:id="@+id/spinnerFonts"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:backgroundTint="#FFFFFF" />
+    </LinearLayout>
+
+    <!-- Opacity -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="8dp">
+        <TextView
+            android:layout_width="100dp"
+            android:layout_height="wrap_content"
+            android:text="Opacity"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp" />
+        <com.google.android.material.slider.Slider
+            android:id="@+id/seekOpacity"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:valueFrom="0"
+            android:valueTo="100"
+            android:stepSize="1"
+            android:value="100" />
+    </LinearLayout>
+
+    <!-- Border Thickness -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="8dp">
+        <TextView
+            android:layout_width="100dp"
+            android:layout_height="wrap_content"
+            android:text="Border Width"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp" />
+        <com.google.android.material.slider.Slider
+            android:id="@+id/seekBorderWidth"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:valueFrom="0"
+            android:valueTo="20"
+            android:stepSize="1"
+            android:value="0" />
+    </LinearLayout>
+
+    <!-- Letter Spacing -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="8dp">
+        <TextView
+            android:layout_width="100dp"
+            android:layout_height="wrap_content"
+            android:text="Letter Spacing"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp" />
+        <com.google.android.material.slider.Slider
+            android:id="@+id/seekLetterSpacing"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:valueFrom="0"
+            android:valueTo="100"
+            android:stepSize="1"
+            android:value="50" />
+    </LinearLayout>
+
+    <!-- Line Spacing -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="8dp">
+        <TextView
+            android:layout_width="100dp"
+            android:layout_height="wrap_content"
+            android:text="Line Spacing"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp" />
+        <com.google.android.material.slider.Slider
+            android:id="@+id/seekLineSpacing"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:valueFrom="0"
+            android:valueTo="100"
+            android:stepSize="1"
+            android:value="50" />
+    </LinearLayout>
+
+    <!-- Alignment -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="16dp">
+        <TextView
+            android:layout_width="100dp"
+            android:layout_height="wrap_content"
+            android:text="Alignment"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAlignLeft"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            app:icon="@drawable/ic_align_left_24"
+            app:iconGravity="textStart"
+            app:iconTint="#FFFFFF"
+            android:backgroundTint="@color/inactiveToolBackground" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAlignCenter"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="4dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            app:icon="@drawable/ic_align_center_24"
+            app:iconGravity="textStart"
+            app:iconTint="#FFFFFF"
+            android:backgroundTint="@color/colorPrimary" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAlignRight"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            app:icon="@drawable/ic_align_right_24"
+            app:iconGravity="textStart"
+            app:iconTint="#FFFFFF"
+            android:backgroundTint="@color/inactiveToolBackground" />
+    </LinearLayout>
+
+</LinearLayout>

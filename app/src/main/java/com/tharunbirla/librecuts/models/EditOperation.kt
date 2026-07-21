@@ -77,13 +77,21 @@ sealed class EditOperation : Serializable {
         val color: String = "#FFFFFF",
         val startTimeMs: Long? = null,
         val endTimeMs: Long? = null,
-        val id: String = System.nanoTime().toString()
+        val id: String = System.nanoTime().toString(),
+        val fontPath: String? = null,
+        val opacity: Float = 1.0f,
+        val borderThickness: Int = 0,
+        val borderColor: String = "#000000",
+        val textAlign: String = "center",
+        val letterSpacing: Float = 0f,
+        val lineSpacing: Float = 0f
     ) : EditOperation() {
         init {
             require(text.isNotEmpty()) { "Text cannot be empty" }
             require(fontSize > 0) { "Font size must be positive" }
             relativeX?.let { require(it in 0f..1f) { "relativeX must be in 0.0..1.0" } }
             relativeY?.let { require(it in 0f..1f) { "relativeY must be in 0.0..1.0" } }
+            require(opacity in 0f..1f) { "opacity must be in 0.0..1.0" }
         }
 
         /** True when this text was placed via drag-and-drop (WYSIWYG coordinates). */

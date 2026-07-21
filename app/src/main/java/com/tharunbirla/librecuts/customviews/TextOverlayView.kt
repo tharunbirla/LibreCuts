@@ -163,24 +163,42 @@ class TextOverlayView @JvmOverloads constructor(
                 if (currentPositionMs < start || currentPositionMs > end) continue
 
                 paint.textSize = op.fontSize * scale
-                try {
-                    paint.color = Color.parseColor(op.color)
-                } catch (e: Exception) {
-                    paint.color = Color.WHITE
+                if (op.fontPath != null) {
+                    try {
+                        paint.typeface = android.graphics.Typeface.createFromFile(op.fontPath)
+                    } catch (e: Exception) {
+                        paint.typeface = android.graphics.Typeface.DEFAULT
+                    }
+                } else {
+                    paint.typeface = android.graphics.Typeface.DEFAULT
                 }
 
-                val x: Float
-                val y: Float
+                val baseColorInt = try { Color.parseColor(op.color) } catch (e: Exception) { Color.WHITE }
+                val alphaInt = (op.opacity * 255).toInt().coerceIn(0, 255)
+                paint.color = Color.argb(alphaInt, Color.red(baseColorInt), Color.green(baseColorInt), Color.blue(baseColorInt))
+                
+                paint.letterSpacing = op.letterSpacing
 
-                val textWidth = paint.measureText(op.text)
-                val textHeight = paint.descent() - paint.ascent()
+                val lines = op.text.split("\n")
+                val textHeight = (paint.descent() - paint.ascent()) + op.lineSpacing * scale
+                val totalHeight = lines.size * textHeight
+                
+                // Find max width among lines
+                var maxTextWidth = 0f
+                for (line in lines) {
+                    val w = paint.measureText(line)
+                    if (w > maxTextWidth) maxTextWidth = w
+                }
+
+                val startX: Float
+                val startY: Float
 
                 if (op.hasCustomPosition()) {
                     // WYSIWYG drag-and-drop coordinates (fractional 0.0–1.0) relative to text center
                     val centerX = videoRect.left + (op.relativeX!! * videoRect.width())
                     val centerY = videoRect.top + (op.relativeY!! * videoRect.height())
-                    x = centerX - (textWidth / 2f)
-                    y = centerY - ((paint.ascent() + paint.descent()) / 2f)
+                    startX = centerX - (maxTextWidth / 2f)
+                    startY = centerY - (totalHeight / 2f) + (textHeight / 2f) - ((paint.ascent() + paint.descent()) / 2f)
                 } else {
                     val rectW = videoRect.width()
                     val rectH = videoRect.height()
@@ -189,53 +207,78 @@ class TextOverlayView @JvmOverloads constructor(
 
                     when (op.position) {
                         TextPosition.TOP_LEFT -> {
-                            x = rectL + 16f
-                            y = rectT + 32f - paint.ascent()
+                            startX = rectL + 16f
+                            startY = rectT + 32f - paint.ascent()
                         }
                         TextPosition.TOP_CENTER -> {
-                            x = rectL + (rectW - textWidth) / 2
-                            y = rectT + 32f - paint.ascent()
+                            startX = rectL + (rectW - maxTextWidth) / 2
+                            startY = rectT + 32f - paint.ascent()
                         }
                         TextPosition.TOP_RIGHT -> {
-                            x = rectL + rectW - textWidth - 16f
-                            y = rectT + 32f - paint.ascent()
+                            startX = rectL + rectW - maxTextWidth - 16f
+                            startY = rectT + 32f - paint.ascent()
                         }
                         TextPosition.CENTER_LEFT -> {
-                            x = rectL + 16f
-                            y = rectT + rectH / 2 - textHeight / 2 - paint.ascent()
+                            startX = rectL + 16f
+                            startY = rectT + rectH / 2 - totalHeight / 2 - paint.ascent()
                         }
                         TextPosition.CENTER -> {
-                            x = rectL + (rectW - textWidth) / 2
-                            y = rectT + rectH / 2 - textHeight / 2 - paint.ascent()
+                            startX = rectL + (rectW - maxTextWidth) / 2
+                            startY = rectT + rectH / 2 - totalHeight / 2 - paint.ascent()
                         }
                         TextPosition.CENTER_RIGHT -> {
-                            x = rectL + rectW - textWidth - 16f
-                            y = rectT + rectH / 2 - textHeight / 2 - paint.ascent()
+                            startX = rectL + rectW - maxTextWidth - 16f
+                            startY = rectT + rectH / 2 - totalHeight / 2 - paint.ascent()
                         }
                         TextPosition.BOTTOM_LEFT -> {
-                            x = rectL + 16f
-                            y = rectT + rectH - 16f - paint.descent()
+                            startX = rectL + 16f
+                            startY = rectT + rectH - 16f - totalHeight + textHeight - paint.descent()
                         }
                         TextPosition.BOTTOM_CENTER -> {
-                            x = rectL + (rectW - textWidth) / 2
-                            y = rectT + rectH - 16f - paint.descent()
+                            startX = rectL + (rectW - maxTextWidth) / 2
+                            startY = rectT + rectH - 16f - totalHeight + textHeight - paint.descent()
                         }
                         TextPosition.BOTTOM_RIGHT -> {
-                            x = rectL + rectW - textWidth - 16f
-                            y = rectT + rectH - 16f - paint.descent()
+                            startX = rectL + rectW - maxTextWidth - 16f
+                            startY = rectT + rectH - 16f - totalHeight + textHeight - paint.descent()
                         }
                         TextPosition.CENTER_BOTTOM -> {
-                            x = rectL + (rectW - textWidth) / 2
-                            y = rectT + rectH - 16f - paint.descent()
+                            startX = rectL + (rectW - maxTextWidth) / 2
+                            startY = rectT + rectH - 16f - totalHeight + textHeight - paint.descent()
                         }
                         TextPosition.CENTER_TOP -> {
-                            x = rectL + (rectW - textWidth) / 2
-                            y = rectT + 32f - paint.ascent()
+                            startX = rectL + (rectW - maxTextWidth) / 2
+                            startY = rectT + 32f - paint.ascent()
                         }
                     }
                 }
 
-                canvas.drawText(op.text, x, y, paint)
+                // Draw each line
+                for ((index, line) in lines.withIndex()) {
+                    val lineW = paint.measureText(line)
+                    val lineX = when (op.textAlign) {
+                        "left", "L" -> startX
+                        "right", "R" -> startX + maxTextWidth - lineW
+                        else -> startX + (maxTextWidth - lineW) / 2 // center
+                    }
+                    val lineY = startY + (index * textHeight)
+
+                    if (op.borderThickness > 0) {
+                        paint.style = Paint.Style.STROKE
+                        paint.strokeWidth = op.borderThickness * scale
+                        paint.strokeJoin = Paint.Join.ROUND
+                        val borderColorInt = try { Color.parseColor(op.borderColor) } catch (e: Exception) { Color.BLACK }
+                        paint.color = Color.argb(alphaInt, Color.red(borderColorInt), Color.green(borderColorInt), Color.blue(borderColorInt))
+                        canvas.drawText(line, lineX, lineY, paint)
+
+                        paint.style = Paint.Style.FILL
+                        paint.color = Color.argb(alphaInt, Color.red(baseColorInt), Color.green(baseColorInt), Color.blue(baseColorInt))
+                    } else {
+                        paint.style = Paint.Style.FILL
+                    }
+                    
+                    canvas.drawText(line, lineX, lineY, paint)
+                }
             }
         }
 

@@ -168,7 +168,14 @@ class VideoEditingViewModel : ViewModel() {
         relativeY: Float? = null,
         color: String = "#FFFFFF",
         startTimeMs: Long? = null,
-        endTimeMs: Long? = null
+        endTimeMs: Long? = null,
+        fontPath: String? = null,
+        opacity: Float = 1.0f,
+        borderThickness: Int = 0,
+        borderColor: String = "#000000",
+        textAlign: String = "center",
+        letterSpacing: Float = 0f,
+        lineSpacing: Float = 0f
     ) {
         addOperation(
             EditOperation.AddText(
@@ -179,7 +186,14 @@ class VideoEditingViewModel : ViewModel() {
                 relativeY = relativeY,
                 color = color,
                 startTimeMs = startTimeMs,
-                endTimeMs = endTimeMs
+                endTimeMs = endTimeMs,
+                fontPath = fontPath,
+                opacity = opacity,
+                borderThickness = borderThickness,
+                borderColor = borderColor,
+                textAlign = textAlign,
+                letterSpacing = letterSpacing,
+                lineSpacing = lineSpacing
             )
         )
     }
@@ -833,8 +847,9 @@ class VideoEditingViewModel : ViewModel() {
             .replace("'", "\\'")
             .replace(":", "\\:")
 
-        val fontPart = if (!fontFilePath.isNullOrBlank()) {
-            val escapedFont = fontFilePath
+        val fontToUse = op.fontPath ?: fontFilePath
+        val fontPart = if (!fontToUse.isNullOrBlank()) {
+            val escapedFont = fontToUse
                 .replace("\\", "\\\\")
                 .replace("'", "\\'")
                 .replace(":", "\\:")
@@ -852,7 +867,13 @@ class VideoEditingViewModel : ViewModel() {
         }
 
         val enablePart = buildEnableExpr(op.startTimeMs, op.endTimeMs)
-        return "drawtext=${fontPart}text='$escapedText':fontcolor='${formatColorForFFmpeg(op.color)}':fontsize=${op.fontSize}:$positionPart$enablePart"
+        
+        val alphaPart = if (op.opacity < 1.0f) ":alpha='${op.opacity}'" else ""
+        val borderPart = if (op.borderThickness > 0) ":borderw=${op.borderThickness}:bordercolor='${formatColorForFFmpeg(op.borderColor)}'" else ""
+        val alignPart = if (op.textAlign.isNotEmpty()) ":text_align=${op.textAlign}" else ""
+        val lineSpacingPart = if (op.lineSpacing != 0f) ":line_spacing=${op.lineSpacing.toInt()}" else ""
+        
+        return "drawtext=${fontPart}text='$escapedText':fontcolor='${formatColorForFFmpeg(op.color)}':fontsize=${op.fontSize}:$positionPart$enablePart$alphaPart$borderPart$alignPart$lineSpacingPart"
     }
 
     private fun formatColorForFFmpeg(colorHex: String): String {

@@ -157,6 +157,66 @@ class VideoEditingActivity : AppCompatActivity() {
     // Passed to buildConsolidatedFFmpegCommand() so drawtext can find the font.
     private var fontFilePath: String? = null
 
+    private fun populateFontSpinner(formatContainer: View?) {
+        val spinnerFonts = formatContainer?.findViewById<Spinner>(R.id.spinnerFonts)
+        if (spinnerFonts == null) return
+
+        val fontNames = mutableListOf<String>()
+        val fontPaths = mutableListOf<String?>()
+
+        fun addFontEntry(name: String, path: String?) {
+            if (path.isNullOrBlank()) return
+            if (fontPaths.contains(path)) return
+            fontNames.add(name)
+            fontPaths.add(path)
+        }
+
+        addFontEntry("Roboto Regular", fontFilePath)
+
+        val fontDirectories = listOf(
+            File("/system/fonts"),
+            File("/data/fonts"),
+            File("/product/fonts"),
+            File(cacheDir, "fonts")
+        )
+
+        for (dir in fontDirectories) {
+            if (!dir.exists() || !dir.isDirectory) continue
+            dir.listFiles()
+                ?.filter { file -> file.isFile && file.extension.lowercase(Locale.US) in setOf("ttf", "otf") }
+                ?.sortedBy { it.nameWithoutExtension.lowercase(Locale.US) }
+                ?.forEach { file ->
+                    addFontEntry(file.nameWithoutExtension, file.absolutePath)
+                }
+        }
+
+        if (fontNames.isEmpty()) {
+            fontNames.add("Roboto Regular")
+            fontPaths.add(fontFilePath)
+        }
+
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, fontNames)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        spinnerFonts.adapter = adapter
+
+        val defaultIndex = fontPaths.indexOf(fontFilePath).takeIf { it >= 0 } ?: 0
+        spinnerFonts.setSelection(defaultIndex)
+        spinnerFonts.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                val selectedFontPath = fontPaths.getOrNull(position)
+                draggableTextOverlay?.setFontPath(selectedFontPath)
+
+                if (formatContainer?.visibility == View.VISIBLE) {
+                    formatContainer.visibility = View.GONE
+                    val btnFormat = (formatContainer.parent as? View)?.findViewById<ImageButton>(R.id.btnTextFormatTab)
+                    btnFormat?.setColorFilter(getColor(R.color.toolTextInactive))
+                }
+            }
+
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+        }
+    }
+
     // Cache for frame extraction
     private val extractedFrames = mutableListOf<Bitmap>()
 
@@ -538,13 +598,15 @@ class VideoEditingActivity : AppCompatActivity() {
         draggableTextOverlay = try {
             findViewById<DraggableTextOverlayView>(R.id.draggableTextOverlay)?.also { overlay ->
                 overlay.isSnappingEnabled = isMagnetEnabled
-                overlay.onTextCommitted = { text, fontSize, relX, relY, color ->
+                overlay.onTextCommitted = { text, fontSize, relX, relY, color, fontPath, opacity, borderThickness, borderColor, textAlign, letterSpacing, lineSpacing ->
                     val selectedId = viewModel.selectedOperationId.value
                     if (selectedId != null) {
                         val op = viewModel.project.value?.operations?.find { (it as? EditOperation.AddText)?.id == selectedId } as? EditOperation.AddText
                         if (op != null) {
                             viewModel.updateOperation(op.copy(
-                                text = text, fontSize = fontSize, relativeX = relX, relativeY = relY, color = color
+                                text = text, fontSize = fontSize, relativeX = relX, relativeY = relY, color = color,
+                                fontPath = fontPath, opacity = opacity, borderThickness = borderThickness, borderColor = borderColor,
+                                textAlign = textAlign, letterSpacing = letterSpacing, lineSpacing = lineSpacing
                             ))
                         }
                     } else {
@@ -558,7 +620,14 @@ class VideoEditingActivity : AppCompatActivity() {
                             relativeY = relY,
                             color = color,
                             startTimeMs = start,
-                            endTimeMs = end
+                            endTimeMs = end,
+                            fontPath = fontPath,
+                            opacity = opacity,
+                            borderThickness = borderThickness,
+                            borderColor = borderColor,
+                            textAlign = textAlign,
+                            letterSpacing = letterSpacing,
+                            lineSpacing = lineSpacing
                         )
                     }
                     viewModel.selectOperation(null)
@@ -601,12 +670,21 @@ class VideoEditingActivity : AppCompatActivity() {
 
                 val btnKeyboard = toolbar.findViewById<ImageButton>(R.id.btnTextKeyboardTab)
                 val btnPalette = toolbar.findViewById<ImageButton>(R.id.btnTextPaletteTab)
+                val btnFormat = toolbar.findViewById<ImageButton>(R.id.btnTextFormatTab)
                 val colorContainer = toolbar.findViewById<View>(R.id.colorPickerContainer)
+                val formatContainer = toolbar.findViewById<View>(R.id.formatSettingsContainer)
+
+                fun resetTabs() {
+                    colorContainer?.visibility = View.GONE
+                    formatContainer?.visibility = View.GONE
+                    btnKeyboard?.setColorFilter(getColor(R.color.toolTextInactive))
+                    btnPalette?.setColorFilter(getColor(R.color.toolTextInactive))
+                    btnFormat?.setColorFilter(getColor(R.color.toolTextInactive))
+                }
 
                 btnKeyboard?.setBounceClickListener {
-                    colorContainer?.visibility = View.GONE
+                    resetTabs()
                     btnKeyboard.setColorFilter(getColor(R.color.colorPrimary))
-                    btnPalette?.setColorFilter(getColor(R.color.toolTextInactive))
                     draggableTextOverlay?.requestEditingFocus()
                 }
 
@@ -614,15 +692,69 @@ class VideoEditingActivity : AppCompatActivity() {
                     val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
                     imm.hideSoftInputFromWindow(toolbar.windowToken, 0)
 
+                    resetTabs()
                     colorContainer?.visibility = View.VISIBLE
                     btnPalette.setColorFilter(getColor(R.color.colorPrimary))
-                    btnKeyboard?.setColorFilter(getColor(R.color.toolTextInactive))
                     setupColorPicker(toolbar)
                 }
 
+                btnFormat?.setBounceClickListener {
+                    val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                    imm.hideSoftInputFromWindow(toolbar.windowToken, 0)
+                    
+                    resetTabs()
+                    formatContainer?.visibility = View.VISIBLE
+                    btnFormat.setColorFilter(getColor(R.color.colorPrimary))
+                }
+                
+                // Format UI listeners
+                populateFontSpinner(formatContainer)
+
+                val seekOpacity = formatContainer?.findViewById<Slider>(R.id.seekOpacity)
+                seekOpacity?.addOnChangeListener { _, value, _ ->
+                    draggableTextOverlay?.setOpacity(value / 100f)
+                }
+                
+                val seekBorderWidth = formatContainer?.findViewById<Slider>(R.id.seekBorderWidth)
+                seekBorderWidth?.addOnChangeListener { _, value, _ ->
+                    draggableTextOverlay?.setBorderThickness(value.toInt())
+                }
+                
+                val seekLetterSpacing = formatContainer?.findViewById<Slider>(R.id.seekLetterSpacing)
+                seekLetterSpacing?.addOnChangeListener { _, value, _ ->
+                    draggableTextOverlay?.setLetterSpacing((value - 50f) / 100f)
+                }
+
+                val seekLineSpacing = formatContainer?.findViewById<Slider>(R.id.seekLineSpacing)
+                seekLineSpacing?.addOnChangeListener { _, value, _ ->
+                    draggableTextOverlay?.setLineSpacing((value - 50f) * 2f)
+                }
+                
+                val btnAlignL = formatContainer?.findViewById<android.widget.Button>(R.id.btnAlignLeft)
+                val btnAlignC = formatContainer?.findViewById<android.widget.Button>(R.id.btnAlignCenter)
+                val btnAlignR = formatContainer?.findViewById<android.widget.Button>(R.id.btnAlignRight)
+                
+                btnAlignL?.setOnClickListener { 
+                    draggableTextOverlay?.setTextAlign("left")
+                    btnAlignL.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.colorPrimary))
+                    btnAlignC?.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.inactiveToolBackground))
+                    btnAlignR?.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.inactiveToolBackground))
+                }
+                btnAlignC?.setOnClickListener { 
+                    draggableTextOverlay?.setTextAlign("center") 
+                    btnAlignL?.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.inactiveToolBackground))
+                    btnAlignC.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.colorPrimary))
+                    btnAlignR?.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.inactiveToolBackground))
+                }
+                btnAlignR?.setOnClickListener { 
+                    draggableTextOverlay?.setTextAlign("right") 
+                    btnAlignL?.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.inactiveToolBackground))
+                    btnAlignC?.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.inactiveToolBackground))
+                    btnAlignR.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.colorPrimary))
+                }
+
+                resetTabs()
                 btnKeyboard?.setColorFilter(getColor(R.color.colorPrimary))
-                btnPalette?.setColorFilter(getColor(R.color.toolTextInactive))
-                colorContainer?.visibility = View.GONE
             }
         } catch (e: Exception) {
             Log.w(TAG, "Text editing toolbar not found: ${e.message}")
