@@ -155,4 +155,6 @@
     <string name="str_default_pictures_librecuts">Vaikimisi (Pictures/LibreCuts)</string>
     <string name="str_app_language">Rakenduse keel</string>
     <string name="str_system_default">Süsteemi vaikesäte</string>
+    <string name="str_opacity">Läbipaistvus</string>
+    <string name="str_reset">Lähtesta</string>
 </resources>
