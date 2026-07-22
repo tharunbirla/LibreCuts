@@ -216,6 +216,37 @@ class VideoEditingViewModel : ViewModel() {
         )
     )
 
+    fun updateCanvasBackgroundOperation(
+        type: EditOperation.CanvasBackground.BackgroundType,
+        colorHex: String = "#000000",
+        imageUri: Uri? = null,
+        blurRadius: Int = 20
+    ) {
+        viewModelScope.launch {
+            _project.update { current ->
+                if (current == null) return@update null
+                val ops = current.operations.toMutableList()
+                val existingIdx = ops.indexOfFirst { it is EditOperation.CanvasBackground }
+                if (existingIdx != -1) {
+                    val op = ops[existingIdx] as EditOperation.CanvasBackground
+                    ops[existingIdx] = op.copy(type = type, colorHex = colorHex, imageUri = imageUri, blurRadius = blurRadius)
+                } else {
+                    ops.add(EditOperation.CanvasBackground(type = type, colorHex = colorHex, imageUri = imageUri, blurRadius = blurRadius))
+                }
+                _undoStack.value = _undoStack.value + current
+                _redoStack.value = emptyList()
+                current.copy(operations = ops)
+            }
+            updateUiState { state ->
+                state.copy(
+                    pendingOperationCount = _project.value?.getOperationCount() ?: 0,
+                    canUndo = _undoStack.value.isNotEmpty(),
+                    canRedo = false
+                )
+            }
+        }
+    }
+
     fun addTextOperation(
         text: String,
         fontSize: Int,
@@ -657,6 +688,7 @@ class VideoEditingViewModel : ViewModel() {
                         it is EditOperation.AddSubtitles && updatedOp is EditOperation.AddSubtitles -> it.id == updatedOp.id
                         it is EditOperation.Crop && updatedOp is EditOperation.Crop -> it.id == updatedOp.id
                         it is EditOperation.Trim && updatedOp is EditOperation.Trim -> it.id == updatedOp.id
+                        it is EditOperation.CanvasBackground && updatedOp is EditOperation.CanvasBackground -> it.id == updatedOp.id
                         else -> false
                     }
                 }
@@ -819,6 +851,7 @@ class VideoEditingViewModel : ViewModel() {
                             is EditOperation.ColorFilter -> op.id == operationId
                             is EditOperation.Adjust -> op.id == operationId
                             is EditOperation.MirrorMain -> op.id == operationId
+                            is EditOperation.CanvasBackground -> op.id == operationId
                         }
                     }
                     it.copy(operations = newOps)
@@ -1327,6 +1360,18 @@ class VideoEditingViewModel : ViewModel() {
             inputIndex++
         }
 
+        // 5. Canvas Background Image Input
+        val bgOp = operations.filterIsInstance<EditOperation.CanvasBackground>().lastOrNull()
+        var bgImageIndex = -1
+        if (bgOp != null && bgOp.type == EditOperation.CanvasBackground.BackgroundType.IMAGE && bgOp.imageUri != null) {
+            val bgPath = resolveUriToPath(bgOp.imageUri)
+            if (bgPath != null) {
+                cmd.append(" -loop 1 -i \"$bgPath\"")
+                bgImageIndex = inputIndex
+                inputIndex++
+            }
+        }
+
         // ── MERGE PATH ────────────────────────────────────────────────────────
         if (mergeOp != null) {
             val inputCount = 1 + mergeOp.videoUris.size
@@ -1401,10 +1446,6 @@ class VideoEditingViewModel : ViewModel() {
             }
 
 
-            // Normalize each clip to the same resolution, fps, pixel format.
-            // Using format=yuv420p ensures consistent formats for xfade and concat inputs.
-            val normTarget = "setpts=PTS-STARTPTS,scale=$mainWidth:$mainHeight:force_original_aspect_ratio=decrease,pad=$mainWidth:$mainHeight:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=30,format=yuv420p"
-
             for (i in 0 until inputCount) {
                 val colorFilterOp = operations.filterIsInstance<EditOperation.ColorFilter>().find { it.index == i }
                 val lutFilterExpr = colorFilterOp?.let { getFFmpegFilterForName(it.filterName) }
@@ -1417,17 +1458,36 @@ class VideoEditingViewModel : ViewModel() {
                     mergeOp?.items?.getOrNull(i - 1)?.isMirrored == true
                 }
                 
-                var clipFilters = normTarget
-                if (lutFilterExpr != null) {
-                    clipFilters = "$clipFilters,$lutFilterExpr"
+                // 1. Prepare raw video with basic visual filters
+                var preFilters = "setpts=PTS-STARTPTS"
+                if (lutFilterExpr != null) preFilters += ",$lutFilterExpr"
+                if (adjustFilterExpr != null) preFilters += ",$adjustFilterExpr"
+                if (isMirrored) preFilters += ",hflip"
+                
+                filterParts.add("[$i:v]$preFilters[pre$i]")
+
+                // 2. Apply background/padding
+                if (bgOp?.type == EditOperation.CanvasBackground.BackgroundType.BLUR) {
+                    val blur = bgOp.blurRadius
+                    val bgScale = "scale=$mainWidth:$mainHeight:force_original_aspect_ratio=increase,crop=$mainWidth:$mainHeight,boxblur=$blur"
+                    val fgScale = "scale=$mainWidth:$mainHeight:force_original_aspect_ratio=decrease"
+                    filterParts.add("[pre$i]split=2[bg_orig$i][fg_orig$i]")
+                    filterParts.add("[bg_orig$i]$bgScale[bg$i]")
+                    filterParts.add("[fg_orig$i]$fgScale[fg$i]")
+                    filterParts.add("[bg$i][fg$i]overlay=(W-w)/2:(H-h)/2,setsar=1,fps=30,format=yuv420p[norm$i]")
+                } else if (bgOp?.type == EditOperation.CanvasBackground.BackgroundType.IMAGE && bgImageIndex != -1) {
+                    val bgScale = "scale=$mainWidth:$mainHeight:force_original_aspect_ratio=increase,crop=$mainWidth:$mainHeight"
+                    val fgScale = "scale=$mainWidth:$mainHeight:force_original_aspect_ratio=decrease"
+                    filterParts.add("[$bgImageIndex:v]$bgScale[bg$i]")
+                    filterParts.add("[pre$i]$fgScale[fg$i]")
+                    // Use shortest=1 in case the loop goes on forever, but we specified -loop 1 which creates an infinite stream for image
+                    filterParts.add("[bg$i][fg$i]overlay=(W-w)/2:(H-h)/2:shortest=1,setsar=1,fps=30,format=yuv420p[norm$i]")
+                } else {
+                    // Default COLOR
+                    val color = bgOp?.colorHex ?: "black"
+                    val padColor = if (color.startsWith("#")) color else "black"
+                    filterParts.add("[pre$i]scale=$mainWidth:$mainHeight:force_original_aspect_ratio=decrease,pad=$mainWidth:$mainHeight:(ow-iw)/2:(oh-ih)/2:color=$padColor,setsar=1,fps=30,format=yuv420p[norm$i]")
                 }
-                if (adjustFilterExpr != null) {
-                    clipFilters = "$clipFilters,$adjustFilterExpr"
-                }
-                if (isMirrored) {
-                    clipFilters = "$clipFilters,hflip"
-                }
-                filterParts.add("[$i:v]${clipFilters}[norm$i]")
 
                 val isClipMuted = operations.filterIsInstance<EditOperation.MuteClip>().find { it.index == i }?.isMuted ?: false
                 if (hasAudioArray[i] && !isClipMuted) {

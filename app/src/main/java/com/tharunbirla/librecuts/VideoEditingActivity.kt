@@ -135,6 +135,12 @@ class VideoEditingActivity : AppCompatActivity() {
     private var activeExtractionCount = 0
     private var chunkDurationsMs = listOf<Long>()
     private var originalMainVideoDurationMs: Long = 0L
+    private var primaryVideoAspectRatio: Float = 0f
+    
+    private var bgPreviewImageView: ImageView? = null
+    private var lastActiveClipIndexForBlur: Int = 0
+    private var currentBlurJob: Job? = null
+    
     private val frameCache = mutableMapOf<Uri, List<Bitmap>>()
     private var activeDirectoryTitleView: TextView? = null
     private var activeDirectoryPathView: TextView? = null
@@ -235,6 +241,7 @@ class VideoEditingActivity : AppCompatActivity() {
     private var selectedVideoIndex: Int? = null
     private var videoEditingToolbar: View? = null
     private var audioEditingToolbar: View? = null
+    private var backgroundEditingToolbar: View? = null
     private var speedEditingToolbar: View? = null
     private var cropEditingToolbar: View? = null
     private var cropOverlayView: com.tharunbirla.librecuts.customviews.CropOverlayView? = null
@@ -444,6 +451,45 @@ class VideoEditingActivity : AppCompatActivity() {
     private fun initializeViews() {
         playerView = findViewById(R.id.playerView)
         playerContainer = findViewById(R.id.playerContainer)
+        bgPreviewImageView = findViewById(R.id.bgPreviewImageView)
+        val canvasContainer = findViewById<FrameLayout>(R.id.canvasContainer)
+
+        playerContainer.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                if (primaryVideoAspectRatio > 0f) {
+                    val containerWidth = playerContainer.width
+                    val containerHeight = playerContainer.height
+                    if (containerWidth > 0 && containerHeight > 0) {
+                        val containerRatio = containerWidth.toFloat() / containerHeight.toFloat()
+                        var finalWidth = containerWidth
+                        var finalHeight = containerHeight
+                        
+                        if (primaryVideoAspectRatio > containerRatio) {
+                            // Video is wider than container
+                            finalHeight = (containerWidth / primaryVideoAspectRatio).toInt()
+                        } else {
+                            // Video is taller than container
+                            finalWidth = (containerHeight * primaryVideoAspectRatio).toInt()
+                        }
+                        
+                        val lp = canvasContainer.layoutParams
+                        if (lp.width != finalWidth || lp.height != finalHeight) {
+                            lp.width = finalWidth
+                            lp.height = finalHeight
+                            canvasContainer.layoutParams = lp
+                            
+                            // Also update overlays to use this fixed size
+                            textOverlayView?.setVideoSize(finalWidth, finalHeight)
+                            draggableTextOverlay?.setVideoSize(finalWidth, finalHeight)
+                            imageOverlayView?.setVideoSize(finalWidth, finalHeight)
+                            draggableImageOverlay?.setVideoSize(finalWidth, finalHeight)
+                            cropOverlayView?.setVideoSize(finalWidth, finalHeight)
+                        }
+                    }
+                }
+            }
+        })
+
         tvDuration = findViewById(R.id.tvDuration)
         sequenceTrackContainer = findViewById(R.id.sequenceTrackContainer)
         customVideoSeeker = findViewById(R.id.customVideoSeeker)
@@ -1310,6 +1356,39 @@ class VideoEditingActivity : AppCompatActivity() {
             null
         }
 
+        backgroundEditingToolbar = try {
+            findViewById<View>(R.id.backgroundEditingToolbar)?.also { toolbar ->
+                toolbar.findViewById<View>(R.id.btnBackFromBackground)?.setBounceClickListener {
+                    exitCanvasBackgroundEditingMode()
+                }
+                toolbar.findViewById<View>(R.id.btnBackgroundDone)?.setBounceClickListener {
+                    exitCanvasBackgroundEditingMode()
+                }
+                toolbar.findViewById<View>(R.id.btnBackgroundColor)?.setBounceClickListener {
+                    showCustomColorPicker("#000000") { hexColor ->
+                        viewModel.updateCanvasBackgroundOperation(
+                            type = EditOperation.CanvasBackground.BackgroundType.COLOR,
+                            colorHex = hexColor
+                        )
+                        updateCanvasBackgroundPreview()
+                    }
+                }
+                toolbar.findViewById<View>(R.id.btnBackgroundBlur)?.setBounceClickListener {
+                    viewModel.updateCanvasBackgroundOperation(
+                        type = EditOperation.CanvasBackground.BackgroundType.BLUR,
+                        blurRadius = 25
+                    )
+                    updateCanvasBackgroundPreview()
+                }
+                toolbar.findViewById<View>(R.id.btnBackgroundImage)?.setBounceClickListener {
+                    pickBackgroundImage()
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Background editing toolbar not found: ${e.message}")
+            null
+        }
+
         findViewById<ImageButton>(R.id.btnHome).setBounceClickListener {
             onBackPressedDispatcher.onBackPressed()
         }
@@ -1356,6 +1435,11 @@ class VideoEditingActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btnVoiceOver)?.setBounceClickListener {
             setActiveToolButton(R.id.btnVoiceOver)
             voiceOverAction()
+        }
+
+        findViewById<ImageButton>(R.id.btnCanvasBackground)?.setBounceClickListener {
+            setActiveToolButton(R.id.btnCanvasBackground)
+            canvasBackgroundAction()
         }
 
         try {
@@ -1430,13 +1514,14 @@ class VideoEditingActivity : AppCompatActivity() {
 
     private fun setActiveToolButton(activeId: Int) {
         if (isShowingPreview) dismissPreview()
-        val toolIds = listOf(R.id.btnText, R.id.btnMediaOverlay, R.id.btnAudio, R.id.btnCrop, R.id.btnSubtitles, R.id.btnVoiceOver)
+        val toolIds = listOf(R.id.btnText, R.id.btnMediaOverlay, R.id.btnAudio, R.id.btnCrop, R.id.btnSubtitles, R.id.btnVoiceOver, R.id.btnCanvasBackground)
         for (id in toolIds) {
             val btn = findViewById<ImageButton>(id) ?: continue
             btn.setBackgroundResource(if (id == activeId) R.drawable.tool_button_active else R.drawable.tool_button_inactive)
-            btn.setColorFilter(
-                if (id == activeId) resources.getColor(R.color.toolTextActive, null)
-                else resources.getColor(R.color.toolTextInactive, null)
+            val parentLayout = btn.parent as? android.widget.LinearLayout
+            val textView = parentLayout?.getChildAt(1) as? TextView
+            textView?.setTextColor(
+                if (id == activeId) getColor(R.color.toolTextActive) else getColor(R.color.toolTextInactive)
             )
         }
     }
@@ -1580,6 +1665,7 @@ class VideoEditingActivity : AppCompatActivity() {
                         resetCropPreview()
                     }
                     
+                    updateCanvasBackgroundPreview()
                     renderTracks(project)
                     updateLayerReorderButtons()
                 }
@@ -1924,6 +2010,22 @@ class VideoEditingActivity : AppCompatActivity() {
         enterCropEditingMode()
     }
 
+    private fun canvasBackgroundAction() {
+        enterCanvasBackgroundEditingMode()
+    }
+
+    private fun enterCanvasBackgroundEditingMode() {
+        closeActiveEditingModes()
+        editingControlsWrapper.visibility = View.GONE
+        backgroundEditingToolbar?.visibility = View.VISIBLE
+    }
+
+    private fun exitCanvasBackgroundEditingMode() {
+        backgroundEditingToolbar?.visibility = View.GONE
+        editingControlsWrapper.visibility = View.VISIBLE
+        setActiveToolButton(-1)
+    }
+
     @SuppressLint("InflateParams")
     private fun textAction() {
         if (isTextEditingActive) {
@@ -1952,6 +2054,7 @@ class VideoEditingActivity : AppCompatActivity() {
         audioEditingToolbar?.visibility = View.GONE
         cropEditingToolbar?.visibility = View.GONE
         subtitlesEditingToolbar?.visibility = View.GONE
+        backgroundEditingToolbar?.visibility = View.GONE
     }
 
     private fun enterTextEditingMode(isReEditing: Boolean = false) {
@@ -2267,6 +2370,19 @@ class VideoEditingActivity : AppCompatActivity() {
             } catch (e2: android.content.ActivityNotFoundException) {
                 Toast.makeText(this, "No app found to handle this action", Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+
+    private fun pickBackgroundImage() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            type = "image/*"
+            addCategory(Intent.CATEGORY_OPENABLE)
+            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/jpeg", "image/png", "image/webp"))
+        }
+        try {
+            startActivityForResult(intent, PICK_BACKGROUND_IMAGE_REQUEST)
+        } catch (e: Exception) {
+            Toast.makeText(this, "No app found to handle image selection", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -3131,6 +3247,79 @@ class VideoEditingActivity : AppCompatActivity() {
         viewModel.project.value?.let { renderTracks(it) }
     }
     
+    private fun updateCanvasBackgroundPreview(activeClipIndex: Int = lastActiveClipIndexForBlur) {
+        val project = viewModel.project.value ?: return
+        val bgOp = project.operations.filterIsInstance<EditOperation.CanvasBackground>().lastOrNull()
+        
+        bgPreviewImageView?.setImageBitmap(null)
+        bgPreviewImageView?.background = null
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            bgPreviewImageView?.setRenderEffect(null)
+        }
+        
+        if (bgOp == null) {
+            bgPreviewImageView?.setBackgroundColor(android.graphics.Color.BLACK)
+            return
+        }
+        
+        when (bgOp.type) {
+            EditOperation.CanvasBackground.BackgroundType.COLOR -> {
+                try {
+                    val color = android.graphics.Color.parseColor(bgOp.colorHex)
+                    bgPreviewImageView?.setBackgroundColor(color)
+                } catch (e: Exception) {
+                    bgPreviewImageView?.setBackgroundColor(android.graphics.Color.BLACK)
+                }
+            }
+            EditOperation.CanvasBackground.BackgroundType.BLUR -> {
+                val clipUri = getSequenceItems().getOrNull(activeClipIndex)?.uri ?: return
+                currentBlurJob?.cancel()
+                currentBlurJob = lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    try {
+                        val path = getFilePathFromUri(clipUri)
+                        if (path != null) {
+                            val retriever = android.media.MediaMetadataRetriever()
+                            retriever.setDataSource(path)
+                            val bitmap = retriever.getFrameAtTime(0, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                            retriever.release()
+                            
+                            if (bitmap != null) {
+                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                    bgPreviewImageView?.setImageBitmap(bitmap)
+                                    bgPreviewImageView?.scaleType = ImageView.ScaleType.CENTER_CROP
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                        val radius = bgOp.blurRadius.toFloat()
+                                        bgPreviewImageView?.setRenderEffect(
+                                            android.graphics.RenderEffect.createBlurEffect(radius, radius, android.graphics.Shader.TileMode.CLAMP)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+            EditOperation.CanvasBackground.BackgroundType.IMAGE -> {
+                bgOp.imageUri?.let { uri ->
+                    try {
+                        val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                            val source = android.graphics.ImageDecoder.createSource(contentResolver, uri)
+                            android.graphics.ImageDecoder.decodeBitmap(source)
+                        } else {
+                            @Suppress("DEPRECATION")
+                            android.provider.MediaStore.Images.Media.getBitmap(contentResolver, uri)
+                        }
+                        bgPreviewImageView?.setImageBitmap(bitmap)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+        }
+    }
+
     private fun updateCropUi(ratio: String) {
         val toolbar = cropEditingToolbar ?: return
         val ratios = mapOf(
@@ -3606,6 +3795,22 @@ class VideoEditingActivity : AppCompatActivity() {
                     Toast.makeText(this, R.string.toast_failed_to_select_folder, Toast.LENGTH_SHORT).show()
                 }
             }
+        } else if (requestCode == PICK_BACKGROUND_IMAGE_REQUEST && resultCode == Activity.RESULT_OK) {
+            data?.data?.let { imageUri ->
+                lifecycleScope.launch {
+                    val tempFile = withContext(Dispatchers.IO) { copyContentUriToTempFile(imageUri, "bg_image", ".png") }
+                    if (tempFile != null) {
+                        val tempUri = Uri.fromFile(tempFile)
+                        viewModel.updateCanvasBackgroundOperation(
+                            type = EditOperation.CanvasBackground.BackgroundType.IMAGE,
+                            imageUri = tempUri
+                        )
+                        updateCanvasBackgroundPreview()
+                    } else {
+                        Toast.makeText(this@VideoEditingActivity, "Failed to load image", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
         }
     }
 
@@ -4075,20 +4280,8 @@ class VideoEditingActivity : AppCompatActivity() {
                             }
                         }
 
-                        val format = player.videoFormat
-                        if (format != null && format.width > 0 && format.height > 0) {
-                            val rotation = format.rotationDegrees
-                            val pixelRatio = format.pixelWidthHeightRatio
-                            val baseWidth = if (rotation == 90 || rotation == 270) format.height else format.width
-                            val baseHeight = if (rotation == 90 || rotation == 270) format.width else format.height
-                            val displayWidth = if (pixelRatio > 0f) (baseWidth * pixelRatio).toInt() else baseWidth
-                            val displayHeight = baseHeight
-                            textOverlayView?.setVideoSize(displayWidth, displayHeight)
-                            draggableTextOverlay?.setVideoSize(displayWidth, displayHeight)
-                            imageOverlayView?.setVideoSize(displayWidth, displayHeight)
-                            draggableImageOverlay?.setVideoSize(displayWidth, displayHeight)
-                            cropOverlayView?.setVideoSize(displayWidth, displayHeight)
-                        }
+                        // We no longer rely on dynamic ExoPlayer video size for overlays.
+                        // Overlays will be sized to match the canvasContainer, which reflects the final output canvas.
                         updateUIInteractionState()
                     }
                 }
@@ -4102,19 +4295,8 @@ class VideoEditingActivity : AppCompatActivity() {
                 }
 
                 override fun onVideoSizeChanged(videoSize: com.google.android.exoplayer2.video.VideoSize) {
-                    if (videoSize.width > 0 && videoSize.height > 0) {
-                        val rotation = videoSize.unappliedRotationDegrees
-                        val pixelRatio = videoSize.pixelWidthHeightRatio
-                        val baseWidth = if (rotation == 90 || rotation == 270) videoSize.height else videoSize.width
-                        val baseHeight = if (rotation == 90 || rotation == 270) videoSize.width else videoSize.height
-                        val displayWidth = if (pixelRatio > 0f) (baseWidth * pixelRatio).toInt() else baseWidth
-                        val displayHeight = baseHeight
-                        textOverlayView?.setVideoSize(displayWidth, displayHeight)
-                        draggableTextOverlay?.setVideoSize(displayWidth, displayHeight)
-                        imageOverlayView?.setVideoSize(displayWidth, displayHeight)
-                        draggableImageOverlay?.setVideoSize(displayWidth, displayHeight)
-                        cropOverlayView?.setVideoSize(displayWidth, displayHeight)
-                    }
+                    // Do nothing here for overlays because ExoPlayer's surface changes size dynamically when clips 
+                    // have different aspect ratios, but we want our overlays to stick to the primary video's canvas.
                 }
 
                 override fun onPositionDiscontinuity(reason: Int) {
@@ -4377,6 +4559,11 @@ class VideoEditingActivity : AppCompatActivity() {
             val activeAdjust = viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.Adjust>()
                 ?.find { it.index == activeClipIndex }
             applyColorFilterAndAdjustToPlayer(activeFilterName, activeAdjust)
+            
+            if (activeClipIndex != lastActiveClipIndexForBlur) {
+                lastActiveClipIndexForBlur = activeClipIndex
+                updateCanvasBackgroundPreview(activeClipIndex)
+            }
 
             val isMirrored = if (activeClipIndex == 0) {
                 viewModel.project.value?.operations?.any { it is com.tharunbirla.librecuts.models.EditOperation.MirrorMain && it.isMirrored } == true
@@ -4456,9 +4643,21 @@ class VideoEditingActivity : AppCompatActivity() {
                             val r = android.media.MediaMetadataRetriever()
                             r.setDataSource(tempInputFile.absolutePath)
                             originalMainVideoDurationMs = r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong() ?: 0L
+                            
+                            val width = r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toInt() ?: 1280
+                            val height = r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toInt() ?: 720
+                            val rotation = r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toInt() ?: 0
+                            
+                            if (rotation == 90 || rotation == 270) {
+                                primaryVideoAspectRatio = height.toFloat() / width.toFloat()
+                            } else {
+                                primaryVideoAspectRatio = width.toFloat() / height.toFloat()
+                            }
+                            
                             r.release()
                         } catch (e: Exception) {
                             Log.e(TAG, "Error getting original duration: ${e.message}")
+                            primaryVideoAspectRatio = 16f / 9f
                         }
 
                         // Now load it into ExoPlayer
@@ -6402,6 +6601,7 @@ class VideoEditingActivity : AppCompatActivity() {
         private const val PICK_IMAGE_REQUEST = 3
         private const val PICK_SRT_REQUEST = 4
         private const val PICK_DIRECTORY_REQUEST = 5
+        private const val PICK_BACKGROUND_IMAGE_REQUEST = 6
     }
 }
 

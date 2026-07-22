@@ -131,13 +131,28 @@
             android:clipToOutline="true"
             android:outlineProvider="background">
 
-            <com.google.android.exoplayer2.ui.StyledPlayerView
-                android:id="@+id/playerView"
+            <FrameLayout
+                android:id="@+id/canvasContainer"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                app:use_controller="false"
-                app:surface_type="texture_view"
-                android:background="@color/cinemaBlack" />
+                android:layout_gravity="center">
+
+                <ImageView
+                    android:id="@+id/bgPreviewImageView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:background="@color/cinemaBlack" />
+
+                <com.google.android.exoplayer2.ui.StyledPlayerView
+                    android:id="@+id/playerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    app:use_controller="false"
+                    app:surface_type="texture_view"
+                    android:background="@android:color/transparent"
+                    app:shutter_background_color="@android:color/transparent"/>
+            </FrameLayout>
 
 
             <com.tharunbirla.librecuts.customviews.TextOverlayView
@@ -510,6 +525,15 @@
             android:layout_marginTop="8dp"
             android:visibility="gone" />
 
+        <!-- Background Editing Toolbar (inline mode, hidden by default) -->
+        <include
+            android:id="@+id/backgroundEditingToolbar"
+            layout="@layout/background_editing_toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
+
         <HorizontalScrollView
             android:id="@+id/editingControlsScroll"
             android:layout_width="match_parent"
@@ -675,6 +699,30 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
                         android:text="@string/str_crop"
+                        android:textSize="11sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textColor="@color/toolTextInactive"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="60dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center">
+                    <ImageButton
+                        android:id="@+id/btnCanvasBackground"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/tool_button_inactive"
+                        android:src="@drawable/ic_canvas_24"
+                        android:padding="8dp"
+                        android:scaleType="fitCenter"
+                        app:tint="@color/toolTextInactive" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Canvas"
                         android:textSize="11sp"
                         android:fontFamily="sans-serif-medium"
                         android:textColor="@color/toolTextInactive"/>

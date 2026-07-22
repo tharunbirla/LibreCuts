@@ -269,6 +269,19 @@ sealed class EditOperation : Serializable {
                    vignette == 0
         }
     }
+
+    /**
+     * Canvas background operation: Sets the padding style for clips that do not match the primary aspect ratio.
+     */
+    data class CanvasBackground(
+        val type: BackgroundType = BackgroundType.COLOR,
+        val colorHex: String = "#000000",
+        val imageUri: Uri? = null,
+        val blurRadius: Int = 20,
+        val id: String = System.nanoTime().toString()
+    ) : EditOperation() {
+        enum class BackgroundType { COLOR, IMAGE, BLUR }
+    }
 }
 
 data class SubtitleCue(
