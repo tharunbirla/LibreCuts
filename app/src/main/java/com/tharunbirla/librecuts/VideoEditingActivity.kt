@@ -114,7 +114,6 @@ class VideoEditingActivity : AppCompatActivity() {
     private lateinit var btnSaveDropdown: View
     private lateinit var editingControlsWrapper: LinearLayout
     private lateinit var emptyProjectState: View
-    private lateinit var btnEmptyImportVideo: Button
 
     private var tvPreviewBadge: TextView? = null
     private var textOverlayView: com.tharunbirla.librecuts.customviews.TextOverlayView? = null
@@ -469,9 +468,7 @@ class VideoEditingActivity : AppCompatActivity() {
         btnTimelineAdd = findViewById(R.id.btnTimelineAdd)
         
         emptyProjectState = findViewById(R.id.emptyProjectState)
-        btnEmptyImportVideo = findViewById(R.id.btnEmptyImportVideo)
-        
-        btnEmptyImportVideo.setBounceClickListener {
+        emptyProjectState.setBounceClickListener {
             openFilePickerMain()
         }
 
@@ -1464,10 +1461,11 @@ class VideoEditingActivity : AppCompatActivity() {
                 exportScreen.visibility = if (uiState.isExporting) View.VISIBLE else View.GONE
 
                 if (::btnUndo.isInitialized && ::btnRedo.isInitialized) {
-                    btnUndo.isEnabled = uiState.canUndo
-                    btnUndo.alpha = if (uiState.canUndo) 1.0f else 0.5f
-                    btnRedo.isEnabled = uiState.canRedo
-                    btnRedo.alpha = if (uiState.canRedo) 1.0f else 0.5f
+                    val isProjectEmpty = findViewById<View>(R.id.emptyProjectState)?.visibility == View.VISIBLE
+                    btnUndo.isEnabled = uiState.canUndo && !isProjectEmpty
+                    btnUndo.alpha = if (uiState.canUndo && !isProjectEmpty) 1.0f else 0.5f
+                    btnRedo.isEnabled = uiState.canRedo && !isProjectEmpty
+                    btnRedo.alpha = if (uiState.canRedo && !isProjectEmpty) 1.0f else 0.5f
                 }
 
                 uiState.errorMessage?.let { error ->
@@ -3200,10 +3198,45 @@ class VideoEditingActivity : AppCompatActivity() {
         
         // Show empty state
         findViewById<View>(R.id.emptyProjectState)?.visibility = View.VISIBLE
+        setEditingButtonsEnabled(false)
         
         // Ensure loading screen is hidden and reset
         isImportLoading = false
         loadingScreen.visibility = View.GONE
+    }
+
+    private fun setEditingButtonsEnabled(enabled: Boolean) {
+        val alpha = if (enabled) 1.0f else 0.5f
+        if (::btnPlayPause.isInitialized) {
+            btnPlayPause.isEnabled = enabled
+            btnPlayPause.alpha = alpha
+        }
+        findViewById<View>(R.id.btnMagnet)?.apply {
+            isEnabled = enabled
+            this.alpha = alpha
+        }
+        findViewById<View>(R.id.btnMute)?.apply {
+            isEnabled = enabled
+            this.alpha = alpha
+        }
+        findViewById<View>(R.id.btnCaptureFrame)?.apply {
+            isEnabled = enabled
+            this.alpha = alpha
+        }
+        findViewById<View>(R.id.layoutSaveSplit)?.apply {
+            isEnabled = enabled
+            this.alpha = alpha
+        }
+        if (!enabled) {
+            if (::btnUndo.isInitialized) {
+                btnUndo.isEnabled = false
+                btnUndo.alpha = 0.5f
+            }
+            if (::btnRedo.isInitialized) {
+                btnRedo.isEnabled = false
+                btnRedo.alpha = 0.5f
+            }
+        }
     }
 
     private fun deleteSelectedVideo() {
@@ -3353,6 +3386,7 @@ class VideoEditingActivity : AppCompatActivity() {
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.data?.let { uri ->
                 emptyProjectState.visibility = View.GONE
+                setEditingButtonsEnabled(true)
                 playerContainer.visibility = View.VISIBLE
                 timelineContainer.visibility = View.VISIBLE
                 findViewById<View>(R.id.seekerContainer).visibility = View.VISIBLE
@@ -3722,7 +3756,7 @@ class VideoEditingActivity : AppCompatActivity() {
 
         val cgResolution = sheetView.findViewById<com.google.android.material.chip.ChipGroup>(R.id.cgResolution)
         val cgFps = sheetView.findViewById<com.google.android.material.chip.ChipGroup>(R.id.cgFps)
-        val switchAudioOnly = sheetView.findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchAudioOnly)
+        val switchAudioOnly = sheetView.findViewById<com.google.android.material.materialswitch.MaterialSwitch>(R.id.switchAudioOnly)
         val btnClose = sheetView.findViewById<ImageButton>(R.id.btnCloseSheet)
 
         // Initialize state
@@ -5096,6 +5130,11 @@ class VideoEditingActivity : AppCompatActivity() {
 
     private fun updateTimelineAddButtonPosition() {
         if (!::btnTimelineAdd.isInitialized) return
+        val emptyStateVisible = findViewById<View>(R.id.emptyProjectState)?.visibility == View.VISIBLE
+        if (emptyStateVisible) {
+            btnTimelineAdd.visibility = View.GONE
+            return
+        }
         val rulerView = findViewById<View>(R.id.timeRulerView) ?: return
         val seqTrack = findViewById<View>(R.id.sequenceTrackContainer) ?: return
         val vScroll = findViewById<android.widget.ScrollView>(R.id.timelineVerticalScroll) ?: return
