@@ -45,6 +45,9 @@ class DraggableTextOverlayView @JvmOverloads constructor(
     /** Called when the text content changes (for live preview feedback). */
     var onTextChanged: ((text: String) -> Unit)? = null
 
+    /** Called when the user taps the text to edit (keyboard opens). */
+    var onEditingFocused: (() -> Unit)? = null
+
     // ── State ─────────────────────────────────────────────────────────────────
     private var isEditingActive = false
     private var currentFontSize = 36
@@ -65,7 +68,7 @@ class DraggableTextOverlayView @JvmOverloads constructor(
     private val scaleDetector = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             val scaleFactor = detector.scaleFactor
-            val newSize = (currentFontSize * scaleFactor).toInt().coerceIn(12, 500)
+            val newSize = (currentFontSize * scaleFactor).toInt().coerceIn(12, 2000)
             if (newSize != currentFontSize) {
                 setFontSize(newSize)
             }
@@ -198,6 +201,16 @@ class DraggableTextOverlayView @JvmOverloads constructor(
             }
             override fun afterTextChanged(s: Editable?) {}
         })
+
+        editText.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                onEditingFocused?.invoke()
+            }
+        }
+        
+        editText.setOnClickListener {
+            onEditingFocused?.invoke()
+        }
 
         // Allow this view to draw over its children (for the selection border)
         setWillNotDraw(false)
@@ -537,7 +550,7 @@ class DraggableTextOverlayView @JvmOverloads constructor(
         imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
     }
 
-    private fun hideKeyboard() {
+    fun hideKeyboard() {
         val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(editText.windowToken, 0)
     }

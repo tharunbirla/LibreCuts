@@ -682,6 +682,11 @@ class VideoEditingActivity : AppCompatActivity() {
                     btnFormat?.setColorFilter(getColor(R.color.toolTextInactive))
                 }
 
+                draggableTextOverlay?.onEditingFocused = {
+                    resetTabs()
+                    btnKeyboard?.setColorFilter(getColor(R.color.colorPrimary))
+                }
+
                 btnKeyboard?.setBounceClickListener {
                     resetTabs()
                     btnKeyboard.setColorFilter(getColor(R.color.colorPrimary))
@@ -689,8 +694,7 @@ class VideoEditingActivity : AppCompatActivity() {
                 }
 
                 btnPalette?.setBounceClickListener {
-                    val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                    imm.hideSoftInputFromWindow(toolbar.windowToken, 0)
+                    draggableTextOverlay?.hideKeyboard()
 
                     resetTabs()
                     colorContainer?.visibility = View.VISIBLE
@@ -699,8 +703,7 @@ class VideoEditingActivity : AppCompatActivity() {
                 }
 
                 btnFormat?.setBounceClickListener {
-                    val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                    imm.hideSoftInputFromWindow(toolbar.windowToken, 0)
+                    draggableTextOverlay?.hideKeyboard()
                     
                     resetTabs()
                     formatContainer?.visibility = View.VISIBLE
@@ -764,13 +767,13 @@ class VideoEditingActivity : AppCompatActivity() {
         draggableImageOverlay = try {
             findViewById<DraggableImageOverlayView>(R.id.draggableImageOverlay)?.also { overlay ->
                 overlay.isSnappingEnabled = isMagnetEnabled
-                overlay.onImageCommitted = { uri, relX, relY, relW, relH, rotationAngle, opacity ->
+                overlay.onImageCommitted = { uri, relX, relY, relW, relH, rotationAngle, opacity, isMirrored ->
                     val selectedId = viewModel.selectedOperationId.value
                     if (selectedId != null) {
                         val op = viewModel.project.value?.operations?.find { (it as? EditOperation.AddImageOverlay)?.id == selectedId } as? EditOperation.AddImageOverlay
                         if (op != null) {
                             viewModel.updateOperation(op.copy(
-                                imageUri = uri, relativeX = relX, relativeY = relY, relativeWidth = relW, relativeHeight = relH, rotationAngle = rotationAngle, opacity = opacity
+                                imageUri = uri, relativeX = relX, relativeY = relY, relativeWidth = relW, relativeHeight = relH, rotationAngle = rotationAngle, opacity = opacity, isMirrored = isMirrored
                             ))
                         }
                     } else {
@@ -792,7 +795,8 @@ class VideoEditingActivity : AppCompatActivity() {
                             fileDurationMs = fileDuration,
                             chromaKeyColor = chromaColor,
                             chromaKeySimilarity = chromaSim,
-                            opacity = opacity
+                            opacity = opacity,
+                            isMirrored = isMirrored
                         )
                     }
                     viewModel.selectOperation(null)
@@ -853,6 +857,9 @@ class VideoEditingActivity : AppCompatActivity() {
                 }
                 toolbar.findViewById<View>(R.id.btnImageDuplicate)?.setBounceClickListener {
                     duplicateSelectedOverlay()
+                }
+                toolbar.findViewById<View>(R.id.btnImageMirror)?.setBounceClickListener {
+                    draggableImageOverlay?.toggleMirror()
                 }
                 toolbar.findViewById<View>(R.id.btnImageChromaKey)?.setBounceClickListener {
                     showChromaKeyDialog()
@@ -964,6 +971,18 @@ class VideoEditingActivity : AppCompatActivity() {
                         if (index >= 0 && index < items.size) {
                             reverseVideoSegment(index, items[index])
                         }
+                    }
+                }
+                toolbar.findViewById<ImageButton>(R.id.btnVideoMirror)?.setBounceClickListener {
+                    selectedVideoIndex?.let { index ->
+                        if (index == 0 && viewModel.project.value?.operations?.any { it is EditOperation.Merge } != true) {
+                            val isCurrentlyMirrored = viewModel.project.value?.operations?.any { it is EditOperation.MirrorMain && it.isMirrored } ?: false
+                            viewModel.updateMainVideoMirror(!isCurrentlyMirrored)
+                        } else {
+                            viewModel.toggleMergeItemMirror(index)
+                        }
+                        viewModel.project.value?.let { renderTracks(it) }
+                        syncUiWithPlayer()
                     }
                 }
                 toolbar.findViewById<ImageButton>(R.id.btnVideoMute)?.setBounceClickListener {
@@ -4298,6 +4317,20 @@ class VideoEditingActivity : AppCompatActivity() {
             val activeAdjust = viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.Adjust>()
                 ?.find { it.index == activeClipIndex }
             applyColorFilterAndAdjustToPlayer(activeFilterName, activeAdjust)
+
+            val isMirrored = if (activeClipIndex == 0) {
+                viewModel.project.value?.operations?.any { it is com.tharunbirla.librecuts.models.EditOperation.MirrorMain && it.isMirrored } == true
+            } else {
+                viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.Merge>()
+                    ?.firstOrNull()?.items?.getOrNull(activeClipIndex - 1)?.isMirrored == true
+            }
+            
+            val videoSurface = playerView.videoSurfaceView
+            if (videoSurface != null) {
+                videoSurface.scaleX = if (isMirrored) -1f else 1f
+            } else {
+                findTextureView(playerView)?.scaleX = if (isMirrored) -1f else 1f
+            }
         }
     }
 

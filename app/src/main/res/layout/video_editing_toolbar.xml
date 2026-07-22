@@ -280,6 +280,33 @@
                 android:textColor="@color/toolTextInactive"/>
         </LinearLayout>
 
+        <!-- Mirror -->
+        <LinearLayout
+            android:id="@+id/btnVideoMirrorContainer"
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center">
+            <ImageButton
+                android:id="@+id/btnVideoMirror"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/tool_button_inactive"
+                android:src="@drawable/ic_mirror"
+                android:padding="8dp"
+                android:scaleType="fitCenter"
+                app:tint="@color/toolTextInactive" />
+            <TextView
+                android:id="@+id/tvVideoMirror"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Mirror"
+                android:textSize="11sp"
+                android:fontFamily="sans-serif-medium"
+                android:textColor="@color/toolTextInactive"/>
+        </LinearLayout>
+
         <!-- Delete -->
         <LinearLayout
             android:id="@+id/btnVideoDeleteContainer"

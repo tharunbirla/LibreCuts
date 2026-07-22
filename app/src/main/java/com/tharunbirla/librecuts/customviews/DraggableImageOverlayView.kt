@@ -30,7 +30,7 @@ class DraggableImageOverlayView @JvmOverloads constructor(
 ) : FrameLayout(context, attrs, defStyleAttr) {
 
     // ── Public callbacks ──────────────────────────────────────────────────────
-    var onImageCommitted: ((uri: Uri, relativeX: Float, relativeY: Float, relativeWidth: Float, relativeHeight: Float, rotationAngle: Float, opacity: Float) -> Unit)? = null
+    var onImageCommitted: ((uri: Uri, relativeX: Float, relativeY: Float, relativeWidth: Float, relativeHeight: Float, rotationAngle: Float, opacity: Float, isMirrored: Boolean) -> Unit)? = null
 
     // ── State ─────────────────────────────────────────────────────────────────
     private var isEditingActive = false
@@ -40,6 +40,7 @@ class DraggableImageOverlayView @JvmOverloads constructor(
     private var relativeHeight = 0.3f
     private var rotationAngle = 0f
     private var opacity = 1.0f
+    private var isMirrored = false
     
     private var videoWidth = 0
     private var videoHeight = 0
@@ -103,7 +104,7 @@ class DraggableImageOverlayView @JvmOverloads constructor(
     private val scaleDetector = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             val scaleFactor = detector.scaleFactor
-            relativeWidth = (relativeWidth * scaleFactor).coerceIn(0.1f, 0.9f)
+            relativeWidth = (relativeWidth * scaleFactor).coerceIn(0.05f, 5.0f)
             val videoRatio = if (videoHeight > 0) videoWidth.toFloat() / videoHeight else 1.0f
             relativeHeight = relativeWidth * videoRatio / imageAspectRatio
             updateImageViewSizeAndPosition()
@@ -201,7 +202,9 @@ class DraggableImageOverlayView @JvmOverloads constructor(
         relativeHeight = relativeWidth * videoRatio / aspect
         rotationAngle = 0f
         opacity = 1.0f
+        isMirrored = false
         imageView.alpha = opacity
+        imageView.scaleX = if (isMirrored) -1f else 1f
 
         loadOverlayMedia(uri)
         visibility = VISIBLE
@@ -225,10 +228,12 @@ class DraggableImageOverlayView @JvmOverloads constructor(
         relativeHeight = op.relativeHeight
         rotationAngle = op.rotationAngle
         opacity = op.opacity
+        isMirrored = op.isMirrored
 
         loadOverlayMedia(op.imageUri)
         imageView.rotation = rotationAngle
         imageView.alpha = opacity
+        imageView.scaleX = if (isMirrored) -1f else 1f
         visibility = VISIBLE
         post {
             updateImageViewSizeAndPosition()
@@ -296,12 +301,18 @@ class DraggableImageOverlayView @JvmOverloads constructor(
         imageView.alpha = opacity
         invalidate()
     }
+    
+    fun toggleMirror() {
+        isMirrored = !isMirrored
+        imageView.scaleX = if (isMirrored) -1f else 1f
+        invalidate()
+    }
 
     fun commitImage() {
         val uri = imageUri
         if (uri != null) {
             updateRelativePosition()
-            onImageCommitted?.invoke(uri, relativeX, relativeY, relativeWidth, relativeHeight, rotationAngle, opacity)
+            onImageCommitted?.invoke(uri, relativeX, relativeY, relativeWidth, relativeHeight, rotationAngle, opacity, isMirrored)
         }
         deactivate()
     }

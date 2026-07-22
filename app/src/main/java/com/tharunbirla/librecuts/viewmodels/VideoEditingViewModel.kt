@@ -144,6 +144,62 @@ class VideoEditingViewModel : ViewModel() {
         }
     }
 
+    fun updateMainVideoMirror(isMirrored: Boolean) {
+        viewModelScope.launch {
+            _project.update { current ->
+                if (current == null) return@update null
+
+                val ops = current.operations.toMutableList()
+                val mirrorIndex = ops.indexOfFirst { it is EditOperation.MirrorMain }
+                if (mirrorIndex != -1) {
+                    ops[mirrorIndex] = EditOperation.MirrorMain(isMirrored)
+                } else {
+                    ops.add(EditOperation.MirrorMain(isMirrored))
+                }
+
+                _undoStack.value = _undoStack.value + current
+                _redoStack.value = emptyList()
+                current.copy(operations = ops)
+            }
+            updateUiState { state ->
+                state.copy(
+                    pendingOperationCount = _project.value?.getOperationCount() ?: 0,
+                    canUndo = _undoStack.value.isNotEmpty(),
+                    canRedo = false
+                )
+            }
+        }
+    }
+
+    fun toggleMergeItemMirror(index: Int) {
+        viewModelScope.launch {
+            _project.update { current ->
+                if (current == null) return@update null
+                val ops = current.operations.toMutableList()
+                val mergeIdx = ops.indexOfFirst { it is EditOperation.Merge }
+                if (mergeIdx != -1) {
+                    val mergeOp = ops[mergeIdx] as EditOperation.Merge
+                    val items = mergeOp.items.toMutableList()
+                    if (index >= 0 && index < items.size) {
+                        val item = items[index]
+                        items[index] = item.copy(isMirrored = !item.isMirrored)
+                        ops[mergeIdx] = mergeOp.copy(items = items)
+                    }
+                }
+                _undoStack.value = _undoStack.value + current
+                _redoStack.value = emptyList()
+                current.copy(operations = ops)
+            }
+            updateUiState { state ->
+                state.copy(
+                    pendingOperationCount = _project.value?.getOperationCount() ?: 0,
+                    canUndo = _undoStack.value.isNotEmpty(),
+                    canRedo = false
+                )
+            }
+        }
+    }
+
     fun addCropOperation(
         aspectRatio: String,
         xFraction: Float = 0f,
@@ -545,7 +601,8 @@ class VideoEditingViewModel : ViewModel() {
         fileDurationMs: Long? = null,
         chromaKeyColor: String? = null,
         chromaKeySimilarity: Float = 0.1f,
-        opacity: Float = 1.0f
+        opacity: Float = 1.0f,
+        isMirrored: Boolean = false
     ) {
         addOperation(
             EditOperation.AddImageOverlay(
@@ -560,7 +617,8 @@ class VideoEditingViewModel : ViewModel() {
                 fileDurationMs = fileDurationMs,
                 chromaKeyColor = chromaKeyColor,
                 chromaKeySimilarity = chromaKeySimilarity,
-                opacity = opacity
+                opacity = opacity,
+                isMirrored = isMirrored
             )
         )
     }
@@ -760,6 +818,7 @@ class VideoEditingViewModel : ViewModel() {
                             is EditOperation.MuteClip -> op.id == operationId
                             is EditOperation.ColorFilter -> op.id == operationId
                             is EditOperation.Adjust -> op.id == operationId
+                            is EditOperation.MirrorMain -> op.id == operationId
                         }
                     }
                     it.copy(operations = newOps)
@@ -1015,11 +1074,13 @@ class VideoEditingViewModel : ViewModel() {
                         if (isVideo) {
                             val startSec = (op.startTimeMs ?: 0L) / 1000.0
                             val ptsLabel = "[pts_$stageIndex]"
-                            stages.add("[$imageInputIndex:v]setpts=PTS-STARTPTS+${startSec}/TB,format=rgba$ptsLabel")
+                            val mirrorStr = if (op.isMirrored) ",hflip" else ""
+                            stages.add("[$imageInputIndex:v]setpts=PTS-STARTPTS+${startSec}/TB,format=rgba$mirrorStr$ptsLabel")
                             stages.add("${ptsLabel}${currentLabel}scale2ref=w=main_w*${op.relativeWidth}:h=main_h*${op.relativeHeight}${scaledImgLabel}${refVidLabel}")
                         } else {
                             val rgbaImgLabel = "[rgba_img_$stageIndex]"
-                            stages.add("[$imageInputIndex:v]format=rgba$rgbaImgLabel")
+                            val mirrorStr = if (op.isMirrored) ",hflip" else ""
+                            stages.add("[$imageInputIndex:v]format=rgba$mirrorStr$rgbaImgLabel")
                             stages.add("${rgbaImgLabel}${currentLabel}scale2ref=w=main_w*${op.relativeWidth}:h=main_h*${op.relativeHeight}${scaledImgLabel}${refVidLabel}")
                         }
 
@@ -1344,12 +1405,21 @@ class VideoEditingViewModel : ViewModel() {
                 val adjustOp = operations.filterIsInstance<EditOperation.Adjust>().find { it.index == i }
                 val adjustFilterExpr = adjustOp?.let { getFFmpegFilterForAdjust(it) }
 
+                val isMirrored = if (i == 0) {
+                    operations.any { it is EditOperation.MirrorMain && it.isMirrored }
+                } else {
+                    mergeOp?.items?.getOrNull(i - 1)?.isMirrored == true
+                }
+                
                 var clipFilters = normTarget
                 if (lutFilterExpr != null) {
                     clipFilters = "$clipFilters,$lutFilterExpr"
                 }
                 if (adjustFilterExpr != null) {
                     clipFilters = "$clipFilters,$adjustFilterExpr"
+                }
+                if (isMirrored) {
+                    clipFilters = "$clipFilters,hflip"
                 }
                 filterParts.add("[$i:v]${clipFilters}[norm$i]")
 
@@ -1655,6 +1725,10 @@ class VideoEditingViewModel : ViewModel() {
                 prepFilters.add(adjustFilterExpr)
             }
         }
+        val mirrorMainOp = operations.filterIsInstance<EditOperation.MirrorMain>().find { it.isMirrored }
+        if (mirrorMainOp != null) {
+            prepFilters.add("hflip")
+        }
 
         if (prepFilters.isNotEmpty()) {
             val combinedFilters = prepFilters.joinToString(",")
@@ -1782,7 +1856,7 @@ class VideoEditingViewModel : ViewModel() {
         }
 
         // ── Assemble the command ──
-        val hasVideoFilters = videoStages.isNotEmpty() || colorFilterOp != null || adjustOp != null
+        val hasVideoFilters = videoStages.isNotEmpty() || prepFilters.isNotEmpty()
         val hasAudioFilters = finalAudioLabel != null
 
         if (hasVideoFilters || hasAudioFilters) {

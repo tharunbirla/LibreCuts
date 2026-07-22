@@ -44,6 +44,14 @@ sealed class EditOperation : Serializable {
     ) : EditOperation()
     
     /**
+     * Mirror operation for the main video.
+     */
+    data class MirrorMain(
+        val isMirrored: Boolean,
+        val id: String = System.nanoTime().toString()
+    ) : EditOperation()
+    
+    /**
      * Crop operation: Crops video to a specified aspect ratio.
      * Supported aspects: "16:9", "9:16", "1:1"
      * Uses FFmpeg's crop filter with video re-encoding.
@@ -105,7 +113,8 @@ sealed class EditOperation : Serializable {
         val trimEndMs: Long = durationMs,
         val speed: Float = 1.0f,
         val proxyUri: Uri? = null,
-        val isReversed: Boolean = false
+        val isReversed: Boolean = false,
+        val isMirrored: Boolean = false
     ) : Serializable {
         val trimmedDurationMs: Long
             get() = ((trimEndMs - trimStartMs) / speed).toLong()
@@ -211,7 +220,8 @@ sealed class EditOperation : Serializable {
         val isLooping: Boolean = true,
         val chromaKeyColor: String? = null,
         val chromaKeySimilarity: Float = 0.1f,
-        val opacity: Float = 1.0f
+        val opacity: Float = 1.0f,
+        val isMirrored: Boolean = false
     ) : EditOperation()
 
     data class AddSubtitles(

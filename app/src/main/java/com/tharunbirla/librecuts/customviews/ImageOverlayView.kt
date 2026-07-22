@@ -336,6 +336,9 @@ class ImageOverlayView @JvmOverloads constructor(
         paint.alpha = (op.opacity * 255).toInt().coerceIn(0, 255)
         canvas.save()
         canvas.rotate(op.rotationAngle, centerX, centerY)
+        if (op.isMirrored) {
+            canvas.scale(-1f, 1f, centerX, centerY)
+        }
         canvas.drawBitmap(bitmap, null, dstRect, paint)
         canvas.restore()
         paint.alpha = oldAlpha
