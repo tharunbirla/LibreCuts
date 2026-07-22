@@ -340,18 +340,24 @@ class FFmpegRenderEngine(private val context: Context) {
         val startSecs = startMs / 1000.0
         val durationSecs = (endMs - startMs) / 1000.0
         
-        val safeSpeed = speed.coerceIn(0.25f, 4.0f)
-        val ptsMultiplier = 1.0f / safeSpeed
+        val ptsMultiplier = 1.0f / speed
         
-        val audioFilter = if (safeSpeed < 0.5f) {
-            "atempo=0.5,atempo=${safeSpeed * 2.0f}"
-        } else if (safeSpeed > 2.0f) {
-            "atempo=2.0,atempo=${safeSpeed / 2.0f}"
-        } else {
-            "atempo=$safeSpeed"
+        val atempoFilters = mutableListOf<String>()
+        var currentSpeed = speed
+        while (currentSpeed < 0.5f) {
+            atempoFilters.add("atempo=0.5")
+            currentSpeed /= 0.5f
         }
+        while (currentSpeed > 2.0f) {
+            atempoFilters.add("atempo=2.0")
+            currentSpeed /= 2.0f
+        }
+        if (currentSpeed != 1.0f || atempoFilters.isEmpty()) {
+            atempoFilters.add("atempo=$currentSpeed")
+        }
+        val audioFilter = atempoFilters.joinToString(",")
         
-        val command = "-y -ss $startSecs -i \"$sourceFilePath\" -to $durationSecs -filter:v \"setpts=${ptsMultiplier}*PTS,format=yuv420p\" -filter:a \"$audioFilter\" \"$outputFilePath\""
+        val command = "-y -ss $startSecs -t $durationSecs -i \"$sourceFilePath\" -filter:v \"setpts=${ptsMultiplier}*PTS,format=yuv420p\" -filter:a \"$audioFilter\" \"$outputFilePath\""
         return executeCommand(command)
     }
 

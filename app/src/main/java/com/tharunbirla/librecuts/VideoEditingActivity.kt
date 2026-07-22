@@ -4787,16 +4787,20 @@ class VideoEditingActivity : AppCompatActivity() {
             segmentView.layoutParams = params
             activeSegmentViews.add(segmentView)
 
+            val stretchedDurationMs = (item.durationMs / item.speed).toLong()
+            val stretchedTrimStartMs = (item.trimStartMs / item.speed).toLong()
+            val stretchedTrimEndMs = (item.trimEndMs / item.speed).toLong()
+
             val rv = segmentView.findViewById<RecyclerView>(R.id.segmentFrameRecyclerView)
             val lm = LinearLayoutManager(this, RecyclerView.HORIZONTAL, false)
             rv.layoutManager = lm
-            val itemWidth = maxOf(1, ((item.durationMs * pixelsPerMs) / 15).toInt())
+            val itemWidth = maxOf(1, ((stretchedDurationMs * pixelsPerMs) / 15).toInt())
             val adapter = FrameAdapter(emptyList(), itemWidth)
             rv.adapter = adapter
             
             // Align frames precisely with the trim bounds by offsetting the RecyclerView scroll
             rv.post {
-                lm.scrollToPositionWithOffset(0, -(item.trimStartMs * pixelsPerMs).toInt())
+                lm.scrollToPositionWithOffset(0, -(stretchedTrimStartMs * pixelsPerMs).toInt())
             }
 
             val job = extractFramesForSegment(item.uri, item.durationMs, adapter)
@@ -4814,20 +4818,20 @@ class VideoEditingActivity : AppCompatActivity() {
             val trackTrimView = segmentView.findViewById<com.tharunbirla.librecuts.customviews.TrackTrimView>(R.id.segmentTrimTrack)
             trackTrimView.isMainVideoTrack = true
             trackTrimView.trackColor = android.graphics.Color.TRANSPARENT
-            trackTrimView.maxDurationMs = item.durationMs
+            trackTrimView.maxDurationMs = stretchedDurationMs
             trackTrimView.customMsPerPixel = 1.0f / pixelsPerMs
             trackTrimView.isSelectedTrack = (selectedVideoIndex == index)
             trackTrimView.isTrimEnabled = false
             
             // Set the full untrimmed width on TrackTrimView and offset it
-            val trackWidth = (item.durationMs * pixelsPerMs).toInt()
+            val trackWidth = (stretchedDurationMs * pixelsPerMs).toInt()
             trackTrimView.layoutParams = FrameLayout.LayoutParams(trackWidth, ViewGroup.LayoutParams.MATCH_PARENT).apply {
-                leftMargin = -(item.trimStartMs * pixelsPerMs).toInt()
+                leftMargin = -(stretchedTrimStartMs * pixelsPerMs).toInt()
             }
             
-            trackTrimView.activeStartMs = item.trimStartMs
-            trackTrimView.activeEndMs = item.trimEndMs
-            trackTrimView.setRange(item.durationMs, item.trimStartMs, item.trimEndMs)
+            trackTrimView.activeStartMs = stretchedTrimStartMs
+            trackTrimView.activeEndMs = stretchedTrimEndMs
+            trackTrimView.setRange(stretchedDurationMs, stretchedTrimStartMs, stretchedTrimEndMs)
             
             // Selection highlight is drawn by TrackTrimView in the foreground
             segmentView.background = null
