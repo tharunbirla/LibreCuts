@@ -1037,17 +1037,12 @@ class VideoEditingViewModel : ViewModel() {
         var currentLabel = inputLabel
         var stageIndex = 0
 
-        for (op in operations) {
+        // Process overlays first so their relative coordinates align with the uncropped original video, matching the UI.
+        val overlayOps = operations.filterNot { it is EditOperation.Crop }
+        val cropOps = operations.filterIsInstance<EditOperation.Crop>()
+
+        for (op in overlayOps) {
             when (op) {
-                is EditOperation.Crop -> {
-                    val filterExpr = buildCropFilterExpr(op)
-                    if (filterExpr != null) {
-                        val nextLabel = "[v$stageIndex]"
-                        stages.add("$currentLabel$filterExpr$nextLabel")
-                        currentLabel = nextLabel
-                        stageIndex++
-                    }
-                }
                 is EditOperation.AddText -> {
                     val filterExpr = buildDrawtextExpr(op, fontFilePath)
                     val nextLabel = "[v$stageIndex]"
@@ -1076,12 +1071,12 @@ class VideoEditingViewModel : ViewModel() {
                             val ptsLabel = "[pts_$stageIndex]"
                             val mirrorStr = if (op.isMirrored) ",hflip" else ""
                             stages.add("[$imageInputIndex:v]setpts=PTS-STARTPTS+${startSec}/TB,format=rgba$mirrorStr$ptsLabel")
-                            stages.add("${ptsLabel}${currentLabel}scale2ref=w=main_w*${op.relativeWidth}:h=main_h*${op.relativeHeight}${scaledImgLabel}${refVidLabel}")
+                            stages.add("${ptsLabel}${currentLabel}scale2ref=w=iw*${op.relativeWidth}:h=ih*${op.relativeHeight}${scaledImgLabel}${refVidLabel}")
                         } else {
                             val rgbaImgLabel = "[rgba_img_$stageIndex]"
                             val mirrorStr = if (op.isMirrored) ",hflip" else ""
                             stages.add("[$imageInputIndex:v]format=rgba$mirrorStr$rgbaImgLabel")
-                            stages.add("${rgbaImgLabel}${currentLabel}scale2ref=w=main_w*${op.relativeWidth}:h=main_h*${op.relativeHeight}${scaledImgLabel}${refVidLabel}")
+                            stages.add("${rgbaImgLabel}${currentLabel}scale2ref=w=iw*${op.relativeWidth}:h=ih*${op.relativeHeight}${scaledImgLabel}${refVidLabel}")
                         }
 
                         var currentOverlayLabel = scaledImgLabel
@@ -1148,9 +1143,9 @@ class VideoEditingViewModel : ViewModel() {
                             }
                         }
 
-                        val boxPart = ":box=1:boxcolor='0x00000080':boxborderw=${(8 * density).toInt()}"
+                        val boxPart = ":box=1:boxcolor='0x00000080':boxborderw=8"
                         
-                        val filterExpr = "drawtext=${fontPart}text='$escapedText':fontcolor='white':fontsize=${(op.fontSize * density).toInt()}:${posPart}${boxPart}$enablePart"
+                        val filterExpr = "drawtext=${fontPart}text='$escapedText':fontcolor='white':fontsize=${op.fontSize}:${posPart}${boxPart}$enablePart"
                         
                         val nextLabel = "[v$stageIndex]"
                         stages.add("$currentLabel$filterExpr$nextLabel")
@@ -1159,6 +1154,17 @@ class VideoEditingViewModel : ViewModel() {
                     }
                 }
                 else -> {}
+            }
+        }
+
+        // Process crop at the end so it crops the video and all overlays together, matching the preview.
+        for (op in cropOps) {
+            val filterExpr = buildCropFilterExpr(op)
+            if (filterExpr != null) {
+                val nextLabel = "[v$stageIndex]"
+                stages.add("$currentLabel$filterExpr$nextLabel")
+                currentLabel = nextLabel
+                stageIndex++
             }
         }
 

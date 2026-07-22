@@ -75,6 +75,27 @@ class ImageOverlayView @JvmOverloads constructor(
                             val file = File(path)
                             if (file.exists()) {
                                 var bitmap = BitmapFactory.decodeFile(file.absolutePath)
+                                if (bitmap != null) {
+                                    try {
+                                        val exif = android.media.ExifInterface(file.absolutePath)
+                                        val orientation = exif.getAttributeInt(
+                                            android.media.ExifInterface.TAG_ORIENTATION,
+                                            android.media.ExifInterface.ORIENTATION_NORMAL
+                                        )
+                                        val matrix = android.graphics.Matrix()
+                                        var needsRotation = false
+                                        when (orientation) {
+                                            android.media.ExifInterface.ORIENTATION_ROTATE_90 -> { matrix.postRotate(90f); needsRotation = true }
+                                            android.media.ExifInterface.ORIENTATION_ROTATE_180 -> { matrix.postRotate(180f); needsRotation = true }
+                                            android.media.ExifInterface.ORIENTATION_ROTATE_270 -> { matrix.postRotate(270f); needsRotation = true }
+                                        }
+                                        if (needsRotation) {
+                                            bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+                                        }
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
+                                }
                                 if (bitmap != null && op.chromaKeyColor != null) {
                                     bitmap = applyChromaKey(bitmap, op.chromaKeyColor!!, op.chromaKeySimilarity, cacheKey)
                                 }

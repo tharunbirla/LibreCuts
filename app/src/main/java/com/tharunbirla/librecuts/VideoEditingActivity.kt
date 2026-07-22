@@ -2353,11 +2353,29 @@ class VideoEditingActivity : AppCompatActivity() {
                     }
                 }
             } else {
+                var rotation = 0
+                try {
+                    val exif = android.media.ExifInterface(tempImageFile.absolutePath)
+                    val orientation = exif.getAttributeInt(
+                        android.media.ExifInterface.TAG_ORIENTATION,
+                        android.media.ExifInterface.ORIENTATION_NORMAL
+                    )
+                    when (orientation) {
+                        android.media.ExifInterface.ORIENTATION_ROTATE_90 -> rotation = 90
+                        android.media.ExifInterface.ORIENTATION_ROTATE_180 -> rotation = 180
+                        android.media.ExifInterface.ORIENTATION_ROTATE_270 -> rotation = 270
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error reading EXIF rotation: ${e.message}")
+                }
                 val options = BitmapFactory.Options().apply {
                     inJustDecodeBounds = true
                 }
                 BitmapFactory.decodeFile(tempImageFile.absolutePath, options)
-                if (options.outHeight > 0) options.outWidth.toFloat() / options.outHeight else 1.0f
+                if (options.outHeight > 0) {
+                    val isSwapped = rotation == 90 || rotation == 270
+                    if (isSwapped) options.outHeight.toFloat() / options.outWidth else options.outWidth.toFloat() / options.outHeight
+                } else 1.0f
             }
             
             enterImageEditingMode(localUri, aspect)
@@ -3614,6 +3632,7 @@ class VideoEditingActivity : AppCompatActivity() {
      * is now passed to buildConsolidatedFFmpegCommand so drawtext gets a valid fontfile= path.
      */
     private fun saveAction() {
+        commitActiveEditsIfAny()
         if (isShowingPreview) dismissPreview()
         val project = viewModel.project.value
         if (project == null) {
@@ -3750,6 +3769,7 @@ class VideoEditingActivity : AppCompatActivity() {
     }
 
     private fun showQualitySettingsDialog() {
+        commitActiveEditsIfAny()
         if (isShowingPreview) dismissPreview()
         val bottomSheetDialog = BottomSheetDialog(this)
         val sheetView = layoutInflater.inflate(R.layout.export_quality_bottom_sheet_dialog, null)
@@ -4058,8 +4078,11 @@ class VideoEditingActivity : AppCompatActivity() {
                         val format = player.videoFormat
                         if (format != null && format.width > 0 && format.height > 0) {
                             val rotation = format.rotationDegrees
-                            val displayWidth = if (rotation == 90 || rotation == 270) format.height else format.width
-                            val displayHeight = if (rotation == 90 || rotation == 270) format.width else format.height
+                            val pixelRatio = format.pixelWidthHeightRatio
+                            val baseWidth = if (rotation == 90 || rotation == 270) format.height else format.width
+                            val baseHeight = if (rotation == 90 || rotation == 270) format.width else format.height
+                            val displayWidth = if (pixelRatio > 0f) (baseWidth * pixelRatio).toInt() else baseWidth
+                            val displayHeight = baseHeight
                             textOverlayView?.setVideoSize(displayWidth, displayHeight)
                             draggableTextOverlay?.setVideoSize(displayWidth, displayHeight)
                             imageOverlayView?.setVideoSize(displayWidth, displayHeight)
@@ -4081,8 +4104,11 @@ class VideoEditingActivity : AppCompatActivity() {
                 override fun onVideoSizeChanged(videoSize: com.google.android.exoplayer2.video.VideoSize) {
                     if (videoSize.width > 0 && videoSize.height > 0) {
                         val rotation = videoSize.unappliedRotationDegrees
-                        val displayWidth = if (rotation == 90 || rotation == 270) videoSize.height else videoSize.width
-                        val displayHeight = if (rotation == 90 || rotation == 270) videoSize.width else videoSize.height
+                        val pixelRatio = videoSize.pixelWidthHeightRatio
+                        val baseWidth = if (rotation == 90 || rotation == 270) videoSize.height else videoSize.width
+                        val baseHeight = if (rotation == 90 || rotation == 270) videoSize.width else videoSize.height
+                        val displayWidth = if (pixelRatio > 0f) (baseWidth * pixelRatio).toInt() else baseWidth
+                        val displayHeight = baseHeight
                         textOverlayView?.setVideoSize(displayWidth, displayHeight)
                         draggableTextOverlay?.setVideoSize(displayWidth, displayHeight)
                         imageOverlayView?.setVideoSize(displayWidth, displayHeight)
@@ -6353,6 +6379,20 @@ class VideoEditingActivity : AppCompatActivity() {
             bottomSheet.dismiss()
         }
         bottomSheet.show()
+    }
+
+    private fun commitActiveEditsIfAny() {
+        if (draggableImageOverlay?.visibility == View.VISIBLE) {
+            draggableImageOverlay?.commitImage()
+            findViewById<View>(R.id.imageEditingToolbar)?.visibility = View.GONE
+        }
+        
+        if (draggableTextOverlay?.visibility == View.VISIBLE) {
+            draggableTextOverlay?.commitText()
+            findViewById<View>(R.id.textEditingToolbar)?.visibility = View.GONE
+        }
+        
+        findViewById<android.widget.HorizontalScrollView>(R.id.editingControlsScroll)?.visibility = View.VISIBLE
     }
 
     companion object {

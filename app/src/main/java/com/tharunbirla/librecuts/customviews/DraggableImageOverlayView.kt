@@ -16,6 +16,9 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.appcompat.widget.AppCompatImageView
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.media.ExifInterface
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -188,18 +191,85 @@ class DraggableImageOverlayView @JvmOverloads constructor(
 
     // ── Public API ────────────────────────────────────────────────────────────
 
+    private fun getMediaAspectRatio(uri: Uri): Float {
+        val path = uri.path ?: return 1.0f
+        val isGif = path.endsWith(".gif", ignoreCase = true)
+        val isVideo = path.endsWith(".mp4", ignoreCase = true) ||
+                      path.endsWith(".mkv", ignoreCase = true) ||
+                      path.endsWith(".mov", ignoreCase = true) ||
+                      path.endsWith(".3gp", ignoreCase = true)
+        if (isGif) {
+            try {
+                val movie = android.graphics.Movie.decodeFile(path)
+                if (movie != null && movie.width() > 0 && movie.height() > 0) {
+                    return movie.width().toFloat() / movie.height().toFloat()
+                }
+            } catch (e: Exception) {
+                Log.e("DraggableImage", "Error getting GIF aspect: ${e.message}")
+            }
+        } else if (isVideo) {
+            try {
+                val retriever = android.media.MediaMetadataRetriever()
+                retriever.setDataSource(path)
+                val wStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
+                val hStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
+                val rStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
+                val w = wStr?.toIntOrNull() ?: 1
+                val h = hStr?.toIntOrNull() ?: 1
+                val r = rStr?.toIntOrNull() ?: 0
+                retriever.release()
+                val isSwapped = r == 90 || r == 270
+                return if (isSwapped) h.toFloat() / w else w.toFloat() / h
+            } catch (e: Exception) {
+                Log.e("DraggableImage", "Error getting video aspect: ${e.message}")
+            }
+        } else {
+            try {
+                var rotation = 0
+                try {
+                    val exif = android.media.ExifInterface(path)
+                    val orientation = exif.getAttributeInt(
+                        android.media.ExifInterface.TAG_ORIENTATION,
+                        android.media.ExifInterface.ORIENTATION_NORMAL
+                    )
+                    when (orientation) {
+                        android.media.ExifInterface.ORIENTATION_ROTATE_90 -> rotation = 90
+                        android.media.ExifInterface.ORIENTATION_ROTATE_180 -> rotation = 180
+                        android.media.ExifInterface.ORIENTATION_ROTATE_270 -> rotation = 270
+                    }
+                } catch (e: Exception) {
+                    // Ignore exif load failure
+                }
+
+                val options = BitmapFactory.Options().apply {
+                    inJustDecodeBounds = true
+                }
+                BitmapFactory.decodeFile(path, options)
+                if (options.outHeight > 0) {
+                    val isSwapped = rotation == 90 || rotation == 270
+                    return if (isSwapped) options.outHeight.toFloat() / options.outWidth else options.outWidth.toFloat() / options.outHeight
+                }
+            } catch (e: Exception) {
+                Log.e("DraggableImage", "Error getting image aspect: ${e.message}")
+            }
+        }
+        return 1.0f
+    }
+
     fun activate(uri: Uri, aspect: Float = 1.0f) {
         isEditingActive = true
         imageUri = uri
         originalBitmapForChroma?.recycle()
         originalBitmapForChroma = null
         currentChromaColor = null
-        imageAspectRatio = aspect
+        
+        val trueAspect = getMediaAspectRatio(uri)
+        imageAspectRatio = trueAspect
         relativeX = 0.5f
         relativeY = 0.5f
         relativeWidth = 0.3f
         val videoRatio = if (videoHeight > 0) videoWidth.toFloat() / videoHeight else 1.0f
-        relativeHeight = relativeWidth * videoRatio / aspect
+        relativeHeight = relativeWidth * videoRatio / imageAspectRatio
         rotationAngle = 0f
         opacity = 1.0f
         isMirrored = false
@@ -207,6 +277,7 @@ class DraggableImageOverlayView @JvmOverloads constructor(
         imageView.scaleX = if (isMirrored) -1f else 1f
 
         loadOverlayMedia(uri)
+
         visibility = VISIBLE
         post {
             updateImageViewSizeAndPosition()
@@ -221,16 +292,19 @@ class DraggableImageOverlayView @JvmOverloads constructor(
         currentChromaColor = op.chromaKeyColor
         currentChromaSimilarity = op.chromaKeySimilarity
         val videoRatio = if (videoHeight > 0) videoWidth.toFloat() / videoHeight else 1.0f
-        imageAspectRatio = if (op.relativeHeight > 0) op.relativeWidth * videoRatio / op.relativeHeight else 1.0f
+        
+        val trueAspect = getMediaAspectRatio(op.imageUri)
+        imageAspectRatio = trueAspect
         relativeX = op.relativeX
         relativeY = op.relativeY
         relativeWidth = op.relativeWidth
-        relativeHeight = op.relativeHeight
+        relativeHeight = relativeWidth * videoRatio / imageAspectRatio
         rotationAngle = op.rotationAngle
         opacity = op.opacity
         isMirrored = op.isMirrored
 
         loadOverlayMedia(op.imageUri)
+
         imageView.rotation = rotationAngle
         imageView.alpha = opacity
         imageView.scaleX = if (isMirrored) -1f else 1f
