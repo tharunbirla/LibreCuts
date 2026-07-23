@@ -221,6 +221,57 @@ class ImageOverlayView @JvmOverloads constructor(
         }
     }
 
+    private fun interpolateKeyframes(
+        keyframes: List<EditOperation.KeyframePoint>,
+        timeMs: Long,
+        defaultValue: Float
+    ): Float {
+        if (keyframes.isEmpty()) return defaultValue
+        val sorted = keyframes.sortedBy { it.timeMs }
+        if (timeMs <= sorted.first().timeMs) {
+            return sorted.first().valueX
+        }
+        if (timeMs >= sorted.last().timeMs) {
+            return sorted.last().valueX
+        }
+        for (i in 0 until sorted.size - 1) {
+            val k1 = sorted[i]
+            val k2 = sorted[i + 1]
+            if (timeMs >= k1.timeMs && timeMs <= k2.timeMs) {
+                val progress = (timeMs - k1.timeMs).toFloat() / (k2.timeMs - k1.timeMs)
+                return k1.valueX + progress * (k2.valueX - k1.valueX)
+            }
+        }
+        return defaultValue
+    }
+
+    private fun interpolateKeyframePosition(
+        keyframes: List<EditOperation.KeyframePoint>,
+        timeMs: Long,
+        defaultX: Float,
+        defaultY: Float
+    ): Pair<Float, Float> {
+        if (keyframes.isEmpty()) return Pair(defaultX, defaultY)
+        val sorted = keyframes.sortedBy { it.timeMs }
+        if (timeMs <= sorted.first().timeMs) {
+            return Pair(sorted.first().valueX, sorted.first().valueY)
+        }
+        if (timeMs >= sorted.last().timeMs) {
+            return Pair(sorted.last().valueX, sorted.last().valueY)
+        }
+        for (i in 0 until sorted.size - 1) {
+            val k1 = sorted[i]
+            val k2 = sorted[i + 1]
+            if (timeMs >= k1.timeMs && timeMs <= k2.timeMs) {
+                val progress = (timeMs - k1.timeMs).toFloat() / (k2.timeMs - k1.timeMs)
+                val x = k1.valueX + progress * (k2.valueX - k1.valueX)
+                val y = k1.valueY + progress * (k2.valueY - k1.valueY)
+                return Pair(x, y)
+            }
+        }
+        return Pair(defaultX, defaultY)
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
@@ -239,9 +290,30 @@ class ImageOverlayView @JvmOverloads constructor(
                           path.endsWith(".mov", ignoreCase = true) ||
                           path.endsWith(".3gp", ignoreCase = true)
 
+            val relativeTimeMs = currentPositionMs - start
+            val interpolatedPos = if (op.positionKeyframes.isNotEmpty()) {
+                interpolateKeyframePosition(op.positionKeyframes, relativeTimeMs, op.relativeX, op.relativeY)
+            } else {
+                Pair(op.relativeX, op.relativeY)
+            }
+            val interpolatedOpacity = if (op.opacityKeyframes.isNotEmpty()) {
+                interpolateKeyframes(op.opacityKeyframes, relativeTimeMs, op.opacity)
+            } else {
+                op.opacity
+            }
+            val interpolatedOp = op.copy(
+                relativeX = interpolatedPos.first,
+                relativeY = interpolatedPos.second,
+                opacity = interpolatedOpacity
+            )
+
             if (isGif || isVideo) {
-                val relativeTimeMs = currentPositionMs - start
-                var effectiveTimeMs = relativeTimeMs
+                val speed = if (op.speedKeyframes.isNotEmpty()) {
+                    interpolateKeyframes(op.speedKeyframes, relativeTimeMs, 1.0f)
+                } else {
+                    1.0f
+                }
+                var effectiveTimeMs = (relativeTimeMs * speed).toLong()
                 
                 if (isGif) {
                     var movie = movieCache[op.imageUri.toString()]
@@ -253,9 +325,9 @@ class ImageOverlayView @JvmOverloads constructor(
                     }
                     if (movie != null && movie.duration() > 0) {
                         effectiveTimeMs = if (op.isLooping) {
-                            relativeTimeMs % movie.duration()
+                            effectiveTimeMs % movie.duration()
                         } else {
-                            Math.min(relativeTimeMs, (movie.duration() - 1).toLong())
+                            Math.min(effectiveTimeMs, (movie.duration() - 1).toLong())
                         }
                     }
                 } else {
@@ -270,7 +342,7 @@ class ImageOverlayView @JvmOverloads constructor(
                     if (retriever != null) {
                         val durationStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
                         val durationMs = durationStr?.toLongOrNull() ?: 1L
-                        effectiveTimeMs = if (op.isLooping && durationMs > 0) relativeTimeMs % durationMs else relativeTimeMs
+                        effectiveTimeMs = if (op.isLooping && durationMs > 0) effectiveTimeMs % durationMs else effectiveTimeMs
                     }
                 }
                 
@@ -280,7 +352,7 @@ class ImageOverlayView @JvmOverloads constructor(
                 // We use a relatively high threshold (100ms) to avoid over-fetching
                 // As long as the fetched frame is close to what we need, we show it
                 if (cached != null && Math.abs(cached.first - effectiveTimeMs) < 100) {
-                    drawBitmapOp(canvas, cached.second, op, videoRect)
+                    drawBitmapOp(canvas, cached.second, interpolatedOp, videoRect)
                 } else {
                     // Need a new frame
                     if (!pendingFetches.contains(op.id)) {
@@ -327,13 +399,13 @@ class ImageOverlayView @JvmOverloads constructor(
                         }
                     }
                     // Draw the old frame while fetching the new one to prevent flickering
-                    cached?.second?.let { drawBitmapOp(canvas, it, op, videoRect) }
+                    cached?.second?.let { drawBitmapOp(canvas, it, interpolatedOp, videoRect) }
                 }
             } else {
                 val staticCacheKey = "${op.imageUri}_${op.chromaKeyColor}_${op.chromaKeySimilarity}"
                 val bitmap = bitmapCache[staticCacheKey]
                 if (bitmap != null) {
-                    drawBitmapOp(canvas, bitmap, op, videoRect)
+                    drawBitmapOp(canvas, bitmap, interpolatedOp, videoRect)
                 }
             }
         }

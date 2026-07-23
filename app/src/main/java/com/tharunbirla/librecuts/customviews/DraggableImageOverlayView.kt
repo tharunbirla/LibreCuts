@@ -34,6 +34,7 @@ class DraggableImageOverlayView @JvmOverloads constructor(
 
     // ── Public callbacks ──────────────────────────────────────────────────────
     var onImageCommitted: ((uri: Uri, relativeX: Float, relativeY: Float, relativeWidth: Float, relativeHeight: Float, rotationAngle: Float, opacity: Float, isMirrored: Boolean) -> Unit)? = null
+    var onPositionChanged: ((relativeX: Float, relativeY: Float) -> Unit)? = null
 
     // ── State ─────────────────────────────────────────────────────────────────
     private var isEditingActive = false
@@ -187,6 +188,7 @@ class DraggableImageOverlayView @JvmOverloads constructor(
 
         relativeX = if (videoRect.width() > 0) ((centerX - videoRect.left) / videoRect.width()).coerceIn(0f, 1f) else 0.5f
         relativeY = if (videoRect.height() > 0) ((centerY - videoRect.top) / videoRect.height()).coerceIn(0f, 1f) else 0.5f
+        onPositionChanged?.invoke(relativeX, relativeY)
     }
 
     // ── Public API ────────────────────────────────────────────────────────────
@@ -652,5 +654,24 @@ class DraggableImageOverlayView @JvmOverloads constructor(
 
             canvas.restore()
         }
+    }
+
+    fun getRelativeX(): Float = relativeX
+    fun getRelativeY(): Float = relativeY
+    fun getRelativeWidth(): Float = relativeWidth
+    fun getRelativeHeight(): Float = relativeHeight
+    fun getRotationAngle(): Float = rotationAngle
+    fun getOpacity(): Float = opacity
+    fun getIsMirrored(): Boolean = isMirrored
+
+    fun setProperties(rx: Float, ry: Float, rw: Float, rh: Float, rot: Float, op: Float, mir: Boolean) {
+        relativeX = rx
+        relativeY = ry
+        relativeWidth = rw
+        relativeHeight = rh
+        rotationAngle = rot
+        opacity = op
+        isMirrored = mir
+        updateImageViewSizeAndPosition()
     }
 }

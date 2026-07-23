@@ -397,6 +397,16 @@
                                     android:clipChildren="false"
                                     android:visibility="gone"/>
 
+                                <!-- Keyframe Track Container (Cues) -->
+                                <LinearLayout
+                                    android:id="@+id/keyframeTrackContainer"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical"
+                                    android:layout_marginTop="4dp"
+                                    android:visibility="gone"
+                                    android:clipChildren="false"/>
+
                             </LinearLayout>
                         </ScrollView>
                     </LinearLayout>
@@ -529,6 +539,15 @@
         <include
             android:id="@+id/backgroundEditingToolbar"
             layout="@layout/background_editing_toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
+
+        <!-- Keyframe Editing Toolbar (inline mode, hidden by default) -->
+        <include
+            android:id="@+id/keyframeEditingToolbar"
+            layout="@layout/keyframe_editing_toolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"

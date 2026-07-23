@@ -56,6 +56,7 @@ import com.tharunbirla.librecuts.customviews.ImageOverlayView
 import com.tharunbirla.librecuts.models.EditOperation
 import com.tharunbirla.librecuts.models.VideoProject
 import com.tharunbirla.librecuts.models.TextPosition
+import com.tharunbirla.librecuts.models.id
 import kotlinx.coroutines.Job
 import com.tharunbirla.librecuts.services.FFmpegRenderEngine
 import com.tharunbirla.librecuts.utils.ErrorCode
@@ -248,6 +249,10 @@ class VideoEditingActivity : AppCompatActivity() {
     private var initialCropOperation: com.tharunbirla.librecuts.models.EditOperation.Crop? = null
     private var subtitlesEditingToolbar: View? = null
     private var isSubtitlesEditingActive = false
+
+    private var keyframeEditingToolbar: View? = null
+    private var isKeyframeEditingMode = false
+    private var activeKeyframeProperty = "Position" // "Position", "Opacity", or "Speed"
 
     // Segmented preview state
     private var previewJob: Job? = null
@@ -641,18 +646,61 @@ class VideoEditingActivity : AppCompatActivity() {
         draggableTextOverlay = try {
             findViewById<DraggableTextOverlayView>(R.id.draggableTextOverlay)?.also { overlay ->
                 overlay.isSnappingEnabled = isMagnetEnabled
+                overlay.onPositionChanged = { rx, ry ->
+                    if (isKeyframeEditingMode && activeKeyframeProperty == "Position") {
+                        val selectedId = viewModel.selectedOperationId.value
+                        if (selectedId != null) {
+                            val op = viewModel.project.value?.operations?.find { (it as? EditOperation.AddText)?.id == selectedId } as? EditOperation.AddText
+                            if (op != null) {
+                                val globalTimeMs = getGlobalPosition()
+                                val start = op.startTimeMs ?: 0L
+                                val relativeTimeMs = globalTimeMs - start
+                                val currentList = op.positionKeyframes.toMutableList()
+                                val existingIndex = currentList.indexOfFirst { Math.abs(it.timeMs - relativeTimeMs) < 150 }
+                                val newPoint = EditOperation.KeyframePoint(relativeTimeMs, rx, ry)
+                                if (existingIndex != -1) {
+                                    currentList[existingIndex] = newPoint
+                                } else {
+                                    currentList.add(newPoint)
+                                }
+                                val newOp = op.copy(positionKeyframes = currentList)
+                                viewModel.updateOperation(newOp)
+                            }
+                        }
+                    }
+                }
                 overlay.onTextCommitted = { text, fontSize, relX, relY, color, fontPath, opacity, borderThickness, borderColor, textAlign, letterSpacing, lineSpacing ->
                     val selectedId = viewModel.selectedOperationId.value
-                    if (selectedId != null) {
-                        val op = viewModel.project.value?.operations?.find { (it as? EditOperation.AddText)?.id == selectedId } as? EditOperation.AddText
-                        if (op != null) {
-                            viewModel.updateOperation(op.copy(
-                                text = text, fontSize = fontSize, relativeX = relX, relativeY = relY, color = color,
-                                fontPath = fontPath, opacity = opacity, borderThickness = borderThickness, borderColor = borderColor,
-                                textAlign = textAlign, letterSpacing = letterSpacing, lineSpacing = lineSpacing
-                            ))
+                    if (isKeyframeEditingMode) {
+                        if (selectedId != null) {
+                            val op = viewModel.project.value?.operations?.find { (it as? EditOperation.AddText)?.id == selectedId } as? EditOperation.AddText
+                            if (op != null) {
+                                val globalTimeMs = getGlobalPosition()
+                                val start = op.startTimeMs ?: 0L
+                                val relativeTimeMs = globalTimeMs - start
+                                val currentList = op.positionKeyframes.toMutableList()
+                                val existingIndex = currentList.indexOfFirst { Math.abs(it.timeMs - relativeTimeMs) < 150 }
+                                val newPoint = EditOperation.KeyframePoint(relativeTimeMs, relX, relY)
+                                if (existingIndex != -1) {
+                                    currentList[existingIndex] = newPoint
+                                } else {
+                                    currentList.add(newPoint)
+                                }
+                                val newOp = op.copy(positionKeyframes = currentList)
+                                viewModel.updateOperation(newOp)
+                            }
                         }
                     } else {
+                        if (selectedId != null) {
+                            val op = viewModel.project.value?.operations?.find { (it as? EditOperation.AddText)?.id == selectedId } as? EditOperation.AddText
+                            if (op != null) {
+                                viewModel.updateOperation(op.copy(
+                                    text = text, fontSize = fontSize, relativeX = relX, relativeY = relY, color = color,
+                                    fontPath = fontPath, opacity = opacity, borderThickness = borderThickness, borderColor = borderColor,
+                                    textAlign = textAlign, letterSpacing = letterSpacing, lineSpacing = lineSpacing
+                                ))
+                            }
+                        } else {
                         val start = getGlobalPosition()
                         val end = minOf(start + 3000L, getTotalSequenceDuration())
                         viewModel.addTextOperation(
@@ -675,6 +723,7 @@ class VideoEditingActivity : AppCompatActivity() {
                     }
                     viewModel.selectOperation(null)
                     exitTextEditingMode()
+                }
                 }
             }
         } catch (e: Exception) {
@@ -799,6 +848,10 @@ class VideoEditingActivity : AppCompatActivity() {
                     btnAlignR.backgroundTintList = android.content.res.ColorStateList.valueOf(getColor(R.color.colorPrimary))
                 }
 
+                toolbar.findViewById<View>(R.id.btnTextKeyframe)?.setBounceClickListener {
+                    enterKeyframeEditingMode(isText = true)
+                }
+
                 resetTabs()
                 btnKeyboard?.setColorFilter(getColor(R.color.colorPrimary))
             }
@@ -810,40 +863,84 @@ class VideoEditingActivity : AppCompatActivity() {
         draggableImageOverlay = try {
             findViewById<DraggableImageOverlayView>(R.id.draggableImageOverlay)?.also { overlay ->
                 overlay.isSnappingEnabled = isMagnetEnabled
+                overlay.onPositionChanged = { rx, ry ->
+                    if (isKeyframeEditingMode && activeKeyframeProperty == "Position") {
+                        val selectedId = viewModel.selectedOperationId.value
+                        if (selectedId != null) {
+                            val op = viewModel.project.value?.operations?.find { (it as? EditOperation.AddImageOverlay)?.id == selectedId } as? EditOperation.AddImageOverlay
+                            if (op != null) {
+                                val globalTimeMs = getGlobalPosition()
+                                val start = op.startTimeMs ?: 0L
+                                val relativeTimeMs = globalTimeMs - start
+                                val currentList = op.positionKeyframes.toMutableList()
+                                val existingIndex = currentList.indexOfFirst { Math.abs(it.timeMs - relativeTimeMs) < 150 }
+                                val newPoint = EditOperation.KeyframePoint(relativeTimeMs, rx, ry)
+                                if (existingIndex != -1) {
+                                    currentList[existingIndex] = newPoint
+                                } else {
+                                    currentList.add(newPoint)
+                                }
+                                val newOp = op.copy(positionKeyframes = currentList)
+                                viewModel.updateOperation(newOp)
+                            }
+                        }
+                    }
+                }
                 overlay.onImageCommitted = { uri, relX, relY, relW, relH, rotationAngle, opacity, isMirrored ->
                     val selectedId = viewModel.selectedOperationId.value
-                    if (selectedId != null) {
-                        val op = viewModel.project.value?.operations?.find { (it as? EditOperation.AddImageOverlay)?.id == selectedId } as? EditOperation.AddImageOverlay
-                        if (op != null) {
-                            viewModel.updateOperation(op.copy(
-                                imageUri = uri, relativeX = relX, relativeY = relY, relativeWidth = relW, relativeHeight = relH, rotationAngle = rotationAngle, opacity = opacity, isMirrored = isMirrored
-                            ))
+                    if (isKeyframeEditingMode) {
+                        if (selectedId != null) {
+                            val op = viewModel.project.value?.operations?.find { (it as? EditOperation.AddImageOverlay)?.id == selectedId } as? EditOperation.AddImageOverlay
+                            if (op != null) {
+                                val globalTimeMs = getGlobalPosition()
+                                val start = op.startTimeMs ?: 0L
+                                val relativeTimeMs = globalTimeMs - start
+                                val currentList = op.positionKeyframes.toMutableList()
+                                val existingIndex = currentList.indexOfFirst { Math.abs(it.timeMs - relativeTimeMs) < 150 }
+                                val newPoint = EditOperation.KeyframePoint(relativeTimeMs, relX, relY)
+                                if (existingIndex != -1) {
+                                    currentList[existingIndex] = newPoint
+                                } else {
+                                    currentList.add(newPoint)
+                                }
+                                val newOp = op.copy(positionKeyframes = currentList)
+                                viewModel.updateOperation(newOp)
+                            }
                         }
                     } else {
-                        val start = getGlobalPosition()
-                        val fileDuration = getOverlayFileDurationMs(uri)
-                        val duration = fileDuration ?: 3000L
-                        val end = minOf(start + duration, getTotalSequenceDuration())
-                        val chromaColor = draggableImageOverlay?.currentChromaColor
-                        val chromaSim = draggableImageOverlay?.currentChromaSimilarity ?: 0.1f
-                        viewModel.addImageOverlayOperation(
-                            imageUri = uri,
-                            relativeX = relX,
-                            relativeY = relY,
-                            relativeWidth = relW,
-                            relativeHeight = relH,
-                            rotationAngle = rotationAngle,
-                            startTimeMs = start,
-                            endTimeMs = end,
-                            fileDurationMs = fileDuration,
-                            chromaKeyColor = chromaColor,
-                            chromaKeySimilarity = chromaSim,
-                            opacity = opacity,
-                            isMirrored = isMirrored
-                        )
+                        if (selectedId != null) {
+                            val op = viewModel.project.value?.operations?.find { (it as? EditOperation.AddImageOverlay)?.id == selectedId } as? EditOperation.AddImageOverlay
+                            if (op != null) {
+                                viewModel.updateOperation(op.copy(
+                                    imageUri = uri, relativeX = relX, relativeY = relY, relativeWidth = relW, relativeHeight = relH, rotationAngle = rotationAngle, opacity = opacity, isMirrored = isMirrored
+                                ))
+                            }
+                        } else {
+                            val start = getGlobalPosition()
+                            val fileDuration = getOverlayFileDurationMs(uri)
+                            val duration = fileDuration ?: 3000L
+                            val end = minOf(start + duration, getTotalSequenceDuration())
+                            val chromaColor = draggableImageOverlay?.currentChromaColor
+                            val chromaSim = draggableImageOverlay?.currentChromaSimilarity ?: 0.1f
+                            viewModel.addImageOverlayOperation(
+                                imageUri = uri,
+                                relativeX = relX,
+                                relativeY = relY,
+                                relativeWidth = relW,
+                                relativeHeight = relH,
+                                rotationAngle = rotationAngle,
+                                startTimeMs = start,
+                                endTimeMs = end,
+                                fileDurationMs = fileDuration,
+                                chromaKeyColor = chromaColor,
+                                chromaKeySimilarity = chromaSim,
+                                opacity = opacity,
+                                isMirrored = isMirrored
+                            )
+                        }
+                        viewModel.selectOperation(null)
+                        exitImageEditingMode()
                     }
-                    viewModel.selectOperation(null)
-                    exitImageEditingMode()
                 }
             }
         } catch (e: Exception) {
@@ -953,7 +1050,9 @@ class VideoEditingActivity : AppCompatActivity() {
                     tvOpacityValue?.text = "${value.toInt()}%"
                     draggableImageOverlay?.setOpacity(value / 100f)
                 }
-
+                toolbar.findViewById<View>(R.id.btnImageKeyframe)?.setBounceClickListener {
+                    enterKeyframeEditingMode(isText = false)
+                }
             }
         } catch (e: Exception) {
             Log.w(TAG, "Image editing toolbar not found: ${e.message}")
@@ -1389,6 +1488,34 @@ class VideoEditingActivity : AppCompatActivity() {
             null
         }
 
+        keyframeEditingToolbar = try {
+            findViewById<View>(R.id.keyframeEditingToolbar)?.also { toolbar ->
+                toolbar.findViewById<ImageButton>(R.id.btnKeyframeCancel)?.setBounceClickListener {
+                    exitKeyframeEditingMode()
+                }
+                toolbar.findViewById<ImageButton>(R.id.btnKeyframeDone)?.setBounceClickListener {
+                    exitKeyframeEditingMode()
+                }
+                toolbar.findViewById<Button>(R.id.btnKeyframeProperty)?.setBounceClickListener {
+                    val btn = toolbar.findViewById<Button>(R.id.btnKeyframeProperty)
+                    if (btn != null) {
+                        showKeyframePropertyMenu(btn)
+                    }
+                }
+                toolbar.findViewById<ImageButton>(R.id.btnKeyframeAction)?.setBounceClickListener {
+                    handleKeyframeActionClick()
+                }
+                toolbar.findViewById<com.google.android.material.slider.Slider>(R.id.sliderKeyframeValue)?.addOnChangeListener { _, value, fromUser ->
+                    if (fromUser) {
+                        handleKeyframeSliderChange(value)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Keyframe editing toolbar not found: ${e.message}")
+            null
+        }
+
         findViewById<ImageButton>(R.id.btnHome).setBounceClickListener {
             onBackPressedDispatcher.onBackPressed()
         }
@@ -1572,6 +1699,9 @@ class VideoEditingActivity : AppCompatActivity() {
                 imageOverlayView?.hiddenOperationId = selectedId
                 
                 if (selectedId != null) {
+                    if (isKeyframeEditingMode) {
+                        exitKeyframeEditingMode()
+                    }
 
                     // Reset editing modes to prevent multiple active editing toolbars/states
                     draggableTextOverlay?.deactivate()
@@ -4541,6 +4671,10 @@ class VideoEditingActivity : AppCompatActivity() {
             textOverlayView?.currentPositionMs = currentGlobalPos
             imageOverlayView?.currentPositionMs = currentGlobalPos
 
+            if (isKeyframeEditingMode) {
+                updateDraggableOverlayFromKeyframes(currentGlobalPos)
+            }
+
             // Apply color filter corresponding to the active clip
             val sequenceItems = getSequenceItems()
             var accumulatedStartMs = 0L
@@ -4617,6 +4751,10 @@ class VideoEditingActivity : AppCompatActivity() {
         updateDurationDisplay(globalPos.toInt(), totalDuration.toInt())
         textOverlayView?.currentPositionMs = globalPos
         imageOverlayView?.currentPositionMs = globalPos
+
+        if (isKeyframeEditingMode) {
+            updateDraggableOverlayFromKeyframes(globalPos)
+        }
     }
 
     // Update your existing Runnable to include the text display update
@@ -5238,6 +5376,7 @@ class VideoEditingActivity : AppCompatActivity() {
                                 seekToGlobalPosition(start)
                             }
                         }
+                        keyframes = (op.positionKeyframes.map { it.timeMs } + op.opacityKeyframes.map { it.timeMs }).distinct()
                     }
                 } else if (op is EditOperation.AddImageOverlay) {
                     trackView.apply {
@@ -5277,6 +5416,7 @@ class VideoEditingActivity : AppCompatActivity() {
                             }
                         }
                         activeRenderJobs.add(imageJob)
+                        keyframes = (op.positionKeyframes.map { it.timeMs } + op.opacityKeyframes.map { it.timeMs } + op.speedKeyframes.map { it.timeMs }).distinct()
                     }
                 }
                 textTrackContainer.addView(trackView)
@@ -5344,6 +5484,60 @@ class VideoEditingActivity : AppCompatActivity() {
             }
         } else {
             audioTrackContainer.visibility = View.GONE
+        }
+
+        // Keyframe cues tracks
+        val keyframeContainer = findViewById<android.widget.LinearLayout>(R.id.keyframeTrackContainer)
+        keyframeContainer?.removeAllViews()
+        var hasKeyframeTracks = false
+        for (op in project.operations) {
+            val keyframes = mutableListOf<Long>()
+            var startTimeMs = 0L
+            var endTimeMs = totalSequenceDuration
+            if (op is com.tharunbirla.librecuts.models.EditOperation.AddText) {
+                keyframes.addAll(op.positionKeyframes.map { it.timeMs })
+                keyframes.addAll(op.opacityKeyframes.map { it.timeMs })
+                startTimeMs = op.startTimeMs ?: 0L
+                endTimeMs = op.endTimeMs ?: totalSequenceDuration
+            } else if (op is com.tharunbirla.librecuts.models.EditOperation.AddImageOverlay) {
+                keyframes.addAll(op.positionKeyframes.map { it.timeMs })
+                keyframes.addAll(op.opacityKeyframes.map { it.timeMs })
+                keyframes.addAll(op.speedKeyframes.map { it.timeMs })
+                startTimeMs = op.startTimeMs ?: 0L
+                endTimeMs = op.endTimeMs ?: totalSequenceDuration
+            }
+            
+            val distinctKeyframes = keyframes.distinct()
+            if (distinctKeyframes.isNotEmpty()) {
+                hasKeyframeTracks = true
+                val trackView = com.tharunbirla.librecuts.customviews.TrackTrimView(this).apply {
+                    layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 24.dpToPx()).apply {
+                        topMargin = 4.dpToPx()
+                    }
+                    trackColor = android.graphics.Color.parseColor("#44FFFFFF") // Semi-transparent background
+                    trackLabel = ""
+                    trackIcon = null
+                    trackThumbnail = null
+                    this.keyframes = distinctKeyframes
+                    maxDurationMs = totalSequenceDuration
+                    activeStartMs = startTimeMs
+                    activeEndMs = endTimeMs
+                    customMsPerPixel = 1.0f / pixelsPerMs
+                    setRange(totalSequenceDuration, startTimeMs, endTimeMs)
+                    
+                    onTrackClicked = {
+                        viewModel.selectOperation(op.id)
+                        enterKeyframeEditingMode(op is com.tharunbirla.librecuts.models.EditOperation.AddText)
+                    }
+                }
+                keyframeContainer?.addView(trackView)
+            }
+        }
+        
+        if (hasKeyframeTracks) {
+            keyframeContainer?.visibility = View.VISIBLE
+        } else {
+            keyframeContainer?.visibility = View.GONE
         }
 
         if (activeExtractionCount == 0 && isImportLoading) {
@@ -6592,6 +6786,417 @@ class VideoEditingActivity : AppCompatActivity() {
         }
         
         findViewById<android.widget.HorizontalScrollView>(R.id.editingControlsScroll)?.visibility = View.VISIBLE
+    }
+
+    private fun enterKeyframeEditingMode(isText: Boolean) {
+        val selectedId = viewModel.selectedOperationId.value ?: return
+        val project = viewModel.project.value ?: return
+        val op = project.operations.find { it.id == selectedId } ?: return
+        
+        isKeyframeEditingMode = true
+        activeKeyframeProperty = "Position"
+        
+        // Hide overlay editing toolbars
+        imageEditingToolbar?.visibility = View.GONE
+        textEditingToolbar?.visibility = View.GONE
+        
+        // Show keyframe toolbar
+        val toolbar = keyframeEditingToolbar ?: return
+        toolbar.visibility = View.VISIBLE
+        
+        toolbar.findViewById<Button>(R.id.btnKeyframeProperty)?.text = "Position"
+        toolbar.findViewById<View>(R.id.layoutKeyframeSlider)?.visibility = View.GONE
+        
+        // Seek to overlay start position
+        val startTime = when (op) {
+            is EditOperation.AddImageOverlay -> op.startTimeMs ?: 0L
+            is EditOperation.AddText -> op.startTimeMs ?: 0L
+            else -> 0L
+        }
+        seekToGlobalPosition(startTime, force = true)
+        
+        updateDraggableOverlayFromKeyframes(startTime)
+    }
+
+    private fun exitKeyframeEditingMode() {
+        isKeyframeEditingMode = false
+        keyframeEditingToolbar?.visibility = View.GONE
+        
+        // Restore corresponding editing toolbar
+        val selectedId = viewModel.selectedOperationId.value
+        val project = viewModel.project.value
+        val op = project?.operations?.find { it.id == selectedId }
+        
+        if (op is EditOperation.AddImageOverlay) {
+            imageEditingToolbar?.visibility = View.VISIBLE
+            // Sync current state back to draggable overlay
+            draggableImageOverlay?.activateForEdit(op)
+        } else if (op is EditOperation.AddText) {
+            textEditingToolbar?.visibility = View.VISIBLE
+            draggableTextOverlay?.activateForEdit(op)
+        }
+    }
+
+    private fun showKeyframePropertyMenu(view: View) {
+        val selectedId = viewModel.selectedOperationId.value ?: return
+        val project = viewModel.project.value ?: return
+        val op = project.operations.find { it.id == selectedId } ?: return
+        
+        val popup = androidx.appcompat.widget.PopupMenu(this, view)
+        popup.menu.add("Position")
+        popup.menu.add("Opacity")
+        if (op is EditOperation.AddImageOverlay) {
+            val isVideo = op.fileDurationMs != null && op.fileDurationMs > 0
+            if (isVideo) {
+                popup.menu.add("Speed")
+            }
+        }
+        
+        popup.setOnMenuItemClickListener { item ->
+            activeKeyframeProperty = item.title.toString()
+            val toolbar = keyframeEditingToolbar ?: return@setOnMenuItemClickListener true
+            toolbar.findViewById<Button>(R.id.btnKeyframeProperty)?.text = activeKeyframeProperty
+            
+            val sliderLayout = toolbar.findViewById<View>(R.id.layoutKeyframeSlider)
+            val slider = toolbar.findViewById<com.google.android.material.slider.Slider>(R.id.sliderKeyframeValue)
+            
+            if (activeKeyframeProperty == "Position") {
+                sliderLayout?.visibility = View.GONE
+            } else {
+                sliderLayout?.visibility = View.VISIBLE
+                if (activeKeyframeProperty == "Opacity") {
+                    slider?.valueFrom = 0.0f
+                    slider?.valueTo = 100.0f
+                    slider?.stepSize = 1.0f
+                } else if (activeKeyframeProperty == "Speed") {
+                    slider?.valueFrom = 0.25f
+                    slider?.valueTo = 4.0f
+                    slider?.stepSize = 0.05f
+                }
+            }
+            
+            updateDraggableOverlayFromKeyframes(getGlobalPosition())
+            true
+        }
+        popup.show()
+    }
+
+    private fun handleKeyframeActionClick() {
+        val selectedId = viewModel.selectedOperationId.value ?: return
+        val project = viewModel.project.value ?: return
+        val op = project.operations.find { it.id == selectedId } ?: return
+        
+        val globalTimeMs = getGlobalPosition()
+        val start = when (op) {
+            is EditOperation.AddImageOverlay -> op.startTimeMs ?: 0L
+            is EditOperation.AddText -> op.startTimeMs ?: 0L
+            else -> 0L
+        }
+        val relativeTimeMs = globalTimeMs - start
+        
+        when (op) {
+            is EditOperation.AddImageOverlay -> {
+                when (activeKeyframeProperty) {
+                    "Position" -> {
+                        val currentList = op.positionKeyframes.toMutableList()
+                        val existingIndex = currentList.indexOfFirst { Math.abs(it.timeMs - relativeTimeMs) < 150 }
+                        if (existingIndex != -1) {
+                            currentList.removeAt(existingIndex)
+                        } else {
+                            currentList.add(EditOperation.KeyframePoint(relativeTimeMs, op.relativeX, op.relativeY))
+                        }
+                        viewModel.updateOperation(op.copy(positionKeyframes = currentList))
+                    }
+                    "Opacity" -> {
+                        val currentList = op.opacityKeyframes.toMutableList()
+                        val existingIndex = currentList.indexOfFirst { Math.abs(it.timeMs - relativeTimeMs) < 150 }
+                        if (existingIndex != -1) {
+                            currentList.removeAt(existingIndex)
+                        } else {
+                            val currentOpacity = if (currentList.isNotEmpty()) {
+                                interpolateKeyframes(currentList, relativeTimeMs, op.opacity)
+                            } else {
+                                op.opacity
+                            }
+                            currentList.add(EditOperation.KeyframePoint(relativeTimeMs, currentOpacity))
+                        }
+                        viewModel.updateOperation(op.copy(opacityKeyframes = currentList))
+                    }
+                    "Speed" -> {
+                        val currentList = op.speedKeyframes.toMutableList()
+                        val existingIndex = currentList.indexOfFirst { Math.abs(it.timeMs - relativeTimeMs) < 150 }
+                        if (existingIndex != -1) {
+                            currentList.removeAt(existingIndex)
+                        } else {
+                            val currentSpeed = if (currentList.isNotEmpty()) {
+                                interpolateKeyframes(currentList, relativeTimeMs, 1.0f)
+                            } else {
+                                1.0f
+                            }
+                            currentList.add(EditOperation.KeyframePoint(relativeTimeMs, currentSpeed))
+                        }
+                        viewModel.updateOperation(op.copy(speedKeyframes = currentList))
+                    }
+                }
+            }
+            is EditOperation.AddText -> {
+                when (activeKeyframeProperty) {
+                    "Position" -> {
+                        val currentList = op.positionKeyframes.toMutableList()
+                        val existingIndex = currentList.indexOfFirst { Math.abs(it.timeMs - relativeTimeMs) < 150 }
+                        if (existingIndex != -1) {
+                            currentList.removeAt(existingIndex)
+                        } else {
+                            currentList.add(EditOperation.KeyframePoint(relativeTimeMs, op.relativeX ?: 0.5f, op.relativeY ?: 0.5f))
+                        }
+                        viewModel.updateOperation(op.copy(positionKeyframes = currentList))
+                    }
+                    "Opacity" -> {
+                        val currentList = op.opacityKeyframes.toMutableList()
+                        val existingIndex = currentList.indexOfFirst { Math.abs(it.timeMs - relativeTimeMs) < 150 }
+                        if (existingIndex != -1) {
+                            currentList.removeAt(existingIndex)
+                        } else {
+                            val currentOpacity = if (currentList.isNotEmpty()) {
+                                interpolateKeyframes(currentList, relativeTimeMs, op.opacity)
+                            } else {
+                                op.opacity
+                            }
+                            currentList.add(EditOperation.KeyframePoint(relativeTimeMs, currentOpacity))
+                        }
+                        viewModel.updateOperation(op.copy(opacityKeyframes = currentList))
+                    }
+                }
+            }
+            else -> {}
+        }
+        updateDraggableOverlayFromKeyframes(globalTimeMs)
+    }
+
+    private fun handleKeyframeSliderChange(value: Float) {
+        val selectedId = viewModel.selectedOperationId.value ?: return
+        val project = viewModel.project.value ?: return
+        val op = project.operations.find { it.id == selectedId } ?: return
+        val globalTimeMs = getGlobalPosition()
+        
+        when (op) {
+            is EditOperation.AddImageOverlay -> {
+                val start = op.startTimeMs ?: 0L
+                val relativeTimeMs = globalTimeMs - start
+                if (activeKeyframeProperty == "Opacity") {
+                    val opacityValue = value / 100.0f
+                    val currentList = op.opacityKeyframes.toMutableList()
+                    val existingIndex = currentList.indexOfFirst { Math.abs(it.timeMs - relativeTimeMs) < 150 }
+                    val newPoint = EditOperation.KeyframePoint(relativeTimeMs, opacityValue)
+                    if (existingIndex != -1) {
+                        currentList[existingIndex] = newPoint
+                    } else {
+                        currentList.add(newPoint)
+                    }
+                    viewModel.updateOperation(op.copy(opacityKeyframes = currentList))
+                } else if (activeKeyframeProperty == "Speed") {
+                    val currentList = op.speedKeyframes.toMutableList()
+                    val existingIndex = currentList.indexOfFirst { Math.abs(it.timeMs - relativeTimeMs) < 150 }
+                    val newPoint = EditOperation.KeyframePoint(relativeTimeMs, value)
+                    if (existingIndex != -1) {
+                        currentList[existingIndex] = newPoint
+                    } else {
+                        currentList.add(newPoint)
+                    }
+                    viewModel.updateOperation(op.copy(speedKeyframes = currentList))
+                }
+            }
+            is EditOperation.AddText -> {
+                val start = op.startTimeMs ?: 0L
+                val relativeTimeMs = globalTimeMs - start
+                if (activeKeyframeProperty == "Opacity") {
+                    val opacityValue = value / 100.0f
+                    val currentList = op.opacityKeyframes.toMutableList()
+                    val existingIndex = currentList.indexOfFirst { Math.abs(it.timeMs - relativeTimeMs) < 150 }
+                    val newPoint = EditOperation.KeyframePoint(relativeTimeMs, opacityValue)
+                    if (existingIndex != -1) {
+                        currentList[existingIndex] = newPoint
+                    } else {
+                        currentList.add(newPoint)
+                    }
+                    viewModel.updateOperation(op.copy(opacityKeyframes = currentList))
+                }
+            }
+            else -> {}
+        }
+        updateDraggableOverlayFromKeyframes(globalTimeMs)
+    }
+
+    private fun updateKeyframeActionButtonState(globalTimeMs: Long) {
+        val selectedId = viewModel.selectedOperationId.value ?: return
+        val project = viewModel.project.value ?: return
+        val op = project.operations.find { it.id == selectedId } ?: return
+        
+        val start = when (op) {
+            is EditOperation.AddImageOverlay -> op.startTimeMs ?: 0L
+            is EditOperation.AddText -> op.startTimeMs ?: 0L
+            else -> 0L
+        }
+        val relativeTimeMs = globalTimeMs - start
+        
+        val hasKeyframe = when (op) {
+            is EditOperation.AddImageOverlay -> {
+                when (activeKeyframeProperty) {
+                    "Position" -> op.positionKeyframes.any { Math.abs(it.timeMs - relativeTimeMs) < 150 }
+                    "Opacity" -> op.opacityKeyframes.any { Math.abs(it.timeMs - relativeTimeMs) < 150 }
+                    "Speed" -> op.speedKeyframes.any { Math.abs(it.timeMs - relativeTimeMs) < 150 }
+                    else -> false
+                }
+            }
+            is EditOperation.AddText -> {
+                when (activeKeyframeProperty) {
+                    "Position" -> op.positionKeyframes.any { Math.abs(it.timeMs - relativeTimeMs) < 150 }
+                    "Opacity" -> op.opacityKeyframes.any { Math.abs(it.timeMs - relativeTimeMs) < 150 }
+                    else -> false
+                }
+            }
+            else -> false
+        }
+        
+        val actionBtn = keyframeEditingToolbar?.findViewById<ImageButton>(R.id.btnKeyframeAction)
+        if (hasKeyframe) {
+            actionBtn?.setImageResource(R.drawable.ic_keyframe_remove)
+        } else {
+            actionBtn?.setImageResource(R.drawable.ic_keyframe_add)
+        }
+    }
+
+    private fun updateDraggableOverlayFromKeyframes(globalTimeMs: Long) {
+        val selectedId = viewModel.selectedOperationId.value ?: return
+        val project = viewModel.project.value ?: return
+        val op = project.operations.find { it.id == selectedId } ?: return
+        
+        when (op) {
+            is EditOperation.AddImageOverlay -> {
+                val start = op.startTimeMs ?: 0L
+                val relativeTimeMs = globalTimeMs - start
+                val interpolatedPos = if (op.positionKeyframes.isNotEmpty()) {
+                    interpolateKeyframePosition(op.positionKeyframes, relativeTimeMs, op.relativeX, op.relativeY)
+                } else {
+                    Pair(op.relativeX, op.relativeY)
+                }
+                val interpolatedOpacity = if (op.opacityKeyframes.isNotEmpty()) {
+                    interpolateKeyframes(op.opacityKeyframes, relativeTimeMs, op.opacity)
+                } else {
+                    op.opacity
+                }
+                
+                draggableImageOverlay?.setProperties(
+                    interpolatedPos.first,
+                    interpolatedPos.second,
+                    op.relativeWidth,
+                    op.relativeHeight,
+                    op.rotationAngle,
+                    interpolatedOpacity,
+                    op.isMirrored
+                )
+                
+                if (activeKeyframeProperty == "Opacity") {
+                    val progress = (interpolatedOpacity * 100).toInt()
+                    val slider = keyframeEditingToolbar?.findViewById<com.google.android.material.slider.Slider>(R.id.sliderKeyframeValue)
+                    slider?.value = progress.toFloat().coerceIn(0.0f, 100.0f)
+                    keyframeEditingToolbar?.findViewById<TextView>(R.id.tvSliderValue)?.text = "$progress%"
+                } else if (activeKeyframeProperty == "Speed") {
+                    val speed = if (op.speedKeyframes.isNotEmpty()) {
+                        interpolateKeyframes(op.speedKeyframes, relativeTimeMs, 1.0f)
+                    } else {
+                        1.0f
+                    }
+                    val slider = keyframeEditingToolbar?.findViewById<com.google.android.material.slider.Slider>(R.id.sliderKeyframeValue)
+                    val safeSpeed = speed.coerceIn(0.25f, 4.0f)
+                    val steps = Math.round((safeSpeed - 0.25f) / 0.05f)
+                    val steppedSpeed = 0.25f + (steps * 0.05f)
+                    slider?.value = steppedSpeed.coerceIn(0.25f, 4.0f)
+                    keyframeEditingToolbar?.findViewById<TextView>(R.id.tvSliderValue)?.text = String.format(java.util.Locale.US, "%.2fx", steppedSpeed)
+                }
+            }
+            is EditOperation.AddText -> {
+                val start = op.startTimeMs ?: 0L
+                val relativeTimeMs = globalTimeMs - start
+                val interpolatedPos = if (op.positionKeyframes.isNotEmpty()) {
+                    interpolateKeyframePosition(op.positionKeyframes, relativeTimeMs, op.relativeX ?: 0.5f, op.relativeY ?: 0.5f)
+                } else {
+                    Pair(op.relativeX ?: 0.5f, op.relativeY ?: 0.5f)
+                }
+                val interpolatedOpacity = if (op.opacityKeyframes.isNotEmpty()) {
+                    interpolateKeyframes(op.opacityKeyframes, relativeTimeMs, op.opacity)
+                } else {
+                    op.opacity
+                }
+                
+                draggableTextOverlay?.setProperties(
+                    interpolatedPos.first,
+                    interpolatedPos.second,
+                    interpolatedOpacity
+                )
+                
+                if (activeKeyframeProperty == "Opacity") {
+                    val progress = (interpolatedOpacity * 100).toInt()
+                    val slider = keyframeEditingToolbar?.findViewById<com.google.android.material.slider.Slider>(R.id.sliderKeyframeValue)
+                    slider?.value = progress.toFloat().coerceIn(0.0f, 100.0f)
+                    keyframeEditingToolbar?.findViewById<TextView>(R.id.tvSliderValue)?.text = "$progress%"
+                }
+            }
+            else -> {}
+        }
+        
+        updateKeyframeActionButtonState(globalTimeMs)
+    }
+
+    private fun interpolateKeyframes(
+        keyframes: List<com.tharunbirla.librecuts.models.EditOperation.KeyframePoint>,
+        timeMs: Long,
+        defaultValue: Float
+    ): Float {
+        if (keyframes.isEmpty()) return defaultValue
+        val sorted = keyframes.sortedBy { it.timeMs }
+        if (timeMs <= sorted.first().timeMs) {
+            return sorted.first().valueX
+        }
+        if (timeMs >= sorted.last().timeMs) {
+            return sorted.last().valueX
+        }
+        for (i in 0 until sorted.size - 1) {
+            val k1 = sorted[i]
+            val k2 = sorted[i + 1]
+            if (timeMs >= k1.timeMs && timeMs <= k2.timeMs) {
+                val progress = (timeMs - k1.timeMs).toFloat() / (k2.timeMs - k1.timeMs)
+                return k1.valueX + progress * (k2.valueX - k1.valueX)
+            }
+        }
+        return defaultValue
+    }
+
+    private fun interpolateKeyframePosition(
+        keyframes: List<com.tharunbirla.librecuts.models.EditOperation.KeyframePoint>,
+        timeMs: Long,
+        defaultX: Float,
+        defaultY: Float
+    ): Pair<Float, Float> {
+        if (keyframes.isEmpty()) return Pair(defaultX, defaultY)
+        val sorted = keyframes.sortedBy { it.timeMs }
+        if (timeMs <= sorted.first().timeMs) {
+            return Pair(sorted.first().valueX, sorted.first().valueY)
+        }
+        if (timeMs >= sorted.last().timeMs) {
+            return Pair(sorted.last().valueX, sorted.last().valueY)
+        }
+        for (i in 0 until sorted.size - 1) {
+            val k1 = sorted[i]
+            val k2 = sorted[i + 1]
+            if (timeMs >= k1.timeMs && timeMs <= k2.timeMs) {
+                val progress = (timeMs - k1.timeMs).toFloat() / (k2.timeMs - k1.timeMs)
+                val x = k1.valueX + progress * (k2.valueX - k1.valueX)
+                val y = k1.valueY + progress * (k2.valueY - k1.valueY)
+                return Pair(x, y)
+            }
+        }
+        return Pair(defaultX, defaultY)
     }
 
     companion object {

@@ -149,6 +149,57 @@ class TextOverlayView @JvmOverloads constructor(
         return rect
     }
 
+    private fun interpolateKeyframes(
+        keyframes: List<EditOperation.KeyframePoint>,
+        timeMs: Long,
+        defaultValue: Float
+    ): Float {
+        if (keyframes.isEmpty()) return defaultValue
+        val sorted = keyframes.sortedBy { it.timeMs }
+        if (timeMs <= sorted.first().timeMs) {
+            return sorted.first().valueX
+        }
+        if (timeMs >= sorted.last().timeMs) {
+            return sorted.last().valueX
+        }
+        for (i in 0 until sorted.size - 1) {
+            val k1 = sorted[i]
+            val k2 = sorted[i + 1]
+            if (timeMs >= k1.timeMs && timeMs <= k2.timeMs) {
+                val progress = (timeMs - k1.timeMs).toFloat() / (k2.timeMs - k1.timeMs)
+                return k1.valueX + progress * (k2.valueX - k1.valueX)
+            }
+        }
+        return defaultValue
+    }
+
+    private fun interpolateKeyframePosition(
+        keyframes: List<EditOperation.KeyframePoint>,
+        timeMs: Long,
+        defaultX: Float,
+        defaultY: Float
+    ): Pair<Float, Float> {
+        if (keyframes.isEmpty()) return Pair(defaultX, defaultY)
+        val sorted = keyframes.sortedBy { it.timeMs }
+        if (timeMs <= sorted.first().timeMs) {
+            return Pair(sorted.first().valueX, sorted.first().valueY)
+        }
+        if (timeMs >= sorted.last().timeMs) {
+            return Pair(sorted.last().valueX, sorted.last().valueY)
+        }
+        for (i in 0 until sorted.size - 1) {
+            val k1 = sorted[i]
+            val k2 = sorted[i + 1]
+            if (timeMs >= k1.timeMs && timeMs <= k2.timeMs) {
+                val progress = (timeMs - k1.timeMs).toFloat() / (k2.timeMs - k1.timeMs)
+                val x = k1.valueX + progress * (k2.valueX - k1.valueX)
+                val y = k1.valueY + progress * (k2.valueY - k1.valueY)
+                return Pair(x, y)
+            }
+        }
+        return Pair(defaultX, defaultY)
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
@@ -173,8 +224,20 @@ class TextOverlayView @JvmOverloads constructor(
                     paint.typeface = android.graphics.Typeface.DEFAULT
                 }
 
+                val relativeTimeMs = currentPositionMs - start
+                val interpolatedPos = if (op.positionKeyframes.isNotEmpty()) {
+                    interpolateKeyframePosition(op.positionKeyframes, relativeTimeMs, op.relativeX ?: 0.5f, op.relativeY ?: 0.5f)
+                } else {
+                    Pair(op.relativeX, op.relativeY)
+                }
+                val interpolatedOpacity = if (op.opacityKeyframes.isNotEmpty()) {
+                    interpolateKeyframes(op.opacityKeyframes, relativeTimeMs, op.opacity)
+                } else {
+                    op.opacity
+                }
+
                 val baseColorInt = try { Color.parseColor(op.color) } catch (e: Exception) { Color.WHITE }
-                val alphaInt = (op.opacity * 255).toInt().coerceIn(0, 255)
+                val alphaInt = (interpolatedOpacity * 255).toInt().coerceIn(0, 255)
                 paint.color = Color.argb(alphaInt, Color.red(baseColorInt), Color.green(baseColorInt), Color.blue(baseColorInt))
                 
                 paint.letterSpacing = op.letterSpacing
@@ -193,10 +256,16 @@ class TextOverlayView @JvmOverloads constructor(
                 val startX: Float
                 val startY: Float
 
-                if (op.hasCustomPosition()) {
+                val rx = interpolatedPos.first
+                val ry = interpolatedPos.second
+                val hasCustomPos = rx != null && ry != null || op.positionKeyframes.isNotEmpty()
+
+                if (hasCustomPos) {
                     // WYSIWYG drag-and-drop coordinates (fractional 0.0–1.0) relative to text center
-                    val centerX = videoRect.left + (op.relativeX!! * videoRect.width())
-                    val centerY = videoRect.top + (op.relativeY!! * videoRect.height())
+                    val cx = rx ?: 0.5f
+                    val cy = ry ?: 0.5f
+                    val centerX = videoRect.left + (cx * videoRect.width())
+                    val centerY = videoRect.top + (cy * videoRect.height())
                     startX = centerX - (maxTextWidth / 2f)
                     startY = centerY - (totalHeight / 2f) + (textHeight / 2f) - ((paint.ascent() + paint.descent()) / 2f)
                 } else {

@@ -76,6 +76,13 @@ sealed class EditOperation : Serializable {
      * Supports 7 predefined positions (Bottom Right, Top Right, Top Left, Bottom Left, Center Bottom, Center Top, Center Align)
      * Uses FFmpeg's drawtext filter.
      */
+    data class KeyframePoint(
+        val timeMs: Long,
+        val valueX: Float,
+        val valueY: Float = 0f,
+        val interpolationType: String = "linear"
+    ) : Serializable
+
     data class AddText(
         val text: String,
         val fontSize: Int,
@@ -92,7 +99,9 @@ sealed class EditOperation : Serializable {
         val borderColor: String = "#000000",
         val textAlign: String = "center",
         val letterSpacing: Float = 0f,
-        val lineSpacing: Float = 0f
+        val lineSpacing: Float = 0f,
+        val positionKeyframes: List<KeyframePoint> = emptyList(),
+        val opacityKeyframes: List<KeyframePoint> = emptyList()
     ) : EditOperation() {
         init {
             require(text.isNotEmpty()) { "Text cannot be empty" }
@@ -221,7 +230,10 @@ sealed class EditOperation : Serializable {
         val chromaKeyColor: String? = null,
         val chromaKeySimilarity: Float = 0.1f,
         val opacity: Float = 1.0f,
-        val isMirrored: Boolean = false
+        val isMirrored: Boolean = false,
+        val positionKeyframes: List<KeyframePoint> = emptyList(),
+        val opacityKeyframes: List<KeyframePoint> = emptyList(),
+        val speedKeyframes: List<KeyframePoint> = emptyList()
     ) : EditOperation()
 
     data class AddSubtitles(
@@ -337,3 +349,23 @@ enum class TextPosition(val ffmpegParam: String) : Serializable {
         )
     }
 }
+
+val EditOperation.id: String
+    get() = when (this) {
+        is EditOperation.Trim -> id
+        is EditOperation.SpeedMain -> id
+        is EditOperation.ReverseMain -> id
+        is EditOperation.MirrorMain -> id
+        is EditOperation.Crop -> id
+        is EditOperation.AddText -> id
+        is EditOperation.Merge -> id
+        is EditOperation.MuteAudio -> id
+        is EditOperation.Transition -> id
+        is EditOperation.MuteClip -> id
+        is EditOperation.ColorFilter -> id
+        is EditOperation.AddBackgroundAudio -> id
+        is EditOperation.AddImageOverlay -> id
+        is EditOperation.AddSubtitles -> id
+        is EditOperation.Adjust -> id
+        is EditOperation.CanvasBackground -> id
+    }

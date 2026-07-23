@@ -47,6 +47,7 @@ class DraggableTextOverlayView @JvmOverloads constructor(
 
     /** Called when the user taps the text to edit (keyboard opens). */
     var onEditingFocused: (() -> Unit)? = null
+    var onPositionChanged: ((relativeX: Float, relativeY: Float) -> Unit)? = null
 
     // ── State ─────────────────────────────────────────────────────────────────
     private var isEditingActive = false
@@ -543,6 +544,7 @@ class DraggableTextOverlayView @JvmOverloads constructor(
 
         relativeX = if (videoRect.width() > 0) ((centerX - videoRect.left) / videoRect.width()).coerceIn(0f, 1f) else 0.5f
         relativeY = if (videoRect.height() > 0) ((centerY - videoRect.top) / videoRect.height()).coerceIn(0f, 1f) else 0.5f
+        onPositionChanged?.invoke(relativeX, relativeY)
     }
 
     private fun showKeyboard() {
@@ -553,5 +555,19 @@ class DraggableTextOverlayView @JvmOverloads constructor(
     fun hideKeyboard() {
         val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(editText.windowToken, 0)
+    }
+
+    fun getRelativeX(): Float = relativeX
+    fun getRelativeY(): Float = relativeY
+    fun getOpacity(): Float = currentOpacity
+
+    fun setProperties(rx: Float, ry: Float, op: Float) {
+        relativeX = rx
+        relativeY = ry
+        currentOpacity = op
+        post {
+            positionEditTextFromRelative()
+            invalidate()
+        }
     }
 }

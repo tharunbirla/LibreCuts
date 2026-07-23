@@ -952,7 +952,11 @@ class VideoEditingViewModel : ViewModel() {
         }
 
         // Use WYSIWYG fractional coordinates if available, else fall back to enum position
-        val positionPart = if (op.hasCustomPosition()) {
+        val positionPart = if (op.positionKeyframes.isNotEmpty()) {
+            val xExpr = buildFFmpegInterpolationExpr(op.positionKeyframes, useValueY = false, defaultValue = op.relativeX ?: 0.5f, startTimeMs = op.startTimeMs ?: 0L)
+            val yExpr = buildFFmpegInterpolationExpr(op.positionKeyframes, useValueY = true, defaultValue = op.relativeY ?: 0.5f, startTimeMs = op.startTimeMs ?: 0L)
+            "x='(w*($xExpr))-(tw/2)':y='(h*($yExpr))-(th/2)'"
+        } else if (op.hasCustomPosition()) {
             "x='(w*${op.relativeX})-(tw/2)':y='(h*${op.relativeY})-(th/2)'"
         } else {
             op.position.ffmpegParam
@@ -960,12 +964,66 @@ class VideoEditingViewModel : ViewModel() {
 
         val enablePart = buildEnableExpr(op.startTimeMs, op.endTimeMs)
         
-        val alphaPart = if (op.opacity < 1.0f) ":alpha='${op.opacity}'" else ""
+        val alphaPart = if (op.opacityKeyframes.isNotEmpty()) {
+            val alphaExpr = buildFFmpegInterpolationExpr(op.opacityKeyframes, useValueY = false, defaultValue = op.opacity, startTimeMs = op.startTimeMs ?: 0L)
+            ":alpha='$alphaExpr'"
+        } else if (op.opacity < 1.0f) {
+            ":alpha='${op.opacity}'"
+        } else {
+            ""
+        }
         val borderPart = if (op.borderThickness > 0) ":borderw=${op.borderThickness}:bordercolor='${formatColorForFFmpeg(op.borderColor)}'" else ""
         val alignPart = if (op.textAlign.isNotEmpty()) ":text_align=${op.textAlign}" else ""
         val lineSpacingPart = if (op.lineSpacing != 0f) ":line_spacing=${op.lineSpacing.toInt()}" else ""
         
         return "drawtext=${fontPart}text='$escapedText':fontcolor='${formatColorForFFmpeg(op.color)}':fontsize=${op.fontSize}:$positionPart$enablePart$alphaPart$borderPart$alignPart$lineSpacingPart"
+    }
+
+    private fun buildFFmpegInterpolationExpr(
+        keyframes: List<EditOperation.KeyframePoint>,
+        useValueY: Boolean,
+        defaultValue: Float,
+        startTimeMs: Long,
+        timeVar: String = "t"
+    ): String {
+        if (keyframes.isEmpty()) return defaultValue.toString()
+        val sorted = keyframes.sortedBy { it.timeMs }
+        val startSec = startTimeMs / 1000.0
+        val tRel = "($timeVar-$startSec)"
+        
+        if (sorted.size == 1) {
+            val v = if (useValueY) sorted[0].valueY else sorted[0].valueX
+            return v.toString()
+        }
+        
+        var expr = ""
+        val lastVal = if (useValueY) sorted.last().valueY else sorted.last().valueX
+        expr = lastVal.toString()
+        
+        for (i in sorted.size - 2 downTo 0) {
+            val k1 = sorted[i]
+            val k2 = sorted[i + 1]
+            val t1 = k1.timeMs / 1000.0
+            val t2 = k2.timeMs / 1000.0
+            val v1 = if (useValueY) k1.valueY else k1.valueX
+            val v2 = if (useValueY) k2.valueY else k2.valueX
+            
+            val diffVal = v2 - v1
+            val diffTime = t2 - t1
+            val segmentExpr = if (diffTime > 0) {
+                "$v1 + ($diffVal) * ($tRel - $t1) / ($diffTime)"
+            } else {
+                v1.toString()
+            }
+            
+            expr = "if(lt($tRel, $t2), $segmentExpr, $expr)"
+        }
+        
+        val firstVal = if (useValueY) sorted.first().valueY else sorted.first().valueX
+        val firstTime = sorted.first().timeMs / 1000.0
+        expr = "if(lt($tRel, $firstTime), $firstVal, $expr)"
+        
+        return expr
     }
 
     private fun formatColorForFFmpeg(colorHex: String): String {
@@ -1103,12 +1161,23 @@ class VideoEditingViewModel : ViewModel() {
                             val startSec = (op.startTimeMs ?: 0L) / 1000.0
                             val ptsLabel = "[pts_$stageIndex]"
                             val mirrorStr = if (op.isMirrored) ",hflip" else ""
-                            stages.add("[$imageInputIndex:v]setpts=PTS-STARTPTS+${startSec}/TB,format=rgba$mirrorStr$ptsLabel")
+                            val speedExpr = if (op.speedKeyframes.isNotEmpty()) {
+                                buildFFmpegInterpolationExpr(op.speedKeyframes, useValueY = false, defaultValue = 1.0f, startTimeMs = 0L, timeVar = "T")
+                            } else {
+                                "1.0"
+                            }
+                            val safeSpeedExpr = "if(gt($speedExpr,0.1),$speedExpr,0.1)"
+                            stages.add("[$imageInputIndex:v]setpts='(PTS-STARTPTS)/($safeSpeedExpr)+${startSec}/TB',format=rgba$mirrorStr$ptsLabel")
                             stages.add("${ptsLabel}${currentLabel}scale2ref=w=iw*${op.relativeWidth}:h=ih*${op.relativeHeight}${scaledImgLabel}${refVidLabel}")
                         } else {
                             val rgbaImgLabel = "[rgba_img_$stageIndex]"
                             val mirrorStr = if (op.isMirrored) ",hflip" else ""
-                            stages.add("[$imageInputIndex:v]format=rgba$mirrorStr$rgbaImgLabel")
+                            if (op.opacityKeyframes.isNotEmpty()) {
+                                // Static image: convert to video stream so geq's T variable advances
+                                stages.add("[$imageInputIndex:v]format=rgba$mirrorStr,loop=loop=-1:size=1:start=0,fps=25$rgbaImgLabel")
+                            } else {
+                                stages.add("[$imageInputIndex:v]format=rgba$mirrorStr$rgbaImgLabel")
+                            }
                             stages.add("${rgbaImgLabel}${currentLabel}scale2ref=w=iw*${op.relativeWidth}:h=ih*${op.relativeHeight}${scaledImgLabel}${refVidLabel}")
                         }
 
@@ -1121,7 +1190,12 @@ class VideoEditingViewModel : ViewModel() {
                             currentOverlayLabel = colorkeyLabel
                         }
 
-                        if (op.opacity < 1.0f) {
+                        if (op.opacityKeyframes.isNotEmpty()) {
+                            val opacityLabel = "[opacity_$stageIndex]"
+                            val alphaExpr = buildFFmpegInterpolationExpr(op.opacityKeyframes, useValueY = false, defaultValue = op.opacity, startTimeMs = 0L, timeVar = "T")
+                            stages.add("${currentOverlayLabel}format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*($alphaExpr)'${opacityLabel}")
+                            currentOverlayLabel = opacityLabel
+                        } else if (op.opacity < 1.0f) {
                             val opacityLabel = "[opacity_$stageIndex]"
                             stages.add("${currentOverlayLabel}format=rgba,colorchannelmixer=aa=${op.opacity}${opacityLabel}")
                             currentOverlayLabel = opacityLabel
@@ -1131,8 +1205,22 @@ class VideoEditingViewModel : ViewModel() {
                         stages.add("${currentOverlayLabel}rotate=$radians:c=none:ow='rotw($radians)':oh='roth($radians)'${rotatedImgLabel}")
                         // Overlay image/video on the reference video
                         val enablePart = buildEnableExpr(op.startTimeMs, op.endTimeMs)
-                        val shortestPart = if ((isGif || isVideo) && op.isLooping) ":shortest=1" else ""
-                        stages.add("${refVidLabel}${rotatedImgLabel}overlay=x=(W*${op.relativeX})-(w/2):y=(H*${op.relativeY})-(h/2)${shortestPart}${enablePart}${nextLabel}")
+                        val shortestPart = if (((isGif || isVideo) && op.isLooping) || (!isGif && !isVideo && op.opacityKeyframes.isNotEmpty())) ":shortest=1" else ""
+                        
+                        val overlayX = if (op.positionKeyframes.isNotEmpty()) {
+                            val xExpr = buildFFmpegInterpolationExpr(op.positionKeyframes, useValueY = false, defaultValue = op.relativeX, startTimeMs = op.startTimeMs ?: 0L)
+                            "x='(W*($xExpr))-(w/2)'"
+                        } else {
+                            "x='(W*${op.relativeX})-(w/2)'"
+                        }
+                        val overlayY = if (op.positionKeyframes.isNotEmpty()) {
+                            val yExpr = buildFFmpegInterpolationExpr(op.positionKeyframes, useValueY = true, defaultValue = op.relativeY, startTimeMs = op.startTimeMs ?: 0L)
+                            "y='(H*($yExpr))-(h/2)'"
+                        } else {
+                            "y='(H*${op.relativeY})-(h/2)'"
+                        }
+                        
+                        stages.add("${refVidLabel}${rotatedImgLabel}overlay=$overlayX:$overlayY${shortestPart}${enablePart}${nextLabel}")
 
                         currentLabel = nextLabel
                         stageIndex++

@@ -44,6 +44,7 @@ class TrackTrimView @JvmOverloads constructor(
     
     var beats: List<Long> = emptyList()
     var internalStartMs: Long = 0L
+    var keyframes: List<Long> = emptyList()
 
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
@@ -214,6 +215,34 @@ class TrackTrimView @JvmOverloads constructor(
                     if (beatX <= endX) {
                         canvas.drawCircle(beatX, yPos, beatRadius, beatPaint)
                     }
+                }
+            }
+            canvas.restore()
+        }
+
+        // Draw Keyframe Markers
+        if (keyframes.isNotEmpty()) {
+            canvas.save()
+            canvas.clipRect(rectF)
+            val kfPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#FFD700") // Gold color for keyframes
+                style = Paint.Style.FILL
+            }
+            val size = 12f // size of the diamond
+            val halfSize = size / 2f
+            val yPos = height - 12f // Draw near the bottom like beat markers
+            val diamondPath = android.graphics.Path()
+
+            for (kfTimeMs in keyframes) {
+                val kfX = startX + (kfTimeMs / msPerPixel)
+                if (kfX >= startX && kfX <= endX) {
+                    diamondPath.reset()
+                    diamondPath.moveTo(kfX, yPos - halfSize)
+                    diamondPath.lineTo(kfX + halfSize, yPos)
+                    diamondPath.lineTo(kfX, yPos + halfSize)
+                    diamondPath.lineTo(kfX - halfSize, yPos)
+                    diamondPath.close()
+                    canvas.drawPath(diamondPath, kfPaint)
                 }
             }
             canvas.restore()
