@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@android:color/transparent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginHorizontal="12dp"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_bottom_nav_floating"
+        android:padding="16dp"
+        android:elevation="8dp">
+
+        <!-- Title & Invert Toggle Row -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Mask"
+                android:textSize="16sp"
+                android:fontFamily="sans-serif-medium"
+                android:textColor="@color/textColor"
+                android:layout_centerVertical="true"
+                android:layout_alignParentStart="true" />
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switchInvertMask"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:text="Invert"
+                android:textSize="13sp"
+                android:textColor="@color/textColor"
+                android:fontFamily="sans-serif-medium" />
+        </RelativeLayout>
+
+        <!-- Horizontal scroll of mask shapes -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none"
+            android:layout_marginBottom="12dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:id="@+id/btnMaskNone"
+                    android:layout_width="64dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="6dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground">
+                    <ImageView
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_close_24"
+                        app:tint="@color/toolTextInactive" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="None"
+                        android:textSize="11sp"
+                        android:textColor="@color/toolTextInactive"
+                        android:layout_marginTop="2dp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/btnMaskSplit"
+                    android:layout_width="64dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="6dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground">
+                    <ImageView
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_split_24"
+                        app:tint="@color/toolTextInactive" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Split"
+                        android:textSize="11sp"
+                        android:textColor="@color/toolTextInactive"
+                        android:layout_marginTop="2dp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/btnMaskShutter"
+                    android:layout_width="64dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="6dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground">
+                    <ImageView
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_shutter_24"
+                        app:tint="@color/toolTextInactive" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Shutter"
+                        android:textSize="11sp"
+                        android:textColor="@color/toolTextInactive"
+                        android:layout_marginTop="2dp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/btnMaskEllipse"
+                    android:layout_width="64dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="6dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground">
+                    <ImageView
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_ellipse_24"
+                        app:tint="@color/toolTextInactive" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Ellipse"
+                        android:textSize="11sp"
+                        android:textColor="@color/toolTextInactive"
+                        android:layout_marginTop="2dp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/btnMaskRectangle"
+                    android:layout_width="64dp"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="6dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground">
+                    <ImageView
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_crop_square_24"
+                        app:tint="@color/toolTextInactive" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Rectangle"
+                        android:textSize="11sp"
+                        android:textColor="@color/toolTextInactive"
+                        android:layout_marginTop="2dp" />
+                </LinearLayout>
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <!-- Done button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDoneMaskSheet"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:text="@string/done"
+            android:textColor="@color/onPrimaryContainer"
+            android:textSize="13sp"
+            android:fontFamily="sans-serif-medium"
+            android:backgroundTint="@color/primaryContainer"
+            app:cornerRadius="20dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:elevation="0dp" />
+
+    </LinearLayout>
+</LinearLayout>

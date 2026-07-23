@@ -429,6 +429,33 @@ class ImageOverlayView @JvmOverloads constructor(
         paint.alpha = (op.opacity * 255).toInt().coerceIn(0, 255)
         canvas.save()
         canvas.rotate(op.rotationAngle, centerX, centerY)
+        
+        if (op.maskConfig.shape != EditOperation.MaskShape.NONE) {
+            val path = android.graphics.Path()
+            val cx = dstRect.left + dstRect.width() * op.maskConfig.relativeX
+            val cy = dstRect.top + dstRect.height() * op.maskConfig.relativeY
+            val mw = dstRect.width() * op.maskConfig.relativeWidth
+            val mh = dstRect.height() * op.maskConfig.relativeHeight
+            
+            when (op.maskConfig.shape) {
+                EditOperation.MaskShape.RECTANGLE -> path.addRect(cx - mw/2, cy - mh/2, cx + mw/2, cy + mh/2, android.graphics.Path.Direction.CW)
+                EditOperation.MaskShape.ELLIPSE -> path.addOval(cx - mw/2, cy - mh/2, cx + mw/2, cy + mh/2, android.graphics.Path.Direction.CW)
+                EditOperation.MaskShape.SPLIT -> path.addRect(dstRect.left - dstRect.width(), cy, dstRect.right + dstRect.width(), dstRect.bottom + dstRect.height(), android.graphics.Path.Direction.CW)
+                EditOperation.MaskShape.SHUTTER -> path.addRect(dstRect.left - dstRect.width(), cy - mh/2, dstRect.right + dstRect.width(), cy + mh/2, android.graphics.Path.Direction.CW)
+                else -> {}
+            }
+            
+            if (op.maskConfig.isInverted) {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    canvas.clipOutPath(path)
+                } else {
+                    canvas.clipPath(path, android.graphics.Region.Op.DIFFERENCE)
+                }
+            } else {
+                canvas.clipPath(path)
+            }
+        }
+        
         if (op.isMirrored) {
             canvas.scale(-1f, 1f, centerX, centerY)
         }

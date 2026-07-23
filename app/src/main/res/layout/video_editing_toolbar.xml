@@ -280,6 +280,8 @@
                 android:textColor="@color/toolTextInactive"/>
         </LinearLayout>
 
+
+
         <!-- Mirror -->
         <LinearLayout
             android:id="@+id/btnVideoMirrorContainer"

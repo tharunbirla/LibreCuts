@@ -591,6 +591,46 @@ class VideoEditingViewModel : ViewModel() {
             }
         }
     }
+    fun updateMergeItemMask(index: Int, maskConfig: EditOperation.MaskConfig) {
+        viewModelScope.launch {
+            _project.update { current ->
+                if (current == null) return@update null
+                val ops = current.operations.toMutableList()
+                
+                if (index == 0) {
+                    val existingIdx = ops.indexOfFirst { it is EditOperation.MaskMain }
+                    if (existingIdx != -1) {
+                        ops[existingIdx] = EditOperation.MaskMain(maskConfig)
+                    } else {
+                        ops.add(EditOperation.MaskMain(maskConfig))
+                    }
+                } else {
+                    val mergeIdx = ops.indexOfFirst { it is EditOperation.Merge }
+                    if (mergeIdx != -1) {
+                        val mergeOp = ops[mergeIdx] as EditOperation.Merge
+                        val newItems = mergeOp.items.toMutableList()
+                        // Merge items are index - 1
+                        val itemIdx = index - 1
+                        if (itemIdx >= 0 && itemIdx < newItems.size) {
+                            newItems[itemIdx] = newItems[itemIdx].copy(maskConfig = maskConfig)
+                            ops[mergeIdx] = mergeOp.copy(items = newItems)
+                        }
+                    }
+                }
+                
+                _undoStack.value = _undoStack.value + current
+                _redoStack.value = emptyList()
+                current.copy(operations = ops)
+            }
+            updateUiState { state ->
+                state.copy(
+                    pendingOperationCount = _project.value?.getOperationCount() ?: 0,
+                    canUndo = _undoStack.value.isNotEmpty(),
+                    canRedo = false
+                )
+            }
+        }
+    }
 
     fun addMuteAudioOperation() {
         addOperation(EditOperation.MuteAudio())
@@ -633,7 +673,8 @@ class VideoEditingViewModel : ViewModel() {
         chromaKeyColor: String? = null,
         chromaKeySimilarity: Float = 0.1f,
         opacity: Float = 1.0f,
-        isMirrored: Boolean = false
+        isMirrored: Boolean = false,
+        maskConfig: EditOperation.MaskConfig = EditOperation.MaskConfig()
     ) {
         addOperation(
             EditOperation.AddImageOverlay(
@@ -649,7 +690,8 @@ class VideoEditingViewModel : ViewModel() {
                 chromaKeyColor = chromaKeyColor,
                 chromaKeySimilarity = chromaKeySimilarity,
                 opacity = opacity,
-                isMirrored = isMirrored
+                isMirrored = isMirrored,
+                maskConfig = maskConfig
             )
         )
     }
@@ -857,6 +899,7 @@ class VideoEditingViewModel : ViewModel() {
                             is EditOperation.ColorFilter -> op.id == operationId
                             is EditOperation.Adjust -> op.id == operationId
                             is EditOperation.MirrorMain -> op.id == operationId
+                            is EditOperation.MaskMain -> op.id == operationId
                             is EditOperation.CanvasBackground -> op.id == operationId
                         }
                     }
@@ -1207,6 +1250,36 @@ class VideoEditingViewModel : ViewModel() {
                             currentOverlayLabel = opacityLabel
                         }
 
+                        if (op.maskConfig.shape != EditOperation.MaskShape.NONE) {
+                            val maskLabel = "[mask_$stageIndex]"
+                            val mc = op.maskConfig
+                            val cx = "W*${mc.relativeX}"
+                            val cy = "H*${mc.relativeY}"
+                            val mw = "W*${mc.relativeWidth}"
+                            val mh = "H*${mc.relativeHeight}"
+                            val rad = Math.toRadians(mc.rotationAngle.toDouble())
+                            val cosA = Math.cos(rad)
+                            val sinA = Math.sin(rad)
+                            
+                            val dx = "(X - $cx)"
+                            val dy = "(Y - $cy)"
+                            val rx = "($dx * $cosA - $dy * $sinA)"
+                            val ry = "($dx * $sinA + $dy * $cosA)"
+                            
+                            val shapeExpr = when (mc.shape) {
+                                EditOperation.MaskShape.RECTANGLE -> "if(lt(abs($rx), $mw/2) * lt(abs($ry), $mh/2), 255, 0)"
+                                EditOperation.MaskShape.ELLIPSE -> "if(lte(pow($rx/($mw/2), 2) + pow($ry/($mh/2), 2), 1), 255, 0)"
+                                EditOperation.MaskShape.SPLIT -> "if(gt($ry, 0), 255, 0)"
+                                EditOperation.MaskShape.SHUTTER -> "if(lt(abs($ry), $mh/2), 255, 0)"
+                                else -> "255"
+                            }
+                            
+                            val finalAlphaExpr = if (mc.isInverted) "(255 - ($shapeExpr))" else "($shapeExpr)"
+                            
+                            stages.add("${currentOverlayLabel}format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*($finalAlphaExpr/255)'${maskLabel}")
+                            currentOverlayLabel = maskLabel
+                        }
+
                         // Rotate image/video overlay (c=none preserves transparent background, ow/oh prevent cropping)
                         stages.add("${currentOverlayLabel}rotate=$radians:c=none:ow='rotw($radians)':oh='roth($radians)'${rotatedImgLabel}")
                         // Overlay image/video on the reference video
@@ -1552,18 +1625,49 @@ class VideoEditingViewModel : ViewModel() {
                     mergeOp?.items?.getOrNull(i - 1)?.isMirrored == true
                 }
                 
+                val maskConfig = if (i == 0) {
+                    operations.filterIsInstance<EditOperation.MaskMain>().lastOrNull()?.maskConfig ?: EditOperation.MaskConfig()
+                } else {
+                    mergeOp?.items?.getOrNull(i - 1)?.maskConfig ?: EditOperation.MaskConfig()
+                }
+                
                 // 1. Prepare raw video with basic visual filters
                 var preFilters = "setpts=PTS-STARTPTS"
                 if (lutFilterExpr != null) preFilters += ",$lutFilterExpr"
                 if (adjustFilterExpr != null) preFilters += ",$adjustFilterExpr"
                 if (isMirrored) preFilters += ",hflip"
                 
+                if (maskConfig.shape != EditOperation.MaskShape.NONE) {
+                    val mc = maskConfig
+                    val cx = "W*${mc.relativeX}"
+                    val cy = "H*${mc.relativeY}"
+                    val mw = "W*${mc.relativeWidth}"
+                    val mh = "H*${mc.relativeHeight}"
+                    val rad = Math.toRadians(mc.rotationAngle.toDouble())
+                    val cosA = Math.cos(rad)
+                    val sinA = Math.sin(rad)
+                    val dx = "(X - $cx)"
+                    val dy = "(Y - $cy)"
+                    val rx = "($dx * $cosA - $dy * $sinA)"
+                    val ry = "($dx * $sinA + $dy * $cosA)"
+                    
+                    val shapeExpr = when (mc.shape) {
+                        EditOperation.MaskShape.RECTANGLE -> "if(lt(abs($rx), $mw/2) * lt(abs($ry), $mh/2), 255, 0)"
+                        EditOperation.MaskShape.ELLIPSE -> "if(lte(pow($rx/($mw/2), 2) + pow($ry/($mh/2), 2), 1), 255, 0)"
+                        EditOperation.MaskShape.SPLIT -> "if(gt($ry, 0), 255, 0)"
+                        EditOperation.MaskShape.SHUTTER -> "if(lt(abs($ry), $mh/2), 255, 0)"
+                        else -> "255"
+                    }
+                    val finalAlphaExpr = if (mc.isInverted) "(255 - ($shapeExpr))" else "($shapeExpr)"
+                    preFilters += ",format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='255*($finalAlphaExpr/255)'"
+                }
+                
                 filterParts.add("[$i:v]$preFilters[pre$i]")
 
                 // 2. Apply background/padding
                 if (bgOp?.type == EditOperation.CanvasBackground.BackgroundType.BLUR) {
                     val blur = bgOp.blurRadius
-                    val bgScale = "scale=$mainWidth:$mainHeight:force_original_aspect_ratio=increase,crop=$mainWidth:$mainHeight,boxblur=$blur"
+                    val bgScale = "format=yuv420p,scale=$mainWidth:$mainHeight:force_original_aspect_ratio=increase,crop=$mainWidth:$mainHeight,boxblur=$blur"
                     val fgScale = "scale=$mainWidth:$mainHeight:force_original_aspect_ratio=decrease"
                     filterParts.add("[pre$i]split=2[bg_orig$i][fg_orig$i]")
                     filterParts.add("[bg_orig$i]$bgScale[bg$i]")
@@ -1580,7 +1684,10 @@ class VideoEditingViewModel : ViewModel() {
                     // Default COLOR
                     val color = bgOp?.colorHex ?: "black"
                     val padColor = if (color.startsWith("#")) color else "black"
-                    filterParts.add("[pre$i]scale=$mainWidth:$mainHeight:force_original_aspect_ratio=decrease,pad=$mainWidth:$mainHeight:(ow-iw)/2:(oh-ih)/2:color=$padColor,setsar=1,fps=30,format=yuv420p[norm$i]")
+                    // Create a solid color background of mainWidth x mainHeight
+                    filterParts.add("color=c=$padColor:s=${mainWidth}x${mainHeight}:r=30[bg$i]")
+                    filterParts.add("[pre$i]scale=$mainWidth:$mainHeight:force_original_aspect_ratio=decrease[fg$i]")
+                    filterParts.add("[bg$i][fg$i]overlay=(W-w)/2:(H-h)/2:shortest=1,setsar=1,fps=30,format=yuv420p[norm$i]")
                 }
 
                 val isClipMuted = operations.filterIsInstance<EditOperation.MuteClip>().find { it.index == i }?.isMuted ?: false
@@ -1888,6 +1995,32 @@ class VideoEditingViewModel : ViewModel() {
         val mirrorMainOp = operations.filterIsInstance<EditOperation.MirrorMain>().find { it.isMirrored }
         if (mirrorMainOp != null) {
             prepFilters.add("hflip")
+        }
+        
+        val maskMainOp = operations.filterIsInstance<EditOperation.MaskMain>().lastOrNull()
+        if (maskMainOp != null && maskMainOp.maskConfig.shape != EditOperation.MaskShape.NONE) {
+            val mc = maskMainOp.maskConfig
+            val cx = "W*${mc.relativeX}"
+            val cy = "H*${mc.relativeY}"
+            val mw = "W*${mc.relativeWidth}"
+            val mh = "H*${mc.relativeHeight}"
+            val rad = Math.toRadians(mc.rotationAngle.toDouble())
+            val cosA = Math.cos(rad)
+            val sinA = Math.sin(rad)
+            val dx = "(X - $cx)"
+            val dy = "(Y - $cy)"
+            val rx = "($dx * $cosA - $dy * $sinA)"
+            val ry = "($dx * $sinA + $dy * $cosA)"
+            
+            val shapeExpr = when (mc.shape) {
+                EditOperation.MaskShape.RECTANGLE -> "if(lt(abs($rx), $mw/2) * lt(abs($ry), $mh/2), 255, 0)"
+                EditOperation.MaskShape.ELLIPSE -> "if(lte(pow($rx/($mw/2), 2) + pow($ry/($mh/2), 2), 1), 255, 0)"
+                EditOperation.MaskShape.SPLIT -> "if(gt($ry, 0), 255, 0)"
+                EditOperation.MaskShape.SHUTTER -> "if(lt(abs($ry), $mh/2), 255, 0)"
+                else -> "255"
+            }
+            val finalAlphaExpr = if (mc.isInverted) "(255 - ($shapeExpr))" else "($shapeExpr)"
+            prepFilters.add("format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='255*($finalAlphaExpr/255)'")
         }
 
         if (prepFilters.isNotEmpty()) {

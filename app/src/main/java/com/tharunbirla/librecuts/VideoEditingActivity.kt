@@ -246,6 +246,8 @@ class VideoEditingActivity : AppCompatActivity() {
     private var speedEditingToolbar: View? = null
     private var cropEditingToolbar: View? = null
     private var cropOverlayView: com.tharunbirla.librecuts.customviews.CropOverlayView? = null
+    private var videoMaskOverlayView: com.tharunbirla.librecuts.customviews.VideoMaskOverlayView? = null
+    private var mainVideoMaskContainer: com.tharunbirla.librecuts.customviews.MaskedFrameLayout? = null
     private var initialCropOperation: com.tharunbirla.librecuts.models.EditOperation.Crop? = null
     private var subtitlesEditingToolbar: View? = null
     private var isSubtitlesEditingActive = false
@@ -886,7 +888,7 @@ class VideoEditingActivity : AppCompatActivity() {
                         }
                     }
                 }
-                overlay.onImageCommitted = { uri, relX, relY, relW, relH, rotationAngle, opacity, isMirrored ->
+                overlay.onImageCommitted = { uri, relX, relY, relW, relH, rotationAngle, opacity, isMirrored, maskConfig ->
                     val selectedId = viewModel.selectedOperationId.value
                     if (isKeyframeEditingMode) {
                         if (selectedId != null) {
@@ -912,7 +914,7 @@ class VideoEditingActivity : AppCompatActivity() {
                             val op = viewModel.project.value?.operations?.find { (it as? EditOperation.AddImageOverlay)?.id == selectedId } as? EditOperation.AddImageOverlay
                             if (op != null) {
                                 viewModel.updateOperation(op.copy(
-                                    imageUri = uri, relativeX = relX, relativeY = relY, relativeWidth = relW, relativeHeight = relH, rotationAngle = rotationAngle, opacity = opacity, isMirrored = isMirrored
+                                    imageUri = uri, relativeX = relX, relativeY = relY, relativeWidth = relW, relativeHeight = relH, rotationAngle = rotationAngle, opacity = opacity, isMirrored = isMirrored, maskConfig = maskConfig
                                 ))
                             }
                         } else {
@@ -935,7 +937,8 @@ class VideoEditingActivity : AppCompatActivity() {
                                 chromaKeyColor = chromaColor,
                                 chromaKeySimilarity = chromaSim,
                                 opacity = opacity,
-                                isMirrored = isMirrored
+                                isMirrored = isMirrored,
+                                maskConfig = maskConfig
                             )
                         }
                         viewModel.selectOperation(null)
@@ -945,6 +948,20 @@ class VideoEditingActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {
             Log.w(TAG, "DraggableImageOverlayView not found: ${e.message}")
+            null
+        }
+        mainVideoMaskContainer = findViewById(R.id.mainVideoMaskContainer)
+        videoMaskOverlayView = try {
+            findViewById<com.tharunbirla.librecuts.customviews.VideoMaskOverlayView>(R.id.videoMaskOverlayView)?.also { overlay ->
+                overlay.onMaskChanged = { maskConfig ->
+                    selectedVideoIndex?.let { index ->
+                        viewModel.updateMergeItemMask(index, maskConfig)
+                        mainVideoMaskContainer?.maskConfig = maskConfig
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "VideoMaskOverlayView not found: ${e.message}")
             null
         }
 
@@ -997,6 +1014,9 @@ class VideoEditingActivity : AppCompatActivity() {
                 }
                 toolbar.findViewById<View>(R.id.btnImageDuplicate)?.setBounceClickListener {
                     duplicateSelectedOverlay()
+                }
+                toolbar.findViewById<View>(R.id.btnImageMask)?.setBounceClickListener {
+                    showMaskBottomSheet()
                 }
                 toolbar.findViewById<View>(R.id.btnImageMirror)?.setBounceClickListener {
                     draggableImageOverlay?.toggleMirror()
@@ -1127,6 +1147,7 @@ class VideoEditingActivity : AppCompatActivity() {
                         syncUiWithPlayer()
                     }
                 }
+
                 toolbar.findViewById<ImageButton>(R.id.btnVideoMute)?.setBounceClickListener {
                     selectedVideoIndex?.let { index ->
                         viewModel.toggleMuteClip(index)
@@ -4493,7 +4514,22 @@ class VideoEditingActivity : AppCompatActivity() {
         val reverseOp = viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.ReverseMain>()?.lastOrNull()
         val isReversed = reverseOp?.isReversed ?: false
         val proxyUri = reverseOp?.proxyUri ?: speedOp?.proxyUri
-        items.add(com.tharunbirla.librecuts.models.EditOperation.MergeItem(sourceUri, sourceDuration, sTrimStart, sTrimEnd, speed, proxyUri, isReversed))
+        val mirrorOp = viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.MirrorMain>()?.lastOrNull()
+        val isMirrored = mirrorOp?.isMirrored ?: false
+        val maskMainOp = viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.MaskMain>()?.lastOrNull()
+        val maskConfig = maskMainOp?.maskConfig ?: com.tharunbirla.librecuts.models.EditOperation.MaskConfig()
+
+        items.add(com.tharunbirla.librecuts.models.EditOperation.MergeItem(
+            uri = sourceUri,
+            durationMs = sourceDuration,
+            trimStartMs = sTrimStart,
+            trimEndMs = sTrimEnd,
+            speed = speed,
+            isReversed = isReversed,
+            isMirrored = isMirrored,
+            proxyUri = proxyUri,
+            maskConfig = maskConfig
+        ))
         
         val mergeOp = viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.Merge>()?.firstOrNull()
         if (mergeOp != null) {
@@ -4693,6 +4729,10 @@ class VideoEditingActivity : AppCompatActivity() {
             val activeAdjust = viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.Adjust>()
                 ?.find { it.index == activeClipIndex }
             applyColorFilterAndAdjustToPlayer(activeFilterName, activeAdjust)
+            
+            if (activeClipIndex >= 0 && activeClipIndex < sequenceItems.size) {
+                mainVideoMaskContainer?.maskConfig = sequenceItems[activeClipIndex].maskConfig
+            }
             
             if (activeClipIndex != lastActiveClipIndexForBlur) {
                 lastActiveClipIndexForBlur = activeClipIndex
@@ -7197,6 +7237,144 @@ class VideoEditingActivity : AppCompatActivity() {
             }
         }
         return Pair(defaultX, defaultY)
+    }
+
+    private fun showMaskBottomSheet() {
+        val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.bottom_sheet_mask, null)
+        bottomSheet.setContentView(view)
+
+        val btnNone = view.findViewById<android.widget.LinearLayout>(R.id.btnMaskNone)
+        val btnSplit = view.findViewById<android.widget.LinearLayout>(R.id.btnMaskSplit)
+        val btnShutter = view.findViewById<android.widget.LinearLayout>(R.id.btnMaskShutter)
+        val btnEllipse = view.findViewById<android.widget.LinearLayout>(R.id.btnMaskEllipse)
+        val btnRectangle = view.findViewById<android.widget.LinearLayout>(R.id.btnMaskRectangle)
+        val switchInvert = view.findViewById<com.google.android.material.materialswitch.MaterialSwitch>(R.id.switchInvertMask)
+
+        val isMainVideo = selectedVideoIndex != null && videoEditingToolbar?.visibility == View.VISIBLE
+        
+        val currentMask = if (isMainVideo) {
+            val idx = selectedVideoIndex!!
+            val items = getSequenceItems()
+            if (idx >= 0 && idx < items.size) items[idx].maskConfig else com.tharunbirla.librecuts.models.EditOperation.MaskConfig()
+        } else {
+            draggableImageOverlay?.maskConfig ?: com.tharunbirla.librecuts.models.EditOperation.MaskConfig()
+        }
+        
+        switchInvert.isChecked = currentMask.isInverted
+
+        fun highlightShape(selectedShape: com.tharunbirla.librecuts.models.EditOperation.MaskShape) {
+            val buttons = mapOf(
+                com.tharunbirla.librecuts.models.EditOperation.MaskShape.NONE to btnNone,
+                com.tharunbirla.librecuts.models.EditOperation.MaskShape.SPLIT to btnSplit,
+                com.tharunbirla.librecuts.models.EditOperation.MaskShape.SHUTTER to btnShutter,
+                com.tharunbirla.librecuts.models.EditOperation.MaskShape.ELLIPSE to btnEllipse,
+                com.tharunbirla.librecuts.models.EditOperation.MaskShape.RECTANGLE to btnRectangle
+            )
+            val activeColor = getColor(R.color.colorPrimary)
+            val inactiveColor = getColor(R.color.toolTextInactive)
+
+            for ((shape, btn) in buttons) {
+                val layout = btn ?: continue
+                val img = layout.getChildAt(0) as? android.widget.ImageView
+                val txt = layout.getChildAt(1) as? android.widget.TextView
+                if (shape == selectedShape) {
+                    img?.setColorFilter(activeColor)
+                    txt?.setTextColor(activeColor)
+                } else {
+                    img?.setColorFilter(inactiveColor)
+                    txt?.setTextColor(inactiveColor)
+                }
+            }
+        }
+
+        highlightShape(currentMask.shape)
+
+        if (isMainVideo) {
+            videoMaskOverlayView?.maskConfig = currentMask
+            videoMaskOverlayView?.isEditingMode = true
+        } else {
+            draggableImageOverlay?.isMaskEditingMode = currentMask.shape != com.tharunbirla.librecuts.models.EditOperation.MaskShape.NONE
+        }
+
+        fun updateMask(shape: com.tharunbirla.librecuts.models.EditOperation.MaskShape) {
+            if (isMainVideo) {
+                val newMask = videoMaskOverlayView?.maskConfig?.copy(shape = shape) ?: com.tharunbirla.librecuts.models.EditOperation.MaskConfig(shape = shape)
+                videoMaskOverlayView?.maskConfig = newMask
+                videoMaskOverlayView?.isEditingMode = true
+                mainVideoMaskContainer?.maskConfig = newMask
+            } else {
+                val newMask = draggableImageOverlay?.maskConfig?.copy(shape = shape) ?: com.tharunbirla.librecuts.models.EditOperation.MaskConfig(shape = shape)
+                draggableImageOverlay?.maskConfig = newMask
+                draggableImageOverlay?.isMaskEditingMode = shape != com.tharunbirla.librecuts.models.EditOperation.MaskShape.NONE
+                draggableImageOverlay?.invalidate()
+            }
+        }
+
+        btnNone.setOnClickListener {
+            updateMask(com.tharunbirla.librecuts.models.EditOperation.MaskShape.NONE)
+            highlightShape(com.tharunbirla.librecuts.models.EditOperation.MaskShape.NONE)
+        }
+        btnSplit.setOnClickListener {
+            updateMask(com.tharunbirla.librecuts.models.EditOperation.MaskShape.SPLIT)
+            highlightShape(com.tharunbirla.librecuts.models.EditOperation.MaskShape.SPLIT)
+        }
+        btnShutter.setOnClickListener {
+            updateMask(com.tharunbirla.librecuts.models.EditOperation.MaskShape.SHUTTER)
+            highlightShape(com.tharunbirla.librecuts.models.EditOperation.MaskShape.SHUTTER)
+        }
+        btnEllipse.setOnClickListener {
+            updateMask(com.tharunbirla.librecuts.models.EditOperation.MaskShape.ELLIPSE)
+            highlightShape(com.tharunbirla.librecuts.models.EditOperation.MaskShape.ELLIPSE)
+        }
+        btnRectangle.setOnClickListener {
+            updateMask(com.tharunbirla.librecuts.models.EditOperation.MaskShape.RECTANGLE)
+            highlightShape(com.tharunbirla.librecuts.models.EditOperation.MaskShape.RECTANGLE)
+        }
+
+        switchInvert.setOnCheckedChangeListener { _, isChecked ->
+            if (isMainVideo) {
+                videoMaskOverlayView?.let {
+                    it.maskConfig = it.maskConfig.copy(isInverted = isChecked)
+                    mainVideoMaskContainer?.maskConfig = it.maskConfig
+                }
+            } else {
+                draggableImageOverlay?.let {
+                    it.maskConfig = it.maskConfig.copy(isInverted = isChecked)
+                    it.invalidate()
+                }
+            }
+        }
+        
+        bottomSheet.setOnDismissListener {
+            if (isMainVideo) {
+                videoMaskOverlayView?.isEditingMode = false
+                selectedVideoIndex?.let { index ->
+                    videoMaskOverlayView?.maskConfig?.let {
+                        viewModel.updateMergeItemMask(index, it)
+                    }
+                }
+            } else {
+                draggableImageOverlay?.isMaskEditingMode = false
+                draggableImageOverlay?.invalidate()
+            }
+        }
+        
+        view.findViewById<View>(R.id.btnDoneMaskSheet)?.setOnClickListener {
+            bottomSheet.dismiss()
+        }
+
+        bottomSheet.setCanceledOnTouchOutside(false)
+        bottomSheet.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        bottomSheet.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL)
+
+        bottomSheet.show()
+
+        val touchOutside = bottomSheet.findViewById<View>(com.google.android.material.R.id.touch_outside)
+        touchOutside?.setOnTouchListener { _, event ->
+            findViewById<View>(android.R.id.content).dispatchTouchEvent(event)
+            true
+        }
     }
 
     companion object {

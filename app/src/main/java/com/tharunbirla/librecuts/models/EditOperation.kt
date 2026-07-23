@@ -115,6 +115,19 @@ sealed class EditOperation : Serializable {
         fun hasCustomPosition(): Boolean = relativeX != null && relativeY != null
     }
     
+    enum class MaskShape { NONE, SPLIT, SHUTTER, ELLIPSE, RECTANGLE }
+    
+    data class MaskConfig(
+        val shape: MaskShape = MaskShape.NONE,
+        val relativeX: Float = 0.5f,
+        val relativeY: Float = 0.5f,
+        val relativeWidth: Float = 0.5f,
+        val relativeHeight: Float = 0.5f,
+        val rotationAngle: Float = 0f,
+        val isInverted: Boolean = false
+    ) : Serializable
+
+    
     data class MergeItem(
         val uri: Uri,
         val durationMs: Long,
@@ -123,7 +136,8 @@ sealed class EditOperation : Serializable {
         val speed: Float = 1.0f,
         val proxyUri: Uri? = null,
         val isReversed: Boolean = false,
-        val isMirrored: Boolean = false
+        val isMirrored: Boolean = false,
+        val maskConfig: MaskConfig = MaskConfig()
     ) : Serializable {
         val trimmedDurationMs: Long
             get() = ((trimEndMs - trimStartMs) / speed).toLong()
@@ -144,6 +158,12 @@ sealed class EditOperation : Serializable {
         // Backward compatibility property
         val videoUris: List<Uri> get() = items.map { it.uri }
     }
+
+    /** Mask configuration for the main track video base (index 0) */
+    data class MaskMain(
+        val maskConfig: MaskConfig,
+        val id: String = System.nanoTime().toString()
+    ) : EditOperation()
     
     /**
      * Mute audio operation: Removes or mutes the audio track.
@@ -233,7 +253,8 @@ sealed class EditOperation : Serializable {
         val isMirrored: Boolean = false,
         val positionKeyframes: List<KeyframePoint> = emptyList(),
         val opacityKeyframes: List<KeyframePoint> = emptyList(),
-        val speedKeyframes: List<KeyframePoint> = emptyList()
+        val speedKeyframes: List<KeyframePoint> = emptyList(),
+        val maskConfig: MaskConfig = MaskConfig()
     ) : EditOperation()
 
     data class AddSubtitles(
@@ -356,6 +377,7 @@ val EditOperation.id: String
         is EditOperation.SpeedMain -> id
         is EditOperation.ReverseMain -> id
         is EditOperation.MirrorMain -> id
+        is EditOperation.MaskMain -> id
         is EditOperation.Crop -> id
         is EditOperation.AddText -> id
         is EditOperation.Merge -> id

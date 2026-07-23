@@ -144,14 +144,20 @@
                     android:scaleType="centerCrop"
                     android:background="@color/cinemaBlack" />
 
-                <com.google.android.exoplayer2.ui.StyledPlayerView
-                    android:id="@+id/playerView"
+                <com.tharunbirla.librecuts.customviews.MaskedFrameLayout
+                    android:id="@+id/mainVideoMaskContainer"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    app:use_controller="false"
-                    app:surface_type="texture_view"
-                    android:background="@android:color/transparent"
-                    app:shutter_background_color="@android:color/transparent"/>
+                    android:layout_height="match_parent">
+                    
+                    <com.google.android.exoplayer2.ui.StyledPlayerView
+                        android:id="@+id/playerView"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        app:use_controller="false"
+                        app:surface_type="texture_view"
+                        android:background="@android:color/transparent"
+                        app:shutter_background_color="@android:color/transparent"/>
+                </com.tharunbirla.librecuts.customviews.MaskedFrameLayout>
             </FrameLayout>
 
 
@@ -179,6 +185,12 @@
 
             <com.tharunbirla.librecuts.customviews.CropOverlayView
                 android:id="@+id/cropOverlayView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone" />
+
+            <com.tharunbirla.librecuts.customviews.VideoMaskOverlayView
+                android:id="@+id/videoMaskOverlayView"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:visibility="gone" />
