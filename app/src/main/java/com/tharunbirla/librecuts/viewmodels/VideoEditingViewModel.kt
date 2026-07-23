@@ -750,6 +750,9 @@ class VideoEditingViewModel : ViewModel() {
     }
 
     fun deleteOperation(id: String) {
+        if (_selectedOperationId.value == id) {
+            _selectedOperationId.value = null
+        }
         viewModelScope.launch {
             _project.update { current ->
                 if (current == null) return@update null
@@ -829,6 +832,9 @@ class VideoEditingViewModel : ViewModel() {
     }
 
     fun removeOperation(operationId: String) {
+        if (_selectedOperationId.value == operationId) {
+            _selectedOperationId.value = null
+        }
         viewModelScope.launch {
             _project.update { current ->
                 current?.let {
