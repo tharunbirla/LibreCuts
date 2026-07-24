@@ -1,31 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="add_video">Lisa video</string>
-    <string name="create_engaging_videos">Vaba. Avatud lähtekoodiga. Piirideta loovus!</string>
-    <string name="home">Avaleht</string>
     <string name="export">Ekspordi</string>
     <string name="delete">Kustuta</string>
-    <string name="save_video">Salvesta video seadmesse</string>
-    <string name="add_overly">Lisa videole ülekateLisa videole ülekate</string>
-    <string name="add_text">Lisa videole tekst</string>
-    <string name="add_audio">Lisa heliribale muusika</string>
-    <string name="crop_video">Kadreeri videot</string>
-    <string name="merge_video">Lisa veel üks video või pilt</string>
     <string name="loading">Impordin videot…</string>
-    <string name="default_time_stamp">00:00 / 00:00</string>
-    <string name="trim_your_video">Lõika oma videot</string>
     <string name="cancel">Katkesta</string>
-    <string name="trim_video">Kärbi videot</string>
     <string name="trim">Lõika/kärbi</string>
     <string name="str_trim_video">Lõika videot</string>
-    <string name="str_trim_audio">Lõika heliriba</string>
     <string name="app_name">LibreCuts</string>
-    <string name="effects">Efektid</string>
-    <string name="keep_right_portion">Eemalda vasakult</string>
-    <string name="keep_left_portion">Eemalda paremalt</string>
     <string name="done">Valmis</string>
-    <string name="please_wait">Palun oota, sinu video on töötlemisel.</string>
-    <string name="select_aspect_ratio">Vali kuvasuhe</string>
     <string name="str_export_settings">Ekspordi seadistused</string>
     <string name="str_loop">Korda</string>
     <string name="split">Poolita</string>
@@ -44,7 +26,6 @@
     <string name="str_import_video">Impordi video</string>
     <string name="str_text">Tekst</string>
     <string name="str_overlay">Ülekate</string>
-    <string name="str_stickers">Kleepsud</string>
     <string name="str_audio">Audio</string>
     <string name="str_voice">Hääl</string>
     <string name="str_subtitles">Subtiitrid</string>
@@ -60,9 +41,6 @@
     <string name="str_extract">Ekstrakti</string>
     <string name="str_freeze">Kiri</string>
     <string name="str_reverse">Pööra ümber</string>
-    <string name="str_edit_text">Muuda teksti</string>
-    <string name="str_enter_text_here">Sisesta tekst siia</string>
-    <string name="str_font_size">Fondi suurus</string>
     <string name="str_saving_video">Video salvestamine…</string>
     <string name="str_please_don_t_close_the_app">Palun ära sulge rakendust</string>
     <string name="str_0">0%</string>
@@ -98,7 +76,6 @@
     <string name="str_voice_over">Pääleloetav tekst</string>
     <string name="str_record_live_commentary_while_t">Salvesta otsekommentaar video mängimise ajal.</string>
     <string name="str_tap_to_start_recording">Salvestamise alustamiseks puuduta</string>
-    <string name="str_choose_a_sticker">Vali kleeps</string>
     <string name="str_new_project">UUS PROJEKT</string>
     <string name="str_tap_to_select_media">Meedia valimiseks puuduta</string>
     <string name="str_free_open_source_nlimitless_cr">tasuta. avatud lähtekoodiga.\npiiramatu loovus.</string>
@@ -178,4 +155,6 @@
     <string name="str_default_pictures_librecuts">Vaikimisi (Pictures/LibreCuts)</string>
     <string name="str_app_language">Rakenduse keel</string>
     <string name="str_system_default">Süsteemi vaikesäte</string>
+    <string name="str_opacity">Läbipaistvus</string>
+    <string name="str_reset">Lähtesta</string>
 </resources>
