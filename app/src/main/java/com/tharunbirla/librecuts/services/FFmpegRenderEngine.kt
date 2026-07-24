@@ -454,7 +454,7 @@ class FFmpegRenderEngine(private val context: Context) {
     ): String {
         val escapedText = text
             .replace("\\", "\\\\")
-            .replace("'", "\\'")
+            .replace("'", "\\\\'")
             .replace(":", "\\:")
 
         val fontPart = if (!fontFilePath.isNullOrBlank()) {

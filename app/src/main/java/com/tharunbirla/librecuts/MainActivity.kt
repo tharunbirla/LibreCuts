@@ -35,12 +35,32 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private val selectVideoLauncher =
-        registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
             if (uri != null) {
+                try {
+                    val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    contentResolver.takePersistableUriPermission(uri, takeFlags)
+                } catch (e: Exception) {
+                    Log.e("VideoSelection", "Could not take persistable permission", e)
+                }
                 Log.d("VideoSelection", "Video selected: $uri")
                 navigateToEditingScreen(uri)
             } else {
                 Log.e("VideoSelectionError", "No video selected")
+            }
+        }
+
+    private val openProjectLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+            if (uri != null) {
+                Log.d("ProjectSelection", "Project selected: $uri")
+                val intent = Intent(this, ProjectImportActivity::class.java).apply {
+                    putExtra("PROJECT_URI", uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                startActivity(intent)
+            } else {
+                Log.e("ProjectSelectionError", "No project selected")
             }
         }
 
@@ -106,6 +126,11 @@ class MainActivity : AppCompatActivity() {
         binding.btnImport.setBounceClickListener {
             Log.d("ButtonClick", "Launching video selection.")
             selectVideo()
+        }
+
+        binding.btnOpenProject.setBounceClickListener {
+            Log.d("ButtonClick", "Launching project selection.")
+            openProjectLauncher.launch(arrayOf("*/*"))
         }
 
         // Initialize bottom navigation tab backgrounds
@@ -338,7 +363,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun selectVideo() {
         Log.d("VideoSelection", "Launching video selector.")
-        selectVideoLauncher.launch("video/*")
+        selectVideoLauncher.launch(arrayOf("video/*"))
     }
 
     private fun navigateToEditingScreen(videoUri: Uri) {

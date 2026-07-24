@@ -280,6 +280,27 @@ class VideoEditingActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.toast_microphone_permission_required, Toast.LENGTH_SHORT).show()
         }
     }
+
+    private val saveProjectLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                val project = viewModel.project.value
+                if (project != null) {
+                    val recipe = com.tharunbirla.librecuts.models.EditRecipe.fromVideoProject(project.sourceName, project)
+                    val json = com.tharunbirla.librecuts.utils.ProjectSerializer.serialize(recipe)
+                    contentResolver.openOutputStream(uri)?.use { outputStream ->
+                        outputStream.write(json.toByteArray())
+                    }
+                    Toast.makeText(this, "Project saved successfully", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to save project", e)
+                Toast.makeText(this, "Failed to save project", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_video_editing)
@@ -2509,7 +2530,7 @@ class VideoEditingActivity : AppCompatActivity() {
     }
 
     private fun pickSrtFile() {
-        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             type = "*/*"
             addCategory(Intent.CATEGORY_OPENABLE)
         }
@@ -2567,7 +2588,7 @@ class VideoEditingActivity : AppCompatActivity() {
 
 
     private fun openImagePicker() {
-        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             type = "*/*"
             putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*", "video/*"))
             addCategory(Intent.CATEGORY_OPENABLE)
@@ -3707,7 +3728,7 @@ class VideoEditingActivity : AppCompatActivity() {
     }
 
     private fun openFilePickerMerge() {
-        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             type = "video/*"
             addCategory(Intent.CATEGORY_OPENABLE)
             putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
@@ -3724,7 +3745,7 @@ class VideoEditingActivity : AppCompatActivity() {
     }
 
     private fun openFilePickerMain() {
-        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             type = "video/*"
             addCategory(Intent.CATEGORY_OPENABLE)
             putExtra(Intent.EXTRA_ALLOW_MULTIPLE, false)
@@ -3743,6 +3764,11 @@ class VideoEditingActivity : AppCompatActivity() {
     private val mainFilePickerLauncher = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.data?.let { uri ->
+                try {
+                    contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to take persistable permission", e)
+                }
                 emptyProjectState.visibility = View.GONE
                 setEditingButtonsEnabled(true)
                 playerContainer.visibility = View.VISIBLE
@@ -3966,7 +3992,7 @@ class VideoEditingActivity : AppCompatActivity() {
     }
 
     private fun audioAction() {
-        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             type = "audio/*"
             addCategory(Intent.CATEGORY_OPENABLE)
         }
@@ -4213,6 +4239,11 @@ class VideoEditingActivity : AppCompatActivity() {
             activeDirectoryPathView = null
         }
 
+        sheetView.findViewById<View>(R.id.btnSaveProject)?.setBounceClickListener {
+            bottomSheetDialog.dismiss()
+            saveProjectLauncher.launch("project.lcprj")
+        }
+
         bottomSheetDialog.setContentView(sheetView)
         bottomSheetDialog.show()
     }
@@ -4386,7 +4417,24 @@ class VideoEditingActivity : AppCompatActivity() {
     }
 
     private fun setupExoPlayer() {
-        videoUri = intent.getParcelableExtra("VIDEO_URI")
+        val projectUri = intent.getParcelableExtra<Uri>("PROJECT_URI")
+        if (projectUri != null) {
+            try {
+                contentResolver.openInputStream(projectUri)?.use { inputStream ->
+                    val json = inputStream.bufferedReader().use { it.readText() }
+                    val editRecipe = com.tharunbirla.librecuts.utils.ProjectSerializer.deserialize(json)
+                    val project = editRecipe.toVideoProject()
+                    viewModel.loadProject(project)
+                    videoUri = project.sourceUri
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load project", e)
+                Toast.makeText(this, "Failed to load project", Toast.LENGTH_SHORT).show()
+            }
+        } else {
+            videoUri = intent.getParcelableExtra("VIDEO_URI")
+        }
+        
         if (videoUri != null) {
             player = ExoPlayer.Builder(this).build()
             playerView.player = player
@@ -4471,8 +4519,10 @@ class VideoEditingActivity : AppCompatActivity() {
             })
 
             initializeVideoData()
-            val displayName = videoUri!!.lastPathSegment ?: "video"
-            viewModel.initializeProject(videoUri!!, displayName)
+            if (projectUri == null) {
+                val displayName = videoUri!!.lastPathSegment ?: "video"
+                viewModel.initializeProject(videoUri!!, displayName)
+            }
         }
     }
 
@@ -5103,22 +5153,25 @@ class VideoEditingActivity : AppCompatActivity() {
                     val videoMediaItem = com.google.android.exoplayer2.MediaItem.Builder()
                         .setUri(videoUri)
                         .build()
-                    val baseVideoSource = mediaSourceFactory.createMediaSource(videoMediaItem)
-                    
-                    val clippedSource = com.google.android.exoplayer2.source.ClippingMediaSource(
-                        baseVideoSource, clipStartUs, clipEndUs, true, false, true
-                    )
                     
                     val isClipMuted = viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.MuteClip>()
                         ?.find { it.index == index }?.isMuted ?: false
 
-                    videoSourceForChunk = if (isClipMuted) {
-                        com.google.android.exoplayer2.source.FilteringMediaSource(
-                            clippedSource,
-                            com.google.android.exoplayer2.C.TRACK_TYPE_VIDEO
+                    videoSourceForChunk = if (clipStartUs < clipEndUs) {
+                        val baseVideoSource = mediaSourceFactory.createMediaSource(videoMediaItem)
+                        val clippedSource = com.google.android.exoplayer2.source.ClippingMediaSource(
+                            baseVideoSource, clipStartUs, clipEndUs, true, false, true
                         )
+                        if (isClipMuted) {
+                            com.google.android.exoplayer2.source.FilteringMediaSource(
+                                clippedSource,
+                                com.google.android.exoplayer2.C.TRACK_TYPE_VIDEO
+                            )
+                        } else {
+                            clippedSource
+                        }
                     } else {
-                        clippedSource
+                        com.google.android.exoplayer2.source.SilenceMediaSource(chunkDurationMs * 1000L)
                     }
                     break
                 }
@@ -5149,17 +5202,21 @@ class VideoEditingActivity : AppCompatActivity() {
                             safeClipEndUs = actualAudioDurationUs
                         }
                         
-                        val audioMediaItem = com.google.android.exoplayer2.MediaItem.Builder()
-                            .setUri(op.audioUri)
-                            .build()
-                        val baseAudioSource = mediaSourceFactory.createMediaSource(audioMediaItem)
-                        
-                        try {
-                            val audioSlice = com.google.android.exoplayer2.source.ClippingMediaSource(
-                                baseAudioSource, clipStartUs, safeClipEndUs, true, false, true
-                            )
-                            chunkSourcesToMerge.add(audioSlice)
-                        } catch (e: Exception) {
+                        if (clipStartUs < safeClipEndUs) {
+                            val audioMediaItem = com.google.android.exoplayer2.MediaItem.Builder()
+                                .setUri(op.audioUri)
+                                .build()
+                            val baseAudioSource = mediaSourceFactory.createMediaSource(audioMediaItem)
+                            
+                            try {
+                                val audioSlice = com.google.android.exoplayer2.source.ClippingMediaSource(
+                                    baseAudioSource, clipStartUs, safeClipEndUs, true, false, true
+                                )
+                                chunkSourcesToMerge.add(audioSlice)
+                            } catch (e: Exception) {
+                                chunkSourcesToMerge.add(com.google.android.exoplayer2.source.SilenceMediaSource(chunkDurationMs * 1000L))
+                            }
+                        } else {
                             chunkSourcesToMerge.add(com.google.android.exoplayer2.source.SilenceMediaSource(chunkDurationMs * 1000L))
                         }
                     }
@@ -5867,10 +5924,10 @@ class VideoEditingActivity : AppCompatActivity() {
             Pair("wiperight", "Wipe R"),
             Pair("slideleft", "Slide L"),
             Pair("slideright", "Slide R"),
-            Pair("smoothleft", "Smth L"),
-            Pair("smoothright", "Smth R"),
+            Pair("coverleft", "Cover L"),
+            Pair("coverright", "Cover R"),
             Pair("circlecrop", "Circle"),
-            Pair("distance", "Distance"),
+            Pair("zoomin", "Zoom In"),
             Pair("pixelize", "Pixelize"),
             Pair("hlslice", "H-Slice"),
             Pair("vuslice", "V-Slice")

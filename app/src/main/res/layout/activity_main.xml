@@ -16,46 +16,104 @@
         android:visibility="visible">
 
         <LinearLayout
-            android:id="@+id/btnImport"
-            android:layout_width="220dp"
-            android:layout_height="220dp"
-            android:background="@drawable/bg_import_card"
-            android:clickable="true"
-            android:focusable="true"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:elevation="8dp">
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
 
-            <View
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:background="@drawable/circle_primary_container" />
+            <!-- New Project Button -->
+            <LinearLayout
+                android:id="@+id/btnImport"
+                android:layout_width="160dp"
+                android:layout_height="180dp"
+                android:background="@drawable/bg_import_card"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:layout_marginEnd="8dp"
+                android:elevation="8dp">
 
-            <ImageView
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_marginTop="-60dp"
-                android:src="@drawable/ic_add_24"
-                app:tint="@color/onPrimaryContainer" />
+                <View
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:background="@drawable/circle_primary_container" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="32dp"
-                android:letterSpacing="0.2"
-                android:text="@string/str_new_project"
-                android:textColor="@color/textColor"
-                android:textSize="14sp"
-                android:fontFamily="sans-serif-medium" />
-                
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="@string/str_tap_to_select_media"
-                android:textColor="@color/iconSecondary"
-                android:textSize="12sp"
-                android:fontFamily="sans-serif" />
+                <ImageView
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_marginTop="-45dp"
+                    android:src="@drawable/ic_add_24"
+                    app:tint="@color/onPrimaryContainer" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:letterSpacing="0.2"
+                    android:text="@string/str_new_project"
+                    android:textColor="@color/textColor"
+                    android:textSize="14sp"
+                    android:fontFamily="sans-serif-medium" />
+                    
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/str_tap_to_select_media"
+                    android:textColor="@color/iconSecondary"
+                    android:textSize="11sp"
+                    android:gravity="center"
+                    android:fontFamily="sans-serif" />
+
+            </LinearLayout>
+
+            <!-- Open Project Button -->
+            <LinearLayout
+                android:id="@+id/btnOpenProject"
+                android:layout_width="160dp"
+                android:layout_height="180dp"
+                android:background="@drawable/bg_import_card"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:layout_marginStart="8dp"
+                android:elevation="8dp">
+
+                <View
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:background="@drawable/circle_primary_container" />
+
+                <ImageView
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:layout_marginTop="-45dp"
+                    android:src="@drawable/ic_folder_24"
+                    app:tint="@color/onPrimaryContainer" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:letterSpacing="0.2"
+                    android:text="Open Project"
+                    android:textColor="@color/textColor"
+                    android:textSize="14sp"
+                    android:fontFamily="sans-serif-medium" />
+                    
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Load .lcprj file"
+                    android:textColor="@color/iconSecondary"
+                    android:textSize="11sp"
+                    android:gravity="center"
+                    android:fontFamily="sans-serif" />
+
+            </LinearLayout>
 
         </LinearLayout>
 

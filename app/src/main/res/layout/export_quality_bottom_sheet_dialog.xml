@@ -252,5 +252,18 @@
                 app:tint="@color/iconSecondary" />
         </LinearLayout>
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSaveProject"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="16dp"
+            android:text="Save Project (.lcprj)"
+            android:textColor="@color/onPrimaryContainer"
+            android:backgroundTint="@color/colorPrimary"
+            app:cornerRadius="12dp"
+            app:icon="@drawable/ic_save_24"
+            app:iconTint="@color/onPrimaryContainer"
+            app:iconGravity="textStart" />
+
     </LinearLayout>
 </LinearLayout>

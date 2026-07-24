@@ -1,6 +1,7 @@
 package com.tharunbirla.librecuts.models
 
 import android.net.Uri
+import com.google.gson.annotations.SerializedName
 import java.io.Serializable
 
 /**
@@ -180,7 +181,7 @@ sealed class EditOperation : Serializable {
      */
     data class Transition(
         val index: Int,
-        val type: String,
+        @SerializedName("transitionType") val type: String,
         val durationMs: Long = 1000L,
         val id: String = System.nanoTime().toString()
     ) : EditOperation()
@@ -307,7 +308,7 @@ sealed class EditOperation : Serializable {
      * Canvas background operation: Sets the padding style for clips that do not match the primary aspect ratio.
      */
     data class CanvasBackground(
-        val type: BackgroundType = BackgroundType.COLOR,
+        @SerializedName("backgroundType") val type: BackgroundType = BackgroundType.COLOR,
         val colorHex: String = "#000000",
         val imageUri: Uri? = null,
         val blurRadius: Int = 20,

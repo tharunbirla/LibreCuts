@@ -61,6 +61,13 @@ class VideoEditingViewModel : ViewModel() {
         updateUiState { it.copy(canUndo = false) }
     }
 
+    fun loadProject(project: VideoProject) {
+        _project.value = project
+        _undoStack.value = emptyList()
+        _redoStack.value = emptyList()
+        updateUiState { it.copy(canUndo = false, pendingOperationCount = project.getOperationCount()) }
+    }
+
     fun updateMainVideoTrim(startMs: Long, endMs: Long) {
         viewModelScope.launch {
             _project.update { current ->
@@ -985,7 +992,7 @@ class VideoEditingViewModel : ViewModel() {
     private fun buildDrawtextExpr(op: EditOperation.AddText, fontFilePath: String?): String {
         val escapedText = op.text
             .replace("\\", "\\\\")
-            .replace("'", "\\'")
+            .replace("'", "\\\\'")
             .replace(":", "\\:")
 
         val fontToUse = op.fontPath ?: fontFilePath
@@ -1125,10 +1132,11 @@ class VideoEditingViewModel : ViewModel() {
         }
 
         // 4. shadows & highlights
+        // Standard FFmpeg does not have a shadows_highlights filter.
+        // If we want to emulate this in the future, we would need to generate complex curves
+        // or use the 'eq' filter's gamma/contrast settings. For now, we omit it to prevent crashes.
         if (op.shadow != 0 || op.highlights != 0) {
-            val sh = op.shadow / 100.0
-            val hl = op.highlights / 100.0
-            filters.add("shadows_highlights=shadows=$sh:highlights=$hl")
+            Log.w(TAG, "Shadow and highlight adjustments are not natively supported by FFmpeg and were skipped.")
         }
 
         // 5. sharpen (unsharp)
@@ -1309,7 +1317,7 @@ class VideoEditingViewModel : ViewModel() {
                     for (cue in op.cues) {
                         val escapedText = cue.text
                             .replace("\\", "\\\\")
-                            .replace("'", "\\'")
+                            .replace("'", "\\\\'")
                             .replace(":", "\\:")
                             .replace("\n", "\n")
                         
@@ -1770,7 +1778,23 @@ class VideoEditingViewModel : ViewModel() {
                     val nextVLabel = "[norm${gapIdx + 1}]"
                     val nextALabel = "[anorm${gapIdx + 1}]"
 
-                    filterParts.add("${baseStream.vLabel}${nextVLabel}xfade=transition=${transOp.type}:duration=${transDuration}:offset=${offset}${xfvOut}")
+                    val validXfadeTransitions = setOf(
+                        "fade", "fadeblack", "fadewhite", "rectcrop", "circlecrop", "circleclose", "circleopen",
+                        "horzclose", "horzopen", "vertclose", "vertopen", "diagbl", "diagbr", "diagtl", "diagtr",
+                        "hlslice", "hrslice", "vuslice", "vdslice", "dissolve", "pixelize", "slidedown", "slideleft",
+                        "slideright", "slideup", "wipedown", "wipeleft", "wiperight", "wipeup", "zoomin", "squeezeh",
+                        "squeezev", "coverleft", "coverright", "coverup", "coverdown", "revealleft", "revealright",
+                        "revealup", "revealdown"
+                    )
+                    val rawType = transOp.type.lowercase()
+                    val sanitizedTransType = when (rawType) {
+                        "smoothleft" -> "coverleft"
+                        "smoothright" -> "coverright"
+                        "distance" -> "zoomin"
+                        else -> if (validXfadeTransitions.contains(rawType)) rawType else "fade"
+                    }
+
+                    filterParts.add("${baseStream.vLabel}${nextVLabel}xfade=transition=${sanitizedTransType}:duration=${transDuration}:offset=${offset}${xfvOut}")
                     filterParts.add("${baseStream.aLabel}${nextALabel}acrossfade=d=${transDuration}:c1=tri:c2=tri${xfaOut}")
 
                     val newDuration = offset + durationsArray[gapIdx + 1]

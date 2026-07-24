@@ -51,6 +51,11 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity
+            android:name=".ProjectImportActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme" />
+
+        <activity
             android:name=".ErrorDisplayActivity"
             android:exported="false"
             android:theme="@style/Editor" />
