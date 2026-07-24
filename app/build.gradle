@@ -21,8 +21,8 @@ android {
         applicationId "com.tharunbirla.librecuts"
         minSdk 26
         targetSdk 34
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode').toInteger() : 6
-        versionName "1.0-beta5"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode').toInteger() : 7
+        versionName "1.0-beta6"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

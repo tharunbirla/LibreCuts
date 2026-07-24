@@ -1,0 +1,12 @@
+<ul>
+  <li>Added overlay masking feature.</li>
+  <li>Implemented keyframe animations for overlays.</li>
+  <li>Added canvas background feature with aspect ratio corrections.</li>
+  <li>Added chroma key support for image overlays.</li>
+  <li>Added opacity controls for overlays.</li>
+  <li>Added mirror functionality for main video and overlays.</li>
+  <li>Improved text overlay with more formatting options.</li>
+  <li>Redesigned empty project state UI.</li>
+  <li>Fixed export crashes during screen rotation.</li>
+  <li>Fixed speed modifier bugs and improved aspect ratio rendering.</li>
+</ul>

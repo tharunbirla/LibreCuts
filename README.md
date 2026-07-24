@@ -22,6 +22,9 @@
   <a href="https://discord.gg/gwr3nE7YW">
     <img src="src/images/badges/badge_discord.png" height="96" alt="Join Discord" />
   </a>
+  <a href="https://hosted.weblate.org/engage/librecuts/">
+    <img src="https://hosted.weblate.org/widget/librecuts/librecuts/287x66-grey.png" height="96" alt="Translation status" />
+  </a>
 </div>
 
 <br/>
@@ -44,6 +47,9 @@ Help resist this gatekeeping and support the movement at [keepandroidopen.org](h
 
 - **Trim** - Remove unwanted parts from the beginning or end of a video clip with a real-time timeline control.
 - **Overlays** - Place text, stickers, images, GIFs, and video overlays on top of video clips to create engaging content. Includes support for continuous media looping.
+- **Masking** - Apply various mask shapes to your overlays for creative effects.
+- **Chroma Key** - Remove backgrounds from any overlay using the green screen effect.
+- **Keyframes** - Animate overlays across the screen with keyframe support.
 - **Subtitles (Captions)** - Import custom `.srt` subtitle files with a dedicated toolbar slider for resizing and fully interactive touch-based positioning directly on the video preview.
 - **Layer Management** - Easily reorder overlay layers to control what renders on top.
 - **Audio** - Manage soundtracks effortlessly by importing custom music or audio tracks, recording voice overs, applying audio ducking and fades, amplifying volume up to 200%, and muting original audio.
@@ -54,6 +60,7 @@ Help resist this gatekeeping and support the movement at [keepandroidopen.org](h
 - **Transition** - Apply transitions with animated visual previews in the toolbar.
 - **Speed** - Change the speed of a video clip using a custom speed slider for granular control.
 - **Adjust & Filters** - Modify video brightness, contrast, saturation, and apply color filters.
+- **Canvas Background** - Add a blurred background or a solid color for a cohesive look when your video aspect ratio does not match the project frame.
 - **Reverse** - Reverse video playback.
 - **Timeline Organization** - Enhanced editing with snapping functionality, overlay duplication, freeze frame actions, and improved UI visual styling.
 - **Hardware Acceleration** - Super-fast and reliable video exports using device hardware-accelerated `h264_mediacodec` encoding (with seamless automatic fallback to software encoding for maximum device compatibility) and accurate FFmpeg progress calculation.
