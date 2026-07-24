@@ -155,4 +155,6 @@
     <string name="str_default_pictures_librecuts">Standard (Pictures/LibreCuts)</string>
     <string name="str_app_language">App Sprache</string>
     <string name="str_system_default">Systemstandard</string>
+    <string name="str_opacity">Deckkraft</string>
+    <string name="str_reset">Zurücksetzen</string>
 </resources>
