@@ -13,25 +13,32 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
+        <!-- Top Action Bar -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="52dp"
+            android:layout_height="56dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:background="@color/background"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp">
+            android:paddingHorizontal="16dp">
 
             <ImageButton
-                android:id="@+id/btnHome"
+                android:id="@+id/btnClose"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
-                android:background="@android:color/transparent"
-                android:src="@drawable/ic_back_24"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_close_24"
                 android:padding="8dp"
                 android:scaleType="fitCenter"
-                android:contentDescription="Back"
-                app:tint="@color/colorOnPrimary" />
+                android:contentDescription="Close"
+                app:tint="@color/textColor" />
+
+            <!-- Hidden duplicate btnHome kept for backwards binary compatibility -->
+            <ImageButton
+                android:id="@+id/btnHome"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:visibility="gone" />
 
             <View
                 android:layout_width="0dp"
@@ -47,9 +54,10 @@
                 android:padding="8dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="Undo"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="6dp"
                 android:alpha="0.5"
-                android:enabled="false"/>
+                android:enabled="false"
+                app:tint="@color/textColor" />
 
             <ImageButton
                 android:id="@+id/btnRedo"
@@ -60,9 +68,10 @@
                 android:padding="8dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="Redo"
-                android:layout_marginEnd="16dp"
+                android:layout_marginEnd="12dp"
                 android:alpha="0.5"
-                android:enabled="false"/>
+                android:enabled="false"
+                app:tint="@color/textColor" />
 
             <ImageButton
                 android:id="@+id/btnPreview"
@@ -73,18 +82,18 @@
                 android:padding="8dp"
                 android:scaleType="fitCenter"
                 android:contentDescription="Preview Render"
-                android:layout_marginEnd="16dp"
+                android:layout_marginEnd="12dp"
                 android:visibility="gone"
-                app:tint="@color/colorOnPrimary" />
+                app:tint="@color/textColor" />
 
             <LinearLayout
                 android:id="@+id/layoutSaveSplit"
-                android:layout_width="120dp"
-                android:layout_height="32dp"
+                android:layout_width="124dp"
+                android:layout_height="36dp"
                 android:orientation="horizontal"
                 android:background="@drawable/bg_split_save_button"
                 android:clipToOutline="true"
-                android:elevation="0dp">
+                android:elevation="2dp">
 
                 <TextView
                     android:id="@+id/btnSaveText"
@@ -95,7 +104,7 @@
                     android:text="@string/export"
                     android:textColor="@color/onPrimaryContainer"
                     android:fontFamily="sans-serif-medium"
-                    android:textSize="14sp"
+                    android:textSize="13sp"
                     android:clickable="true"
                     android:focusable="true"
                     android:background="?attr/selectableItemBackground" />
@@ -103,7 +112,7 @@
                 <View
                     android:layout_width="1dp"
                     android:layout_height="match_parent"
-                    android:background="#33FFFFFF" />
+                    android:background="#22FFFFFF" />
 
                 <ImageView
                     android:id="@+id/btnSaveDropdown"
@@ -121,13 +130,17 @@
             </LinearLayout>
         </LinearLayout>
 
+        <!-- Video Player Frame Container -->
         <FrameLayout
             android:id="@+id/playerContainer"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:background="@color/surfaceContainer"
-            android:elevation="8dp"
+            android:layout_marginHorizontal="12dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/bg_hero_bento_secondary"
+            android:elevation="6dp"
             android:clipToOutline="true"
             android:outlineProvider="background">
 
@@ -279,13 +292,14 @@
 
                 <ImageButton
                     android:id="@+id/btnPlayPause"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="@android:color/transparent"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:background="@drawable/circle_primary_container"
                     android:src="@drawable/ic_play_24"
-                    android:padding="8dp"
+                    android:padding="10dp"
                     android:scaleType="fitCenter"
-                    app:tint="@color/colorOnSecondary" />
+                    android:elevation="4dp"
+                    app:tint="@color/onPrimaryContainer" />
 
                 <Space
                     android:layout_width="0dp"
@@ -569,11 +583,9 @@
             android:id="@+id/editingControlsScroll"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="8dp"
-            android:layout_marginBottom="12dp"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="6dp"
             android:scrollbars="none"
-            android:background="@drawable/bg_bottom_nav_floating"
+            android:background="@drawable/bg_bottom_nav_docked"
             android:elevation="12dp"
             android:clipToOutline="true"
             android:requiresFadingEdge="horizontal"

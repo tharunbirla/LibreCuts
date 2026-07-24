@@ -10,9 +10,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginBottom="12dp"
-        android:background="@drawable/bg_bottom_nav_floating"
+        android:layout_marginTop="6dp"
+        android:background="@drawable/bg_bottom_nav_docked"
         android:paddingVertical="16dp"
         android:paddingHorizontal="16dp"
         android:elevation="12dp">

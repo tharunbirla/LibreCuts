@@ -1558,7 +1558,10 @@ class VideoEditingActivity : AppCompatActivity() {
             null
         }
 
-        findViewById<ImageButton>(R.id.btnHome).setBounceClickListener {
+        findViewById<ImageButton>(R.id.btnHome)?.setBounceClickListener {
+            onBackPressedDispatcher.onBackPressed()
+        }
+        findViewById<ImageView>(R.id.btnClose)?.setBounceClickListener {
             onBackPressedDispatcher.onBackPressed()
         }
 
