@@ -1,6 +1,7 @@
 package com.tharunbirla.librecuts
 
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
@@ -32,10 +33,34 @@ class ProjectImportActivity : AppCompatActivity() {
 
     private val TAG = "ProjectImportActivity"
 
-    private lateinit var tvProjectStatus: TextView
-    private lateinit var btnLoadProject: android.widget.Button
-    private lateinit var btnCancel: android.widget.Button
+    // Top action bar
+    private lateinit var btnClose: ImageView
+    private lateinit var btnNext: com.google.android.material.button.MaterialButton
 
+    // Hero Header
+    private lateinit var tvProjectTitle: TextView
+    private lateinit var tvProjectDuration: TextView
+    private lateinit var tvProjectClipsCount: TextView
+    private lateinit var tvProjectStatus: TextView
+
+    // Main section
+    private lateinit var tvOverallProgress: TextView
+
+    // Row category headers & card containers
+    private lateinit var cardPrimaryVideo: View
+    private lateinit var layoutPrimaryHeader: View
+    private lateinit var tvPrimaryCount: TextView
+    private lateinit var cardMergedVideos: View
+    private lateinit var layoutMergedHeader: View
+    private lateinit var tvMergedCount: TextView
+    private lateinit var cardAudioTracks: View
+    private lateinit var layoutAudioHeader: View
+    private lateinit var tvAudioCount: TextView
+    private lateinit var cardOverlays: View
+    private lateinit var layoutOverlaysHeader: View
+    private lateinit var tvOverlaysCount: TextView
+
+    // RecyclerViews
     private lateinit var rvPrimaryVideo: RecyclerView
     private lateinit var rvMergedVideos: RecyclerView
     private lateinit var rvAudioTracks: RecyclerView
@@ -101,17 +126,45 @@ class ProjectImportActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_project_import)
 
-        tvProjectStatus = findViewById(R.id.tvProjectStatus)
-        btnLoadProject = findViewById(R.id.btnLoadProject)
-        btnCancel = findViewById(R.id.btnCancel)
+        // Top bar
+        btnClose = findViewById(R.id.btnClose)
+        btnNext = findViewById(R.id.btnNext)
 
+        // Hero
+        tvProjectTitle = findViewById(R.id.tvProjectTitle)
+        tvProjectDuration = findViewById(R.id.tvProjectDuration)
+        tvProjectClipsCount = findViewById(R.id.tvProjectClipsCount)
+        tvProjectStatus = findViewById(R.id.tvProjectStatus)
+
+        // Main section
+        tvOverallProgress = findViewById(R.id.tvOverallProgress)
+
+        // Headers & Cards
+        cardPrimaryVideo = findViewById(R.id.cardPrimaryVideo)
+        layoutPrimaryHeader = findViewById(R.id.layoutPrimaryHeader)
+        tvPrimaryCount = findViewById(R.id.tvPrimaryCount)
+        cardMergedVideos = findViewById(R.id.cardMergedVideos)
+        layoutMergedHeader = findViewById(R.id.layoutMergedHeader)
+        tvMergedCount = findViewById(R.id.tvMergedCount)
+        cardAudioTracks = findViewById(R.id.cardAudioTracks)
+        layoutAudioHeader = findViewById(R.id.layoutAudioHeader)
+        tvAudioCount = findViewById(R.id.tvAudioCount)
+        cardOverlays = findViewById(R.id.cardOverlays)
+        layoutOverlaysHeader = findViewById(R.id.layoutOverlaysHeader)
+        tvOverlaysCount = findViewById(R.id.tvOverlaysCount)
+
+        // Recyclers
         rvPrimaryVideo = findViewById(R.id.rvPrimaryVideo)
         rvMergedVideos = findViewById(R.id.rvMergedVideos)
         rvAudioTracks = findViewById(R.id.rvAudioTracks)
         rvOverlays = findViewById(R.id.rvOverlays)
 
-        btnCancel.setBounceClickListener { finish() }
-        btnLoadProject.setBounceClickListener { loadProject() }
+        btnClose.setBounceClickListener { finish() }
+        btnNext.setBounceClickListener {
+            if (btnNext.isEnabled) {
+                loadProject()
+            }
+        }
 
         projectUri = intent.getParcelableExtra("PROJECT_URI")
         if (projectUri == null) {
@@ -135,6 +188,7 @@ class ProjectImportActivity : AppCompatActivity() {
                     extractDependencies()
                     checkDependenciesExistence()
                     withContext(Dispatchers.Main) {
+                        updateHeroMetadata()
                         setupRecyclerViews()
                         updateUi()
                     }
@@ -152,6 +206,20 @@ class ProjectImportActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun updateHeroMetadata() {
+        val recipe = editRecipe ?: return
+        val rawName = recipe.sourceName.ifBlank { "Import Project" }
+        tvProjectTitle.text = rawName
+
+        val primaryDur = dependencies.firstOrNull { it.type == DependencyType.PRIMARY }?.requiredDurationMs ?: 0L
+        val mergeDur = dependencies.filter { it.type == DependencyType.MERGE }.sumOf { it.requiredDurationMs }
+        val totalMs = primaryDur + mergeDur
+
+        val formattedDur = formatDuration(totalMs).ifEmpty { "0.0s" }
+        tvProjectDuration.text = "$formattedDur Total"
+        tvProjectClipsCount.text = "${dependencies.size} clips"
     }
 
     private fun getMediaDurationMs(uri: Uri?): Long {
@@ -294,21 +362,21 @@ class ProjectImportActivity : AppCompatActivity() {
         
         val mergeDeps = dependencies.filter { it.type == DependencyType.MERGE }
         if (mergeDeps.isNotEmpty()) {
-            findViewById<View>(R.id.tvMergedTitle).visibility = View.VISIBLE
+            layoutMergedHeader.visibility = View.VISIBLE
             rvMergedVideos.visibility = View.VISIBLE
             rvMergedVideos.adapter = DependencyAdapter(mergeDeps) { dep -> replaceMedia(dep, "video/*") }
         }
 
         val audioDeps = dependencies.filter { it.type == DependencyType.AUDIO }
         if (audioDeps.isNotEmpty()) {
-            findViewById<View>(R.id.tvAudioTitle).visibility = View.VISIBLE
+            layoutAudioHeader.visibility = View.VISIBLE
             rvAudioTracks.visibility = View.VISIBLE
             rvAudioTracks.adapter = DependencyAdapter(audioDeps) { dep -> replaceMedia(dep, "audio/*") }
         }
 
         val overlayDeps = dependencies.filter { it.type == DependencyType.OVERLAY }
         if (overlayDeps.isNotEmpty()) {
-            findViewById<View>(R.id.tvOverlaysTitle).visibility = View.VISIBLE
+            layoutOverlaysHeader.visibility = View.VISIBLE
             rvOverlays.visibility = View.VISIBLE
             rvOverlays.adapter = DependencyAdapter(overlayDeps) { dep -> replaceMedia(dep, "image/*", "video/*") }
         }
@@ -320,16 +388,45 @@ class ProjectImportActivity : AppCompatActivity() {
     }
 
     private fun updateUi() {
-        val missingCount = dependencies.count { !it.isFound }
+        val totalCount = dependencies.size
+        val foundTotal = dependencies.count { it.isFound }
+        val missingCount = totalCount - foundTotal
+
+        tvOverallProgress.text = if (missingCount == 0) "All $totalCount Ready" else "$foundTotal/$totalCount Selected"
+
         if (missingCount == 0) {
+            tvOverallProgress.setTextColor(ContextCompat.getColor(this, R.color.colorSecondary))
             tvProjectStatus.text = "All files found. Ready to edit."
-            tvProjectStatus.setTextColor(ContextCompat.getColor(this, R.color.colorPrimary))
-            btnLoadProject.isEnabled = true
+            tvProjectStatus.setTextColor(ContextCompat.getColor(this, R.color.colorSecondary))
+            
+            btnNext.isEnabled = true
+            btnNext.alpha = 1.0f
+            btnNext.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.colorPrimary))
         } else {
-            tvProjectStatus.text = "$missingCount file(s) missing. Click squares to replace them."
+            tvOverallProgress.setTextColor(ContextCompat.getColor(this, R.color.colorPrimary))
+            tvProjectStatus.text = "$missingCount file(s) missing. Tap clips below to replace."
             tvProjectStatus.setTextColor(ContextCompat.getColor(this, R.color.colorPrimary))
-            btnLoadProject.isEnabled = false
+            
+            btnNext.isEnabled = false
+            btnNext.alpha = 0.4f
+            btnNext.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.surfaceContainerHigh))
         }
+
+        val primaryDeps = dependencies.filter { it.type == DependencyType.PRIMARY }
+        tvPrimaryCount.text = "${primaryDeps.count { it.isFound }}/${primaryDeps.size}"
+        cardPrimaryVideo.visibility = if (primaryDeps.isNotEmpty()) View.VISIBLE else View.GONE
+
+        val mergedDeps = dependencies.filter { it.type == DependencyType.MERGE }
+        tvMergedCount.text = "${mergedDeps.count { it.isFound }}/${mergedDeps.size}"
+        cardMergedVideos.visibility = if (mergedDeps.isNotEmpty()) View.VISIBLE else View.GONE
+
+        val audioDeps = dependencies.filter { it.type == DependencyType.AUDIO }
+        tvAudioCount.text = "${audioDeps.count { it.isFound }}/${audioDeps.size}"
+        cardAudioTracks.visibility = if (audioDeps.isNotEmpty()) View.VISIBLE else View.GONE
+
+        val overlayDeps = dependencies.filter { it.type == DependencyType.OVERLAY }
+        tvOverlaysCount.text = "${overlayDeps.count { it.isFound }}/${overlayDeps.size}"
+        cardOverlays.visibility = if (overlayDeps.isNotEmpty()) View.VISIBLE else View.GONE
 
         rvPrimaryVideo.adapter?.notifyDataSetChanged()
         rvMergedVideos.adapter?.notifyDataSetChanged()

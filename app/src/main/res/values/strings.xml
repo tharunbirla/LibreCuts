@@ -157,4 +157,6 @@
     <string name="str_system_default">System Default</string>
     <string name="str_opacity">Opacity</string>
     <string name="str_reset">Reset</string>
+    <string name="str_help_translate">Translate LibreCuts</string>
+    <string name="str_contribute_translations_on_weblate">Contribute translations on Weblate</string>
 </resources>

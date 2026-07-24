@@ -5,141 +5,204 @@
     android:layout_height="match_parent"
     android:background="@color/background">
 
-    <!-- Home Page Content -->
+    <!-- Top Header Bar -->
     <LinearLayout
-        android:id="@+id/layoutHomeContent"
+        android:id="@+id/layoutTopHeader"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:paddingBottom="80dp"
-        android:visibility="visible">
+        android:layout_height="64dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="24dp"
+        android:background="@color/background">
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center">
+            android:orientation="vertical">
 
-            <!-- New Project Button -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/app_name"
+                android:textColor="@color/textColor"
+                android:textSize="22sp"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.02" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Video Editor"
+                android:textColor="@color/iconSecondary"
+                android:textSize="11sp"
+                android:fontFamily="sans-serif" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Home Page Content (Bento Style Layout) -->
+    <ScrollView
+        android:id="@+id/layoutHomeContent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/layoutTopHeader"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="100dp"
+        android:clipToPadding="false"
+        android:overScrollMode="never"
+        android:scrollbars="none"
+        android:visibility="visible">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Hero Bento Card: New Project -->
             <LinearLayout
                 android:id="@+id/btnImport"
-                android:layout_width="160dp"
-                android:layout_height="180dp"
-                android:background="@drawable/bg_import_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="210dp"
+                android:background="@drawable/bg_hero_bento_primary"
                 android:clickable="true"
                 android:focusable="true"
-                android:gravity="center"
+                android:foreground="?attr/selectableItemBackground"
+                android:gravity="bottom"
                 android:orientation="vertical"
-                android:layout_marginEnd="8dp"
+                android:padding="24dp"
                 android:elevation="8dp">
 
-                <View
-                    android:layout_width="60dp"
-                    android:layout_height="60dp"
-                    android:background="@drawable/circle_primary_container" />
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp">
 
-                <ImageView
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
-                    android:layout_marginTop="-45dp"
-                    android:src="@drawable/ic_add_24"
-                    app:tint="@color/onPrimaryContainer" />
+                    <View
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:background="@drawable/circle_primary_container" />
+
+                    <ImageView
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_centerVertical="true"
+                        android:layout_marginStart="14dp"
+                        android:src="@drawable/ic_add_24"
+                        app:tint="@color/onPrimaryContainer" />
+                </RelativeLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
-                    android:letterSpacing="0.2"
                     android:text="@string/str_new_project"
                     android:textColor="@color/textColor"
-                    android:textSize="14sp"
+                    android:textSize="24sp"
                     android:fontFamily="sans-serif-medium" />
-                    
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="@string/str_tap_to_select_media"
+                    android:text="Your next edit starts right here."
                     android:textColor="@color/iconSecondary"
-                    android:textSize="11sp"
-                    android:gravity="center"
+                    android:textSize="13sp"
                     android:fontFamily="sans-serif" />
 
             </LinearLayout>
 
-            <!-- Open Project Button -->
+            <!-- Secondary Bento Card: Open Project -->
             <LinearLayout
                 android:id="@+id/btnOpenProject"
-                android:layout_width="160dp"
-                android:layout_height="180dp"
-                android:background="@drawable/bg_import_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="150dp"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_hero_bento_secondary"
                 android:clickable="true"
                 android:focusable="true"
-                android:gravity="center"
+                android:foreground="?attr/selectableItemBackground"
+                android:gravity="center_vertical"
                 android:orientation="vertical"
-                android:layout_marginStart="8dp"
-                android:elevation="8dp">
+                android:padding="24dp"
+                android:elevation="4dp">
 
-                <View
-                    android:layout_width="60dp"
-                    android:layout_height="60dp"
-                    android:background="@drawable/circle_primary_container" />
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp">
 
-                <ImageView
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
-                    android:layout_marginTop="-45dp"
-                    android:src="@drawable/ic_folder_24"
-                    app:tint="@color/onPrimaryContainer" />
+                    <View
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/circle_primary_container" />
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_centerVertical="true"
+                        android:layout_marginStart="12dp"
+                        android:src="@drawable/ic_folder_24"
+                        app:tint="@color/onPrimaryContainer" />
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:src="@drawable/ic_arrow_up_right_24"
+                        app:tint="@color/iconSecondary"
+                        android:alpha="0.5" />
+                </RelativeLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
-                    android:letterSpacing="0.2"
                     android:text="Open Project"
                     android:textColor="@color/textColor"
-                    android:textSize="14sp"
+                    android:textSize="18sp"
                     android:fontFamily="sans-serif-medium" />
-                    
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Load .lcprj file"
+                    android:text="Load saved .lcprj file to resume editing"
                     android:textColor="@color/iconSecondary"
-                    android:textSize="11sp"
-                    android:gravity="center"
-                    android:fontFamily="sans-serif" />
+                    android:textSize="13sp"
+                    android:fontFamily="sans-serif"
+                    android:visibility="visible" />
 
             </LinearLayout>
+
+            <!-- App Tagline -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="48dp"
+                android:gravity="center"
+                android:letterSpacing="0.05"
+                android:text="@string/str_free_open_source_nlimitless_cr"
+                android:textColor="@color/colorOnSurface"
+                android:alpha="0.4"
+                android:textSize="14sp"
+                android:fontFamily="sans-serif-light" />
 
         </LinearLayout>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="64dp"
-            android:gravity="center"
-            android:letterSpacing="0.1"
-            android:lineSpacingMultiplier="1.4"
-            android:text="@string/str_free_open_source_nlimitless_cr"
-            android:textColor="@color/colorOnSurface"
-            android:alpha="0.5"
-            android:textSize="18sp"
-            android:fontFamily="sans-serif-light" />
+    </ScrollView>
 
-    </LinearLayout>
-
-    <!-- Settings Page Content -->
+    <!-- Settings Page Content (Bento Style Layout) -->
     <ScrollView
         android:id="@+id/layoutSettingsContent"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_below="@id/layoutTopHeader"
         android:visibility="gone"
-        android:padding="24dp"
-        android:paddingBottom="120dp"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="100dp"
         android:clipToPadding="false"
         android:overScrollMode="never"
         android:scrollbars="none">
@@ -147,25 +210,26 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center_horizontal">
+            android:orientation="vertical">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="32dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="16dp"
                 android:fontFamily="sans-serif-medium"
                 android:text="@string/str_settings"
                 android:textColor="@color/textColor"
-                android:textSize="28sp" />
+                android:textSize="24sp" />
 
+            <!-- General Settings Bento Card -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="32dp"
-                android:background="@drawable/bg_import_card"
+                android:background="@drawable/bg_hero_bento_secondary"
                 android:orientation="vertical"
-                android:padding="24dp">
+                android:padding="20dp"
+                android:elevation="4dp">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -173,8 +237,8 @@
                     android:fontFamily="sans-serif-medium"
                     android:text="@string/str_general"
                     android:textColor="@color/textColor"
-                    android:textSize="18sp"
-                    android:layout_marginBottom="16dp" />
+                    android:textSize="16sp"
+                    android:layout_marginBottom="12dp" />
 
                 <!-- App Language Setting -->
                 <LinearLayout
@@ -185,21 +249,21 @@
                     android:background="?attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true"
-                    android:paddingVertical="12dp">
+                    android:paddingVertical="10dp">
                     
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/str_app_language"
                         android:textColor="@color/textColor"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
+                        android:textSize="15sp"
+                        android:fontFamily="sans-serif-medium" />
                     
                     <TextView
                         android:id="@+id/tvCurrentLanguage"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="2dp"
                         android:text="@string/str_system_default"
                         android:textColor="@color/iconSecondary"
                         android:textSize="13sp" />
@@ -208,7 +272,7 @@
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:background="@color/outline"
+                    android:background="@color/outlineVariant"
                     android:layout_marginVertical="4dp" />
 
                 <!-- Video Export Folder Setting -->
@@ -220,21 +284,21 @@
                     android:background="?attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true"
-                    android:paddingVertical="12dp">
+                    android:paddingVertical="10dp">
                     
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/str_video_export_folder"
                         android:textColor="@color/textColor"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
+                        android:textSize="15sp"
+                        android:fontFamily="sans-serif-medium" />
                     
                     <TextView
                         android:id="@+id/tvCurrentExportFolder"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="2dp"
                         android:text="@string/str_default_movies_librecuts"
                         android:textColor="@color/iconSecondary"
                         android:textSize="13sp" />
@@ -243,7 +307,7 @@
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:background="@color/outline"
+                    android:background="@color/outlineVariant"
                     android:layout_marginVertical="4dp" />
 
                 <!-- Audio Export Folder Setting -->
@@ -255,21 +319,21 @@
                     android:background="?attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true"
-                    android:paddingVertical="12dp">
+                    android:paddingVertical="10dp">
                     
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/str_audio_export_folder"
                         android:textColor="@color/textColor"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
+                        android:textSize="15sp"
+                        android:fontFamily="sans-serif-medium" />
                     
                     <TextView
                         android:id="@+id/tvCurrentAudioExportFolder"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="2dp"
                         android:text="@string/str_default_music_librecuts"
                         android:textColor="@color/iconSecondary"
                         android:textSize="13sp" />
@@ -278,7 +342,7 @@
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:background="@color/outline"
+                    android:background="@color/outlineVariant"
                     android:layout_marginVertical="4dp" />
 
                 <!-- Snapshot Export Folder Setting -->
@@ -290,31 +354,37 @@
                     android:background="?attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true"
-                    android:paddingVertical="12dp">
+                    android:paddingVertical="10dp">
                     
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/str_snapshot_export_folder"
                         android:textColor="@color/textColor"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
+                        android:textSize="15sp"
+                        android:fontFamily="sans-serif-medium" />
                     
                     <TextView
                         android:id="@+id/tvCurrentSnapshotExportFolder"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="2dp"
                         android:text="@string/str_default_pictures_librecuts"
                         android:textColor="@color/iconSecondary"
                         android:textSize="13sp" />
                 </LinearLayout>
 
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="@color/outline"
-                    android:layout_marginVertical="8dp" />
+            </LinearLayout>
+
+            <!-- System Bento Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_hero_bento_secondary"
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:elevation="4dp">
 
                 <!-- Check for Updates Setting -->
                 <LinearLayout
@@ -325,20 +395,20 @@
                     android:background="?attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true"
-                    android:paddingVertical="12dp">
+                    android:paddingVertical="10dp">
                     
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/str_check_for_updates"
                         android:textColor="@color/textColor"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
+                        android:textSize="15sp"
+                        android:fontFamily="sans-serif-medium" />
                     
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="2dp"
                         android:text="@string/str_manually_check_for_the_latest"
                         android:textColor="@color/iconSecondary"
                         android:textSize="13sp" />
@@ -347,8 +417,8 @@
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:background="@color/outline"
-                    android:layout_marginVertical="8dp" />
+                    android:background="@color/outlineVariant"
+                    android:layout_marginVertical="4dp" />
 
                 <!-- Open Source Licenses Setting -->
                 <LinearLayout
@@ -359,20 +429,20 @@
                     android:background="?attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true"
-                    android:paddingVertical="12dp">
+                    android:paddingVertical="10dp">
                     
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/str_open_source_licenses"
                         android:textColor="@color/textColor"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
+                        android:textSize="15sp"
+                        android:fontFamily="sans-serif-medium" />
                     
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
+                        android:layout_marginTop="2dp"
                         android:text="@string/str_view_third_party_software_licenses"
                         android:textColor="@color/iconSecondary"
                         android:textSize="13sp" />
@@ -383,14 +453,16 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- About Page Content -->
+    <!-- About Page Content (Bento Style Layout) -->
     <ScrollView
         android:id="@+id/layoutAboutContent"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_below="@id/layoutTopHeader"
         android:visibility="gone"
-        android:padding="24dp"
-        android:paddingBottom="120dp"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="100dp"
         android:clipToPadding="false"
         android:overScrollMode="never"
         android:scrollbars="none">
@@ -398,53 +470,65 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center_horizontal">
+            android:orientation="vertical">
 
-            <ImageView
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:layout_marginTop="32dp"
-                android:src="@mipmap/ic_launcher_round" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:fontFamily="sans-serif-medium"
-                android:text="@string/app_name"
-                android:textColor="@color/textColor"
-                android:textSize="28sp" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:alpha="0.6"
-                android:text="@string/str_v1_0_beta4"
-                android:textColor="@color/colorPrimary"
-                android:textSize="14sp"
-                android:fontFamily="sans-serif-medium" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:gravity="center"
-                android:lineSpacingMultiplier="1.3"
-                android:text="@string/str_a_privacy_friendly_open_source"
-                android:textColor="@color/iconSecondary"
-                android:textSize="15sp" />
-
-            <!-- Support & Feedback Card -->
+            <!-- Hero Bento Card: About Header -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="32dp"
-                android:background="@drawable/bg_import_card"
+                android:background="@drawable/bg_hero_bento_primary"
                 android:orientation="vertical"
                 android:padding="24dp"
-                android:gravity="center_horizontal">
+                android:gravity="center"
+                android:elevation="8dp">
+
+                <ImageView
+                    android:layout_width="72dp"
+                    android:layout_height="72dp"
+                    android:src="@mipmap/ic_launcher_round" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="@string/app_name"
+                    android:textColor="@color/textColor"
+                    android:textSize="26sp" />
+
+                <TextView
+                    android:id="@+id/tvAboutVersion"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/colorSecondary"
+                    android:textSize="13sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:background="@drawable/bg_pill_accent"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="4dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center"
+                    android:lineSpacingMultiplier="1.3"
+                    android:text="@string/str_a_privacy_friendly_open_source"
+                    android:textColor="@color/iconSecondary"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <!-- Support & Community Bento Card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_hero_bento_secondary"
+                android:orientation="vertical"
+                android:padding="24dp"
+                android:gravity="center_horizontal"
+                android:elevation="4dp">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -457,7 +541,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="6dp"
                     android:gravity="center"
                     android:text="@string/str_librecuts_is_open_source_help"
                     android:textColor="@color/iconSecondary"
@@ -466,14 +550,14 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnStarGithub"
                     android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:layout_marginTop="24dp"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="20dp"
                     android:text="@string/str_star_on_github"
                     android:textColor="@color/onPrimaryContainer"
                     android:backgroundTint="@color/colorPrimary"
-                    app:cornerRadius="16dp"
-                    android:textSize="15sp"
-                    android:textStyle="bold"
+                    app:cornerRadius="14dp"
+                    android:textSize="14sp"
+                    android:fontFamily="sans-serif-medium"
                     app:icon="@drawable/ic_star_24"
                     app:iconTint="@color/onPrimaryContainer"
                     app:iconGravity="textStart"
@@ -481,36 +565,56 @@
                     android:insetBottom="0dp" />
 
                 <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnTranslate"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/str_help_translate"
+                    android:textColor="@color/textColor"
+                    android:backgroundTint="@color/surfaceContainerHigh"
+                    app:strokeColor="@color/outline"
+                    app:strokeWidth="1dp"
+                    app:cornerRadius="14dp"
+                    android:textSize="14sp"
+                    android:fontFamily="sans-serif-medium"
+                    app:icon="@drawable/ic_translate_24"
+                    app:iconTint="@color/textColor"
+                    app:iconGravity="textStart"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp" />
+
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnReportBug"
                     android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:layout_marginTop="16dp"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="12dp"
                     android:text="@string/str_report_a_bug"
                     android:textColor="@color/textColor"
                     android:backgroundTint="@color/surfaceContainerHigh"
                     app:strokeColor="@color/outline"
                     app:strokeWidth="1dp"
-                    app:cornerRadius="16dp"
-                    android:textSize="15sp"
-                    android:textStyle="bold"
+                    app:cornerRadius="14dp"
+                    android:textSize="14sp"
+                    android:fontFamily="sans-serif-medium"
                     app:icon="@drawable/ic_bug_24"
                     app:iconTint="@color/textColor"
                     app:iconGravity="textStart"
                     android:insetTop="0dp"
                     android:insetBottom="0dp" />
+
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSponsor"
                     android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:layout_marginTop="16dp"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="12dp"
                     android:text="@string/str_sponsor_project"
                     android:textColor="#ff69b4"
                     android:backgroundTint="@color/surfaceContainerHigh"
                     app:strokeColor="#ff69b4"
                     app:strokeWidth="1dp"
-                    app:cornerRadius="16dp"
-                    android:textSize="15sp"
-                    android:textStyle="bold"
+                    app:cornerRadius="14dp"
+                    android:textSize="14sp"
+                    android:fontFamily="sans-serif-medium"
                     app:icon="@drawable/ic_heart_24"
                     app:iconTint="#ff69b4"
                     app:iconGravity="textStart"
@@ -522,7 +626,8 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="48dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="32dp"
                 android:alpha="0.4"
                 android:text="@string/str_made_by_tharun_birla"
                 android:textColor="@color/textColor"
@@ -531,82 +636,119 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- Bottom Navigation Bar (Floating Pill) -->
+    <!-- Bottom Navigation Bar (Docked Full-Width Spec) -->
     <LinearLayout
         android:id="@+id/bottomNavBar"
-        android:layout_width="260dp"
-        android:layout_height="64dp"
+        android:layout_width="match_parent"
+        android:layout_height="68dp"
         android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        android:layout_marginBottom="32dp"
-        android:background="@drawable/bg_bottom_nav_floating"
+        android:background="@drawable/bg_bottom_nav_docked"
         android:gravity="center"
         android:orientation="horizontal"
-        android:paddingHorizontal="8dp"
-        android:elevation="24dp">
+        android:paddingHorizontal="16dp"
+        android:elevation="16dp">
 
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <FrameLayout
+            <LinearLayout
                 android:id="@+id/tabHome"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
                 android:layout_gravity="center"
                 android:background="@drawable/bg_nav_active_pill"
                 android:clickable="true"
-                android:focusable="true">
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingHorizontal="18dp">
                 <ImageView
                     android:id="@+id/ivHome"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
                     android:src="@drawable/ic_home_24"
                     app:tint="@color/colorPrimary" />
-            </FrameLayout>
+                <TextView
+                    android:id="@+id/tvHomeLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="Home"
+                    android:textColor="@color/colorPrimary"
+                    android:textSize="13sp"
+                    android:singleLine="true"
+                    android:maxLines="1"
+                    android:fontFamily="sans-serif-medium" />
+            </LinearLayout>
         </FrameLayout>
 
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <FrameLayout
+            <LinearLayout
                 android:id="@+id/tabSettings"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
                 android:layout_gravity="center"
                 android:clickable="true"
-                android:focusable="true">
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingHorizontal="18dp">
                 <ImageView
                     android:id="@+id/ivSettings"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
                     android:src="@drawable/ic_settings_24"
                     app:tint="@color/inactiveTool" />
-            </FrameLayout>
+                <TextView
+                    android:id="@+id/tvSettingsLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="Settings"
+                    android:textColor="@color/inactiveTool"
+                    android:textSize="13sp"
+                    android:singleLine="true"
+                    android:maxLines="1"
+                    android:fontFamily="sans-serif-medium" />
+            </LinearLayout>
         </FrameLayout>
 
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1">
-            <FrameLayout
+            <LinearLayout
                 android:id="@+id/tabAbout"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
                 android:layout_gravity="center"
                 android:clickable="true"
-                android:focusable="true">
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingHorizontal="18dp">
                 <ImageView
                     android:id="@+id/ivAbout"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
                     android:src="@drawable/ic_info_24"
                     app:tint="@color/inactiveTool" />
-            </FrameLayout>
+                <TextView
+                    android:id="@+id/tvAboutLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="About"
+                    android:textColor="@color/inactiveTool"
+                    android:textSize="13sp"
+                    android:singleLine="true"
+                    android:maxLines="1"
+                    android:fontFamily="sans-serif-medium" />
+            </LinearLayout>
         </FrameLayout>
 
     </LinearLayout>

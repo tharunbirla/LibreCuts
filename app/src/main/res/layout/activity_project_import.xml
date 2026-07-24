@@ -6,154 +6,437 @@
     android:orientation="vertical"
     android:background="@color/background">
 
-    <!-- Header -->
-    <LinearLayout
+    <!-- Top Navigation Bar -->
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="24dp"
-        android:orientation="vertical"
-        android:background="@color/surfaceContainer">
+        android:layout_height="64dp"
+        android:paddingHorizontal="16dp"
+        android:background="@color/background">
+
+        <ImageButton
+            android:id="@+id/btnClose"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_centerVertical="true"
+            android:layout_alignParentStart="true"
+            android:src="@drawable/ic_close_24"
+            android:padding="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Close"
+            app:tint="@color/textColor" />
 
         <TextView
+            android:id="@+id/tvScreenTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Import Project"
-            android:textColor="@color/colorOnSurface"
-            android:textSize="24sp"
-            android:textStyle="bold" />
+            android:layout_centerInParent="true"
+            android:text="Select Media"
+            android:textColor="@color/textColor"
+            android:textSize="18sp"
+            android:fontFamily="sans-serif-medium" />
 
-        <TextView
-            android:id="@+id/tvProjectStatus"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnNext"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Checking files..."
-            android:textColor="@color/iconSecondary"
-            android:textSize="14sp" />
-    </LinearLayout>
+            android:layout_height="40dp"
+            android:layout_centerVertical="true"
+            android:layout_alignParentEnd="true"
+            android:text="Next"
+            android:textColor="@color/onPrimaryContainer"
+            android:backgroundTint="@color/colorPrimary"
+            app:cornerRadius="20dp"
+            android:textSize="14sp"
+            android:fontFamily="sans-serif-medium"
+            android:paddingHorizontal="20dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:elevation="0dp" />
+    </RelativeLayout>
 
+    <!-- Scrollable Content -->
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
         android:clipToPadding="false"
-        android:padding="16dp">
+        android:paddingHorizontal="20dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="32dp"
+        android:overScrollMode="never"
+        android:scrollbars="none">
 
         <LinearLayout
-            android:id="@+id/layoutDependenciesContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Primary Video Section -->
-            <TextView
-                android:id="@+id/tvPrimaryTitle"
+            <!-- Hero Bento Header Card Container -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Primary Video"
-                android:textColor="@color/colorPrimary"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp" />
+                android:minHeight="180dp"
+                android:background="@drawable/bg_hero_bento_primary"
+                android:orientation="vertical"
+                android:padding="24dp"
+                android:gravity="bottom"
+                android:elevation="8dp">
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvPrimaryVideo"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:orientation="horizontal"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp">
 
-            <!-- Merged Videos Section -->
-            <TextView
-                android:id="@+id/tvMergedTitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Additional Videos"
-                android:textColor="@color/colorPrimary"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp"
-                android:visibility="gone" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="TEMPLATE"
+                        android:textColor="@color/colorPrimary"
+                        android:textSize="11sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:letterSpacing="0.08"
+                        android:background="@drawable/bg_pill_accent"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="4dp"
+                        android:layout_marginEnd="8dp" />
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvMergedVideos"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:orientation="horizontal"
-                android:visibility="gone"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+                    <TextView
+                        android:id="@+id/tvProjectDuration"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.0s Total"
+                        android:textColor="@color/textColor"
+                        android:textSize="12sp"
+                        android:fontFamily="sans-serif"
+                        android:alpha="0.8"
+                        android:layout_marginEnd="8dp" />
 
-            <!-- Audio Section -->
-            <TextView
-                android:id="@+id/tvAudioTitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Audio Tracks"
-                android:textColor="@color/colorPrimary"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp"
-                android:visibility="gone" />
+                    <TextView
+                        android:id="@+id/tvProjectClipsCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0 clips"
+                        android:textColor="@color/textColor"
+                        android:textSize="12sp"
+                        android:fontFamily="sans-serif"
+                        android:alpha="0.8" />
+                </LinearLayout>
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvAudioTracks"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:orientation="horizontal"
-                android:visibility="gone"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+                <TextView
+                    android:id="@+id/tvProjectTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Project Title"
+                    android:textColor="@color/textColor"
+                    android:textSize="24sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:ellipsize="end"
+                    android:maxLines="1" />
 
-            <!-- Overlays Section -->
-            <TextView
-                android:id="@+id/tvOverlaysTitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Image / Video Overlays"
-                android:textColor="@color/colorPrimary"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp"
-                android:visibility="gone" />
+                <TextView
+                    android:id="@+id/tvProjectStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="Checking media files..."
+                    android:textColor="@color/iconSecondary"
+                    android:textSize="13sp"
+                    android:fontFamily="sans-serif" />
+            </LinearLayout>
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvOverlays"
+            <!-- Requirements Header Bar -->
+            <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                android:orientation="horizontal"
-                android:visibility="gone"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="12dp"
+                android:paddingHorizontal="4dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:text="REQUIREMENTS"
+                    android:textColor="@color/textColor"
+                    android:textSize="13sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.08"
+                    android:alpha="0.6" />
+
+                <TextView
+                    android:id="@+id/tvOverallProgress"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:text="0/0 Selected"
+                    android:textColor="@color/colorPrimary"
+                    android:textSize="13sp"
+                    android:fontFamily="sans-serif-medium" />
+            </RelativeLayout>
+
+            <!-- Dependencies Container -->
+            <LinearLayout
+                android:id="@+id/layoutDependenciesContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Primary Video Section Bento Card -->
+                <LinearLayout
+                    android:id="@+id/cardPrimaryVideo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_hero_bento_secondary"
+                    android:orientation="vertical"
+                    android:padding="20dp"
+                    android:elevation="4dp"
+                    android:layout_marginBottom="16dp">
+
+                    <RelativeLayout
+                        android:id="@+id/layoutPrimaryHeader"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="14dp">
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentStart="true"
+                            android:layout_centerVertical="true"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <ImageView
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
+                                android:src="@drawable/ic_play_24"
+                                app:tint="@color/colorPrimary"
+                                android:layout_marginEnd="8dp" />
+
+                            <TextView
+                                android:id="@+id/tvPrimaryTitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Primary Video"
+                                android:textColor="@color/textColor"
+                                android:textSize="15sp"
+                                android:fontFamily="sans-serif-medium" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tvPrimaryCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentEnd="true"
+                            android:layout_centerVertical="true"
+                            android:text="0/1"
+                            android:textColor="@color/iconSecondary"
+                            android:textSize="13sp"
+                            android:fontFamily="sans-serif-medium" />
+                    </RelativeLayout>
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rvPrimaryVideo"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+                </LinearLayout>
+
+                <!-- Additional / Merged Videos Section Bento Card -->
+                <LinearLayout
+                    android:id="@+id/cardMergedVideos"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_hero_bento_secondary"
+                    android:orientation="vertical"
+                    android:padding="20dp"
+                    android:elevation="4dp"
+                    android:layout_marginBottom="16dp"
+                    android:visibility="gone">
+
+                    <RelativeLayout
+                        android:id="@+id/layoutMergedHeader"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="14dp">
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentStart="true"
+                            android:layout_centerVertical="true"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <ImageView
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
+                                android:src="@drawable/ic_play_24"
+                                app:tint="@color/colorPrimary"
+                                android:layout_marginEnd="8dp" />
+
+                            <TextView
+                                android:id="@+id/tvMergedTitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Additional Clips"
+                                android:textColor="@color/textColor"
+                                android:textSize="15sp"
+                                android:fontFamily="sans-serif-medium" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tvMergedCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentEnd="true"
+                            android:layout_centerVertical="true"
+                            android:text="0/0"
+                            android:textColor="@color/iconSecondary"
+                            android:textSize="13sp"
+                            android:fontFamily="sans-serif-medium" />
+                    </RelativeLayout>
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rvMergedVideos"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+                </LinearLayout>
+
+                <!-- Audio Tracks Section Bento Card -->
+                <LinearLayout
+                    android:id="@+id/cardAudioTracks"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_hero_bento_secondary"
+                    android:orientation="vertical"
+                    android:padding="20dp"
+                    android:elevation="4dp"
+                    android:layout_marginBottom="16dp"
+                    android:visibility="gone">
+
+                    <RelativeLayout
+                        android:id="@+id/layoutAudioHeader"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="14dp">
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentStart="true"
+                            android:layout_centerVertical="true"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <ImageView
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
+                                android:src="@drawable/ic_audio_24"
+                                app:tint="@color/colorPrimary"
+                                android:layout_marginEnd="8dp" />
+
+                            <TextView
+                                android:id="@+id/tvAudioTitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Audio Tracks"
+                                android:textColor="@color/textColor"
+                                android:textSize="15sp"
+                                android:fontFamily="sans-serif-medium" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tvAudioCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentEnd="true"
+                            android:layout_centerVertical="true"
+                            android:text="0/0"
+                            android:textColor="@color/iconSecondary"
+                            android:textSize="13sp"
+                            android:fontFamily="sans-serif-medium" />
+                    </RelativeLayout>
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rvAudioTracks"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+                </LinearLayout>
+
+                <!-- Overlays Section Bento Card -->
+                <LinearLayout
+                    android:id="@+id/cardOverlays"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_hero_bento_secondary"
+                    android:orientation="vertical"
+                    android:padding="20dp"
+                    android:elevation="4dp"
+                    android:layout_marginBottom="16dp"
+                    android:visibility="gone">
+
+                    <RelativeLayout
+                        android:id="@+id/layoutOverlaysHeader"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="14dp">
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentStart="true"
+                            android:layout_centerVertical="true"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <ImageView
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
+                                android:src="@drawable/ic_image_24"
+                                app:tint="@color/colorPrimary"
+                                android:layout_marginEnd="8dp" />
+
+                            <TextView
+                                android:id="@+id/tvOverlaysTitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Overlays"
+                                android:textColor="@color/textColor"
+                                android:textSize="15sp"
+                                android:fontFamily="sans-serif-medium" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tvOverlaysCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentEnd="true"
+                            android:layout_centerVertical="true"
+                            android:text="0/0"
+                            android:textColor="@color/iconSecondary"
+                            android:textSize="13sp"
+                            android:fontFamily="sans-serif-medium" />
+                    </RelativeLayout>
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rvOverlays"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+                </LinearLayout>
+
+            </LinearLayout>
 
         </LinearLayout>
     </ScrollView>
-
-    <!-- Bottom Actions -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="16dp"
-        android:background="@color/surfaceContainer"
-        android:orientation="horizontal">
-
-        <Button
-            android:id="@+id/btnCancel"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Cancel"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_marginEnd="8dp" />
-
-        <Button
-            android:id="@+id/btnLoadProject"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Load Project"
-            android:layout_marginStart="8dp" />
-    </LinearLayout>
 
 </LinearLayout>

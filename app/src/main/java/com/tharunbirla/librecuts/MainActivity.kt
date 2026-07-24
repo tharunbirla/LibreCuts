@@ -204,11 +204,21 @@ class MainActivity : AppCompatActivity() {
 
         updateLanguageUI()
 
-        // Setup GitHub button listeners
+        // Set dynamic About version tag
+        try {
+            val pInfo = packageManager.getPackageInfo(packageName, 0)
+            binding.tvAboutVersion.text = "v${pInfo.versionName}"
+        } catch (e: Exception) {
+            binding.tvAboutVersion.text = "v1.0-beta5"
+        }
+
+        // Setup GitHub and Translation button listeners
         binding.btnStarGithub.setBounceClickListener {
             openUrl("https://github.com/tharunbirla/LibreCuts")
         }
-
+        binding.btnTranslate.setBounceClickListener {
+            openUrl("https://hosted.weblate.org/engage/librecuts/")
+        }
         binding.btnReportBug.setBounceClickListener {
             openUrl("https://github.com/tharunbirla/LibreCuts/issues")
         }
@@ -311,11 +321,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun switchTab(tabIndex: Int) {
-        val activeBg = ContextCompat.getDrawable(this, R.drawable.bg_nav_active)
+        val activeBg = ContextCompat.getDrawable(this, R.drawable.bg_nav_active_pill)
         val attrs = intArrayOf(android.R.attr.selectableItemBackgroundBorderless)
         val ta = obtainStyledAttributes(attrs)
         val inactiveBg = ta.getDrawable(0)
         ta.recycle()
+
+        val activeColor = ContextCompat.getColor(this, R.color.colorPrimary)
+        val inactiveColor = ContextCompat.getColor(this, R.color.inactiveTool)
 
         // Reset all tabs to inactive
         binding.layoutHomeContent.visibility = View.GONE
@@ -323,27 +336,35 @@ class MainActivity : AppCompatActivity() {
         binding.layoutAboutContent.visibility = View.GONE
 
         binding.tabHome.background = inactiveBg
-        binding.ivHome.setColorFilter(ContextCompat.getColor(this, R.color.inactiveTool))
+        binding.ivHome.setColorFilter(inactiveColor)
+        binding.tvHomeLabel.setTextColor(inactiveColor)
+
         binding.tabSettings.background = inactiveBg
-        binding.ivSettings.setColorFilter(ContextCompat.getColor(this, R.color.inactiveTool))
+        binding.ivSettings.setColorFilter(inactiveColor)
+        binding.tvSettingsLabel.setTextColor(inactiveColor)
+
         binding.tabAbout.background = inactiveBg
-        binding.ivAbout.setColorFilter(ContextCompat.getColor(this, R.color.inactiveTool))
+        binding.ivAbout.setColorFilter(inactiveColor)
+        binding.tvAboutLabel.setTextColor(inactiveColor)
 
         when (tabIndex) {
             0 -> {
                 binding.layoutHomeContent.visibility = View.VISIBLE
                 binding.tabHome.background = activeBg
-                binding.ivHome.setColorFilter(ContextCompat.getColor(this, R.color.colorPrimary))
+                binding.ivHome.setColorFilter(activeColor)
+                binding.tvHomeLabel.setTextColor(activeColor)
             }
             1 -> {
                 binding.layoutSettingsContent.visibility = View.VISIBLE
                 binding.tabSettings.background = activeBg
-                binding.ivSettings.setColorFilter(ContextCompat.getColor(this, R.color.colorPrimary))
+                binding.ivSettings.setColorFilter(activeColor)
+                binding.tvSettingsLabel.setTextColor(activeColor)
             }
             2 -> {
                 binding.layoutAboutContent.visibility = View.VISIBLE
                 binding.tabAbout.background = activeBg
-                binding.ivAbout.setColorFilter(ContextCompat.getColor(this, R.color.colorPrimary))
+                binding.ivAbout.setColorFilter(activeColor)
+                binding.tvAboutLabel.setTextColor(activeColor)
             }
         }
     }
