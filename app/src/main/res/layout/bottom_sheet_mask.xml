@@ -10,11 +10,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_marginHorizontal="12dp"
-        android:layout_marginBottom="12dp"
-        android:background="@drawable/bg_bottom_nav_floating"
+        android:layout_marginTop="6dp"
+        android:background="@drawable/bg_bottom_nav_docked"
         android:padding="16dp"
-        android:elevation="8dp">
+        android:elevation="12dp">
 
         <!-- Title & Invert Toggle Row -->
         <RelativeLayout

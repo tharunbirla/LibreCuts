@@ -75,7 +75,7 @@ class DraggableImageOverlayView @JvmOverloads constructor(
     private var chromaJob: Job? = null
 
     private val guidelinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#FF2A6D")
+        color = Color.parseColor("#CEC0EC")
         style = Paint.Style.STROKE
         strokeWidth = 3f
         pathEffect = android.graphics.DashPathEffect(floatArrayOf(15f, 10f), 0f)
@@ -89,13 +89,24 @@ class DraggableImageOverlayView @JvmOverloads constructor(
 
     // ── Selection border paint ────────────────────────────────────────────────
     private val selectionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#FFFFFF")
+        color = Color.parseColor("#99FFFFFF")
         style = Paint.Style.STROKE
-        strokeWidth = 3f
-        setShadowLayer(4f, 0f, 0f, Color.parseColor("#80000000"))
+        strokeWidth = 2f
+        pathEffect = DashPathEffect(floatArrayOf(12f, 8f), 0f)
     }
 
     private val selectionRect = RectF()
+
+    private val cornerHandlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        style = Paint.Style.STROKE
+        strokeWidth = 5f
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+        setShadowLayer(5f, 0f, 1f, Color.parseColor("#99000000"))
+    }
+    
+    private val cornerPath = android.graphics.Path()
 
     private val handleFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#FF2A6D")
@@ -702,7 +713,7 @@ class DraggableImageOverlayView @JvmOverloads constructor(
                 canvas.drawLine(videoRect.left, videoRect.centerY(), videoRect.right, videoRect.centerY(), guidelinePaint)
             }
 
-            // Draw selection bounds correctly around rotated image
+            // Draw selection bounds around rotated image
             canvas.save()
             canvas.rotate(rotationAngle, imageView.x + imageView.width / 2f, imageView.y + imageView.height / 2f)
             selectionRect.set(
@@ -713,20 +724,41 @@ class DraggableImageOverlayView @JvmOverloads constructor(
             )
             canvas.drawRect(selectionRect, selectionPaint)
 
-            // Draw 4 corner handles
-            val handleRadius = 14f
-            
-            canvas.drawCircle(selectionRect.left, selectionRect.top, handleRadius, handleFillPaint)
-            canvas.drawCircle(selectionRect.left, selectionRect.top, handleRadius, handleStrokePaint)
-            
-            canvas.drawCircle(selectionRect.right, selectionRect.top, handleRadius, handleFillPaint)
-            canvas.drawCircle(selectionRect.right, selectionRect.top, handleRadius, handleStrokePaint)
-            
-            canvas.drawCircle(selectionRect.left, selectionRect.bottom, handleRadius, handleFillPaint)
-            canvas.drawCircle(selectionRect.left, selectionRect.bottom, handleRadius, handleStrokePaint)
-            
-            canvas.drawCircle(selectionRect.right, selectionRect.bottom, handleRadius, handleFillPaint)
-            canvas.drawCircle(selectionRect.right, selectionRect.bottom, handleRadius, handleStrokePaint)
+            // Draw 4 modern curved corner bracket handles touching the border
+            val bracketLength = 22f
+            val cornerRadius = 8f
+
+            // Top-Left Corner
+            cornerPath.reset()
+            cornerPath.moveTo(selectionRect.left + bracketLength, selectionRect.top)
+            cornerPath.lineTo(selectionRect.left + cornerRadius, selectionRect.top)
+            cornerPath.quadTo(selectionRect.left, selectionRect.top, selectionRect.left, selectionRect.top + cornerRadius)
+            cornerPath.lineTo(selectionRect.left, selectionRect.top + bracketLength)
+            canvas.drawPath(cornerPath, cornerHandlePaint)
+
+            // Top-Right Corner
+            cornerPath.reset()
+            cornerPath.moveTo(selectionRect.right - bracketLength, selectionRect.top)
+            cornerPath.lineTo(selectionRect.right - cornerRadius, selectionRect.top)
+            cornerPath.quadTo(selectionRect.right, selectionRect.top, selectionRect.right, selectionRect.top + cornerRadius)
+            cornerPath.lineTo(selectionRect.right, selectionRect.top + bracketLength)
+            canvas.drawPath(cornerPath, cornerHandlePaint)
+
+            // Bottom-Left Corner
+            cornerPath.reset()
+            cornerPath.moveTo(selectionRect.left + bracketLength, selectionRect.bottom)
+            cornerPath.lineTo(selectionRect.left + cornerRadius, selectionRect.bottom)
+            cornerPath.quadTo(selectionRect.left, selectionRect.bottom, selectionRect.left, selectionRect.bottom - cornerRadius)
+            cornerPath.lineTo(selectionRect.left, selectionRect.bottom - bracketLength)
+            canvas.drawPath(cornerPath, cornerHandlePaint)
+
+            // Bottom-Right Corner
+            cornerPath.reset()
+            cornerPath.moveTo(selectionRect.right - bracketLength, selectionRect.bottom)
+            cornerPath.lineTo(selectionRect.right - cornerRadius, selectionRect.bottom)
+            cornerPath.quadTo(selectionRect.right, selectionRect.bottom, selectionRect.right, selectionRect.bottom - cornerRadius)
+            cornerPath.lineTo(selectionRect.right, selectionRect.bottom - bracketLength)
+            canvas.drawPath(cornerPath, cornerHandlePaint)
 
             canvas.restore()
             
