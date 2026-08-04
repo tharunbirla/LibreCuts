@@ -1,0 +1,8 @@
+# Ignore all Android source code and build files on gh-pages branch
+*
+!index.html
+!assets/
+!assets/**
+!.gitignore
+!README.md
+!CNAME
