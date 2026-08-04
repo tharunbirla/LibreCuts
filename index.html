@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html class="dark scroll-smooth" lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    
+    <!-- SEO Optimization Meta Tags -->
+    <title>LibreCuts | Free &amp; Open Source Video Editor for Android (No Watermark, Privacy First)</title>
+    <meta name="description" content="LibreCuts is a professional, free, open source video editor for Android. Edit and export high quality, watermark free videos offline. Features hardware accelerated H.264 rendering, multi track timeline, chroma key, subtitles, and keyframe animations. 100% private with no ads or telemetry.">
+    <meta name="keywords" content="video editor for android, android video editor, free video editor android, open source video editor, no watermark video editor, FOSS video editor, privacy first video editor, LibreCuts, offline video editor, trim merge split video, android chroma key, capcut alternative, no ads video editor">
+    <meta name="author" content="tharunbirla">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph (Facebook / LinkedIn) -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="LibreCuts | FOSS Android Video Editor (No Watermark, Privacy First)">
+    <meta property="og:description" content="Professional, open source mobile video editor for Android. Edit offline with multi track support, chroma key, subtitles, and hardware acceleration. 100% free with zero watermarks.">
+    <meta property="og:image" content="assets/featureGraphic.png">
+    
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="LibreCuts | FOSS Android Video Editor">
+    <meta name="twitter:description" content="Free, open source, offline video editor for Android. Multi track, chroma key, subtitles, and hardware accelerated exports.">
+    <meta name="twitter:image" content="assets/featureGraphic.png">
+
+    <!-- Schema Markup (Structured Data) -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "LibreCuts",
+        "operatingSystem": "Android",
+        "applicationCategory": "MultimediaApplication",
+        "genre": "Video Editor",
+        "offers": {
+            "@type": "Offer",
+            "price": "0.00",
+            "priceCurrency": "USD"
+        },
+        "description": "LibreCuts is a free, open source, and privacy first video editor for Android that prioritizes simplicity, efficiency, and offline editing. It features hardware accelerated H.264 rendering, keyframes, chroma key, subtitles, and multi track audio.",
+        "license": "https://opensource.org/licenses/MIT",
+        "downloadUrl": "https://github.com/tharunbirla/LibreCuts/releases/latest",
+        "softwareVersion": "2.0",
+        "author": {
+            "@type": "Person",
+            "name": "tharunbirla"
+        }
+    }
+    </script>
+
+    <!-- Tailwind CSS (with forms and container-queries plugins) -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;family=JetBrains+Mono:wght@100..800&amp;display=swap" rel="stylesheet">
+    
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "error-container": "#93000a",
+                        "surface-variant": "#353438",
+                        "on-tertiary-fixed-variant": "#004f54",
+                        "secondary": "#ffdf9e",
+                        "surface-container-high": "#2a2a2d",
+                        "background": "#131316",
+                        "surface-container-highest": "#353438",
+                        "on-error-container": "#ffdad6",
+                        "tertiary": "#00dbe9",
+                        "on-tertiary-fixed": "#002022",
+                        "outline-variant": "#5c3f43",
+                        "inverse-on-surface": "#303033",
+                        "on-surface-variant": "#e5bdc1",
+                        "on-secondary-fixed-variant": "#5b4300",
+                        "on-primary": "#670024",
+                        "on-secondary": "#3f2e00",
+                        "tertiary-fixed-dim": "#00dbe9",
+                        "error": "#ffb4ab",
+                        "surface-dim": "#131316",
+                        "secondary-fixed": "#ffdf9e",
+                        "primary-fixed-dim": "#ffb2bd",
+                        "secondary-fixed-dim": "#fabd00",
+                        "primary": "#ffb2bd",
+                        "surface-container": "#1f1f22",
+                        "inverse-primary": "#bd004a",
+                        "surface-tint": "#ffb2bd",
+                        "surface-container-low": "#1b1b1e",
+                        "outline": "#ac888c",
+                        "on-primary-fixed-variant": "#900037",
+                        "on-primary-fixed": "#400014",
+                        "on-surface": "#e4e1e6",
+                        "on-tertiary-container": "#002f33",
+                        "on-primary-container": "#5a001f",
+                        "on-tertiary": "#00363a",
+                        "tertiary-container": "#00a0aa",
+                        "on-background": "#e4e1e6",
+                        "surface": "#131316",
+                        "secondary-container": "#fabd00",
+                        "inverse-surface": "#e4e1e6",
+                        "primary-fixed": "#ffd9dd",
+                        "tertiary-fixed": "#7df4ff",
+                        "on-error": "#690005",
+                        "surface-container-lowest": "#0e0e11",
+                        "surface-bright": "#39393c",
+                        "primary-container": "#ff4e7b",
+                        "on-secondary-container": "#6a4e00",
+                        "on-secondary-fixed": "#261a00",
+                        // Brand colors
+                        "brand-pink": "#FF2A6D",
+                        "brand-amber": "#FFC107",
+                        "brand-obsidian": "#111114",
+                        "brand-border": "#3F3F4A",
+                        "brand-black": "#000000"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px",
+                        "2xl": "1rem",
+                        "3xl": "1.5rem"
+                    },
+                    spacing: {
+                        "xs": "4px",
+                        "lg": "24px",
+                        "bento-gap": "12px",
+                        "container-padding": "16px",
+                        "unit": "4px",
+                        "md": "16px",
+                        "sm": "8px",
+                        "xl": "32px",
+                        "2xl": "48px",
+                        "3xl": "64px"
+                    },
+                    fontFamily: {
+                        "label-sm": ["Geist"],
+                        "headline-sm": ["Geist"],
+                        "body-lg": ["Geist"],
+                        "headline-md": ["Geist"],
+                        "display-lg": ["Geist"],
+                        "headline-lg-mobile": ["Geist"],
+                        "body-md": ["Geist"],
+                        "label-mono": ["JetBrains Mono"]
+                    },
+                    fontSize: {
+                        "label-sm": ["11px", { "lineHeight": "14px", "fontWeight": "600" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "display-lg": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["32px", { "lineHeight": "40px", "fontWeight": "700" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-mono": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #000000;
+            color: #e4e1e6;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .bento-card {
+            background-color: #111114;
+            border: 1px solid #3F3F4A;
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        .bento-card:hover {
+            background-color: #16161c;
+            border-color: #FF2A6D;
+            box-shadow: 0 0 25px rgba(255, 42, 109, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .glow-button {
+            background-color: #FF2A6D;
+            color: white;
+            position: relative;
+            z-index: 1;
+            transition: all 0.2s ease;
+        }
+        
+        .glow-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #FF2A6D;
+            filter: blur(8px);
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            border-radius: inherit;
+        }
+        
+        .glow-button:hover::before {
+            opacity: 0.8;
+        }
+
+        .glow-button:hover {
+            transform: scale(1.02);
+        }
+        
+        .ghost-button {
+            border: 1px solid #3F3F4A;
+            background: transparent;
+            transition: all 0.2s ease;
+        }
+        
+        .ghost-button:hover {
+            border-color: #FF2A6D;
+            background-color: rgba(255, 42, 109, 0.05);
+        }
+        
+        /* Grid Lines Background */
+        .bg-grid {
+            background-image: 
+                linear-gradient(to right, #3F3F4A 1px, transparent 1px),
+                linear-gradient(to bottom, #3F3F4A 1px, transparent 1px);
+            background-size: 40px 40px;
+            mask-image: radial-gradient(circle at center, black, transparent 80%);
+            -webkit-mask-image: radial-gradient(circle at center, black, transparent 80%);
+            opacity: 0.1;
+        }
+
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        .animate-marquee {
+            animation: marquee 25s linear infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col relative overflow-x-hidden">
+    <!-- Grid Background -->
+    <div class="fixed inset-0 pointer-events-none z-0 flex items-center justify-center">
+        <div class="absolute inset-0 bg-grid"></div>
+        <!-- Subtle radial glow behind hero -->
+        <div class="w-[800px] h-[800px] bg-brand-pink/5 rounded-full blur-[100px] mix-blend-screen opacity-50"></div>
+    </div>
+
+    <!-- TopNavBar -->
+    <header class="bg-background/40 backdrop-blur-xl docked full-width top-0 sticky border-b border-surface-variant flat no shadows z-50">
+        <div class="flex justify-between items-center px-container-padding py-md max-w-7xl mx-auto w-full">
+            <div class="flex items-center gap-sm">
+                <span class="material-symbols-outlined text-brand-pink text-[28px] select-none">donut_large</span>
+                <span class="font-display-lg text-headline-md font-bold tracking-tighter text-white">
+                    Libre<span class="text-brand-pink">Cuts</span>
+                </span>
+            </div>
+            <nav class="hidden md:flex gap-lg font-body-md text-body-md">
+                <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="#features">Features</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="#screenshots">Screenshots</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="#translate">Translations</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="https://github.com/tharunbirla/LibreCuts/wiki/Error-Codes-&-Troubleshooting" target="_blank">Troubleshooting</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors duration-200" href="#support">Sponsor</a>
+            </nav>
+            <a href="https://github.com/tharunbirla/LibreCuts/releases/latest" target="_blank" class="font-label-sm text-label-sm md:font-body-md md:text-body-md bg-brand-pink text-white px-md py-sm rounded-full hover:opacity-90 transition-opacity flex items-center gap-sm">
+                <span class="material-symbols-outlined text-[18px]">download</span>
+                Download
+            </a>
+        </div>
+    </header>
+
+    <main class="flex-1 z-10 relative">
+        <!-- Hero Section -->
+        <section class="max-w-7xl mx-auto px-container-padding pt-3xl pb-2xl flex flex-col lg:flex-row items-center gap-2xl">
+            <div class="flex-1 flex flex-col gap-lg z-10">
+                <div class="inline-flex items-center gap-sm px-sm py-[2px] bg-surface-container-high rounded-full border border-surface-variant w-max font-label-mono text-label-mono text-tertiary">
+                    <span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+                    100% Free &amp; Open Source
+                </div>
+                <h1 class="font-display-lg text-display-lg lg:text-[56px] lg:leading-[64px] tracking-tighter text-on-surface">
+                    Free, Open Source Video Editor for Android.
+                    <span class="text-primary block mt-2">No Watermarks. Privacy First.</span>
+                </h1>
+                <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">
+                    LibreCuts is a free, open source video editor for Android that prioritizes simplicity, efficiency, and privacy. Built for seamless performance, it empowers creators to easily select, edit, and export watermark free videos locally on their device.
+                </p>
+                
+                <!-- Action Buttons -->
+                <div class="flex flex-wrap gap-md mt-md">
+                    <a href="https://github.com/tharunbirla/LibreCuts" target="_blank" class="glow-button font-headline-sm text-headline-sm px-xl py-md rounded-lg flex items-center gap-sm decoration-none">
+                        <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24" role="img" xmlns="http://www.w3.org/2000/svg"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+                        Get on GitHub
+                    </a>
+                    <a href="https://f-droid.org/packages/com.tharunbirla.librecuts/" target="_blank" class="ghost-button font-headline-sm text-headline-sm text-on-surface px-xl py-md rounded-lg flex items-center gap-sm decoration-none">
+                        <svg class="w-6 h-6 fill-current" viewBox="0 0 24 24" role="img" xmlns="http://www.w3.org/2000/svg"><path d="M20.472 10.081H3.528a1.59 1.59 0 0 0-1.589 1.589v10.59a1.59 1.59 0 0 0 1.589 1.589h16.944a1.59 1.59 0 0 0 1.589-1.589V11.67a1.59 1.59 0 0 0-1.589-1.589zM12 22.525c-3.066 0-5.56-2.494-5.56-5.56s2.494-5.56 5.56-5.56c3.066 0 5.56 2.494 5.56 5.56s-2.494 5.56-5.56 5.56zm0-10.114c-2.511 0-4.554 2.043-4.554 4.554S9.489 21.519 12 21.519s4.554-2.043 4.554-4.554-2.043-4.554-4.554-4.554zm0 7.863a3.322 3.322 0 0 1-3.221-2.568h1.67c.275.581.859.979 1.551.979.96 0 1.721-.761 1.721-1.721 0-.96-.761-1.721-1.721-1.721a1.7 1.7 0 0 0-1.493.874H8.805A3.322 3.322 0 0 1 12 13.655a3.321 3.321 0 0 1 3.309 3.309A3.321 3.321 0 0 1 12 20.274zM23.849.396l-.002.003-.006-.005.004-.004a.668.668 0 0 0-.519-.238.654.654 0 0 0-.512.259l-1.818 2.353a1.564 1.564 0 0 0-.523-.095H3.528c-.184 0-.358.038-.523.095L1.187.41A.657.657 0 0 0 .156.389L.16.393.153.399.151.396a.662.662 0 0 0-.012.824l1.909 2.471a1.587 1.587 0 0 0-.108.566v3.707a1.59 1.59 0 0 0 1.589 1.589h16.944a1.59 1.59 0 0 0 1.589-1.589V4.257c0-.2-.041-.39-.109-.566l1.909-2.471a.663.663 0 0 0-.013-.824zM6.904 8.228a1.787 1.787 0 1 1 0-3.574 1.787 1.787 0 0 1 0 3.574zm10.325 0a1.787 1.787 0 1 1 0-3.574 1.787 1.787 0 0 1 0 3.574z"/></svg>
+                        Get on F-Droid
+                    </a>
+                </div>
+
+                <!-- Secondary Install & Community Links (Clean native UI pills, no badge PNGs) -->
+                <div class="flex flex-wrap items-center gap-sm mt-md font-label-mono text-label-mono">
+                    <span class="text-on-surface-variant text-xs opacity-70">Also on:</span>
+                    <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/tharunbirla/LibreCuts" target="_blank" class="px-md py-xs bg-surface-container border border-brand-border hover:border-tertiary rounded-full text-on-surface hover:text-tertiary flex items-center gap-xs transition-colors decoration-none text-xs">
+                        <span class="material-symbols-outlined text-[15px] text-tertiary">system_update</span>
+                        Obtainium
+                    </a>
+                    <a href="https://discord.gg/gwr3nE7YW" target="_blank" class="px-md py-xs bg-surface-container border border-brand-border hover:border-brand-pink rounded-full text-on-surface hover:text-brand-pink flex items-center gap-xs transition-colors decoration-none text-xs">
+                        <span class="material-symbols-outlined text-[15px] text-brand-pink">forum</span>
+                        Discord Community
+                    </a>
+                </div>
+            </div>
+
+            <!-- Phone Preview Mockup (With real app screenshot!) -->
+            <div class="flex-1 w-full max-w-sm relative group flex justify-center">
+                <!-- Glowing background behind mockup -->
+                <div class="absolute -inset-1.5 bg-gradient-to-r from-brand-pink to-tertiary rounded-[38px] blur-xl opacity-20 group-hover:opacity-40 transition duration-500"></div>
+                
+                <!-- Phone Frame Container -->
+                <div class="relative border-[6px] border-surface-container-high bg-brand-obsidian rounded-[36px] shadow-2xl overflow-hidden aspect-[9/19] w-full max-w-[280px] md:max-w-[320px]">
+                    <!-- Camera Punch-Hole -->
+                    <div class="absolute top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-black rounded-full border border-surface-container-high z-20"></div>
+                    <!-- Screen Image -->
+                    <img src="assets/screenshots/hero_preview.png" alt="LibreCuts Video Editor Interface" class="w-full h-full object-cover select-none">
+                </div>
+            </div>
+        </section>
+
+        <!-- Value Prop Banner (Marquee loop) -->
+        <section class="border-y border-brand-border bg-surface-container-low/50 backdrop-blur-sm overflow-hidden py-md">
+            <div class="flex gap-2xl whitespace-nowrap px-container-padding font-label-mono text-label-mono text-on-surface-variant animate-marquee w-max select-none">
+                <div class="flex items-center gap-sm">
+                    <span class="material-symbols-outlined text-brand-pink text-[16px]">lock</span>
+                    100% Offline &amp; Private
+                </div>
+                <div class="w-1.5 h-1.5 bg-brand-border rounded-full self-center"></div>
+                <div class="flex items-center gap-sm">
+                    <span class="material-symbols-outlined text-brand-amber text-[16px]">memory</span>
+                    Hardware Accelerated (H.264 MediaCodec)
+                </div>
+                <div class="w-1.5 h-1.5 bg-brand-border rounded-full self-center"></div>
+                <div class="flex items-center gap-sm">
+                    <span class="material-symbols-outlined text-tertiary text-[16px]">visibility_off</span>
+                    Zero Telemetry &amp; Trackers
+                </div>
+                <div class="w-1.5 h-1.5 bg-brand-border rounded-full self-center"></div>
+                <div class="flex items-center gap-sm">
+                    <span class="material-symbols-outlined text-brand-pink text-[16px]">code</span>
+                    FOSS (MIT Licensed)
+                </div>
+                <div class="w-1.5 h-1.5 bg-brand-border rounded-full self-center"></div>
+                <div class="flex items-center gap-sm">
+                    <span class="material-symbols-outlined text-brand-amber text-[16px]">verified</span>
+                    No Watermarks &amp; No Ads
+                </div>
+
+                <!-- Duplicate contents for seamless looping -->
+                <div class="w-1.5 h-1.5 bg-brand-border rounded-full self-center"></div>
+                <div class="flex items-center gap-sm">
+                    <span class="material-symbols-outlined text-brand-pink text-[16px]">lock</span>
+                    100% Offline &amp; Private
+                </div>
+                <div class="w-1.5 h-1.5 bg-brand-border rounded-full self-center"></div>
+                <div class="flex items-center gap-sm">
+                    <span class="material-symbols-outlined text-brand-amber text-[16px]">memory</span>
+                    Hardware Accelerated (H.264 MediaCodec)
+                </div>
+                <div class="w-1.5 h-1.5 bg-brand-border rounded-full self-center"></div>
+                <div class="flex items-center gap-sm">
+                    <span class="material-symbols-outlined text-tertiary text-[16px]">visibility_off</span>
+                    Zero Telemetry &amp; Trackers
+                </div>
+                <div class="w-1.5 h-1.5 bg-brand-border rounded-full self-center"></div>
+                <div class="flex items-center gap-sm">
+                    <span class="material-symbols-outlined text-brand-pink text-[16px]">code</span>
+                    FOSS (MIT Licensed)
+                </div>
+                <div class="w-1.5 h-1.5 bg-brand-border rounded-full self-center"></div>
+                <div class="flex items-center gap-sm">
+                    <span class="material-symbols-outlined text-brand-amber text-[16px]">verified</span>
+                    No Watermarks &amp; No Ads
+                </div>
+            </div>
+        </section>
+
+        <!-- Bento Grid Showcase (Features) -->
+        <section class="max-w-7xl mx-auto px-container-padding py-2xl" id="features">
+            <div class="mb-xl text-center md:text-left">
+                <h2 class="font-headline-md text-display-lg text-on-surface tracking-tight mb-sm">Powerful Core Features</h2>
+                <p class="font-body-lg text-body-lg text-on-surface-variant max-w-xl">
+                    Everything you need to edit high-quality videos locally, without cloud processing or licensing restrictions.
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-bento-gap">
+                <!-- Precision Timeline (Large Card) -->
+                <div class="bento-card md:col-span-2 flex flex-col gap-md group">
+                    <div class="flex justify-between items-start">
+                        <div class="flex items-center gap-sm">
+                            <div class="w-10 h-10 rounded bg-surface-container flex items-center justify-center border border-brand-border">
+                                <span class="material-symbols-outlined text-brand-pink">timeline</span>
+                            </div>
+                            <h3 class="font-headline-sm text-headline-sm text-on-surface">Precision Multi Track Timeline</h3>
+                        </div>
+                    </div>
+                    <p class="font-body-md text-body-md text-on-surface-variant">
+                        Frame perfect control over your sequence. Trim, split, and merge multiple video segments with snap to timeline functionality. Add overlay tracks for images, stickers, text, and voice clips.
+                    </p>
+                </div>
+
+                <!-- Hardware Acceleration -->
+                <div class="bento-card flex flex-col gap-md group">
+                    <div class="flex items-center gap-sm">
+                        <div class="w-10 h-10 rounded bg-surface-container flex items-center justify-center border border-brand-border">
+                            <span class="material-symbols-outlined text-brand-amber">bolt</span>
+                        </div>
+                        <h3 class="font-headline-sm text-headline-sm text-on-surface">Hardware Accelerated</h3>
+                    </div>
+                    <p class="font-body-md text-body-md text-on-surface-variant">
+                        Super fast exports powered by device level hardware `h264_mediacodec` encoding. Automatic fallback to software encoding guarantees maximum compatibility.
+                    </p>
+                </div>
+
+                <!-- Chroma Key & Masking -->
+                <div class="bento-card flex flex-col gap-md group">
+                    <div class="flex items-center gap-sm">
+                        <div class="w-10 h-10 rounded bg-surface-container flex items-center justify-center border border-brand-border">
+                            <span class="material-symbols-outlined text-tertiary">layers</span>
+                        </div>
+                        <h3 class="font-headline-sm text-headline-sm text-on-surface">Chroma Key &amp; Masking</h3>
+                    </div>
+                    <p class="font-body-md text-body-md text-on-surface-variant">
+                        Remove backgrounds from any media overlay using a configurable green screen color picker. Apply circles, rectangles, and custom mask shapes to overlay tracks.
+                    </p>
+                </div>
+
+                <!-- Keyframe Animation -->
+                <div class="bento-card flex flex-col gap-md group">
+                    <div class="flex items-center gap-sm">
+                        <div class="w-10 h-10 rounded bg-surface-container flex items-center justify-center border border-brand-border">
+                            <span class="material-symbols-outlined text-brand-pink">animation</span>
+                        </div>
+                        <h3 class="font-headline-sm text-headline-sm text-on-surface">Keyframe Animation</h3>
+                    </div>
+                    <p class="font-body-md text-body-md text-on-surface-variant">
+                        Animate your media and text overlays dynamically across the screen. Move, scale, and spin elements with a simple, touch based timeline keyframe manager.
+                    </p>
+                </div>
+
+                <!-- Subtitles (Captions) -->
+                <div class="bento-card flex flex-col gap-md group">
+                    <div class="flex items-center gap-sm">
+                        <div class="w-10 h-10 rounded bg-surface-container flex items-center justify-center border border-brand-border">
+                            <span class="material-symbols-outlined text-brand-amber">subtitles</span>
+                        </div>
+                        <h3 class="font-headline-sm text-headline-sm text-on-surface">Interactive Subtitles</h3>
+                    </div>
+                    <p class="font-body-md text-body-md text-on-surface-variant">
+                        Import custom `.srt` subtitle files. Position, resize, and style text layouts directly on the live preview screen using intuitive drag gestures.
+                    </p>
+                </div>
+
+                <!-- Audio Studio -->
+                <div class="bento-card flex flex-col gap-md group">
+                    <div class="flex items-center gap-sm">
+                        <div class="w-10 h-10 rounded bg-surface-container flex items-center justify-center border border-brand-border">
+                            <span class="material-symbols-outlined text-tertiary">graphic_eq</span>
+                        </div>
+                        <h3 class="font-headline-sm text-headline-sm text-on-surface">Audio &amp; Voice Studio</h3>
+                    </div>
+                    <p class="font-body-md text-body-md text-on-surface-variant">
+                        Import background audio, record voice overs, apply ducking, fades, and scale volume up to 200%. Export your final audio mix directly to a standalone MP3 file.
+                    </p>
+                </div>
+
+                <!-- Privacy First (Large Card) -->
+                <div class="bento-card md:col-span-2 flex flex-col gap-md group">
+                    <div class="flex items-center gap-sm">
+                        <div class="w-10 h-10 rounded bg-surface-container flex items-center justify-center border border-brand-border">
+                            <span class="material-symbols-outlined text-brand-pink">lock</span>
+                        </div>
+                        <h3 class="font-headline-sm text-headline-sm text-on-surface">100% Offline &amp; Privacy First</h3>
+                    </div>
+                    <p class="font-body-md text-body-md text-on-surface-variant">
+                        LibreCuts does not request internet access permission. Your videos, audio files, and exports never leave your device. Zero telemetry, zero tracking, zero data collection.
+                    </p>
+                </div>
+
+                <!-- And So Much More Card (Full Row Card) -->
+                <div class="bento-card md:col-span-3 flex flex-col gap-md group border-dashed border-brand-border/80 hover:border-tertiary">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-md">
+                        <div class="flex items-center gap-sm">
+                            <div class="w-10 h-10 rounded bg-surface-container flex items-center justify-center border border-brand-border">
+                                <span class="material-symbols-outlined text-tertiary">auto_awesome</span>
+                            </div>
+                            <div>
+                                <h3 class="font-headline-sm text-headline-sm text-on-surface">And So Much More...</h3>
+                                <p class="font-body-md text-body-md text-on-surface-variant">Packed with essential creator tools &amp; an expanding mobile editing feature set.</p>
+                            </div>
+                        </div>
+                        <span class="px-md py-xs bg-tertiary/10 text-tertiary border border-tertiary/30 rounded-full font-label-mono text-xs whitespace-nowrap">
+                            Active FOSS Development
+                        </span>
+                    </div>
+                    <div class="flex flex-wrap gap-xs font-label-mono text-xs text-on-surface-variant pt-xs">
+                        <span class="px-sm py-[3px] bg-surface-container-high border border-brand-border rounded-md">⚡ Speed Ramp &amp; Reverse</span>
+                        <span class="px-sm py-[3px] bg-surface-container-high border border-brand-border rounded-md">🎨 Color Filters &amp; Adjustments</span>
+                        <span class="px-sm py-[3px] bg-surface-container-high border border-brand-border rounded-md">📐 Aspect Ratio Presets (16:9, 9:16, 1:1)</span>
+                        <span class="px-sm py-[3px] bg-surface-container-high border border-brand-border rounded-md">🎞️ GIF &amp; Audio Only Export</span>
+                        <span class="px-sm py-[3px] bg-surface-container-high border border-brand-border rounded-md">🔊 Pitch Control &amp; Ducking</span>
+                        <span class="px-sm py-[3px] bg-surface-container-high border border-brand-border rounded-md">✏️ Custom TTF/OTF Font Import</span>
+                        <span class="px-sm py-[3px] bg-surface-container-high border border-brand-border rounded-md">🖼️ Frame Extractor &amp; Snapshot</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Screenshots Gallery Section -->
+        <section class="max-w-7xl mx-auto px-container-padding py-2xl border-t border-brand-border" id="screenshots">
+            <div class="mb-xl text-center md:text-left">
+                <h2 class="font-headline-md text-display-lg text-on-surface tracking-tight mb-sm">Visual Showcase</h2>
+                <p class="font-body-lg text-body-lg text-on-surface-variant max-w-xl">
+                    A clean and native Android user interface designed for efficiency.
+                </p>
+            </div>
+
+            <!-- Screenshots Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-md">
+                <div class="flex flex-col gap-sm">
+                    <div class="border-2 border-brand-border rounded-2xl overflow-hidden shadow-lg hover:border-brand-pink transition-colors">
+                        <img src="assets/screenshots/sc_1.png" alt="LibreCuts Welcome and Home Screen" class="w-full object-cover">
+                    </div>
+                    <span class="text-center font-label-mono text-label-mono text-on-surface-variant">Home Screen</span>
+                </div>
+                <div class="flex flex-col gap-sm">
+                    <div class="border-2 border-brand-border rounded-2xl overflow-hidden shadow-lg hover:border-brand-pink transition-colors">
+                        <img src="assets/screenshots/sc_2.png" alt="LibreCuts Editor Screen and Timeline" class="w-full object-cover">
+                    </div>
+                    <span class="text-center font-label-mono text-label-mono text-on-surface-variant">Editor &amp; Tracks</span>
+                </div>
+                <div class="flex flex-col gap-sm">
+                    <div class="border-2 border-brand-border rounded-2xl overflow-hidden shadow-lg hover:border-brand-pink transition-colors">
+                        <img src="assets/screenshots/sc_3.png" alt="LibreCuts Audio Import Panel" class="w-full object-cover">
+                    </div>
+                    <span class="text-center font-label-mono text-label-mono text-on-surface-variant">Audio Import</span>
+                </div>
+                <div class="flex flex-col gap-sm">
+                    <div class="border-2 border-brand-border rounded-2xl overflow-hidden shadow-lg hover:border-brand-pink transition-colors">
+                        <img src="assets/screenshots/sc_4.png" alt="LibreCuts Timeline Management" class="w-full object-cover">
+                    </div>
+                    <span class="text-center font-label-mono text-label-mono text-on-surface-variant">Timeline Zoom</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Translation & Localization Section -->
+        <section class="max-w-7xl mx-auto px-container-padding py-2xl border-t border-brand-border" id="translate">
+            <div class="bg-gradient-to-r from-surface-container-low via-surface-container to-surface-container-low border border-brand-border rounded-3xl p-xl flex flex-col md:flex-row items-center justify-between gap-xl">
+                <div class="flex-1 flex flex-col gap-sm text-center md:text-left">
+                    <div class="inline-flex items-center gap-xs px-sm py-[2px] bg-tertiary/10 border border-tertiary/30 text-tertiary rounded-full w-max mx-auto md:mx-0 font-label-mono text-xs">
+                        <span class="material-symbols-outlined text-[16px]">translate</span>
+                        Multilingual Community
+                    </div>
+                    <h2 class="font-headline-md text-headline-md lg:text-display-lg text-white">Help Translate LibreCuts</h2>
+                    <p class="font-body-md text-body-md text-on-surface-variant max-w-xl">
+                        LibreCuts is built for creators everywhere. Help bring LibreCuts to your native language by contributing translations on Hosted Weblate!
+                    </p>
+                    <div class="flex flex-wrap gap-xs justify-center md:justify-start font-label-mono text-xs text-on-surface-variant pt-xs">
+                        <span class="px-sm py-[2px] bg-surface-container border border-brand-border rounded">🌐 English</span>
+                        <span class="px-sm py-[2px] bg-surface-container border border-brand-border rounded">🌐 Español</span>
+                        <span class="px-sm py-[2px] bg-surface-container border border-brand-border rounded">🌐 Deutsch</span>
+                        <span class="px-sm py-[2px] bg-surface-container border border-brand-border rounded">🌐 Français</span>
+                        <span class="px-sm py-[2px] bg-surface-container border border-brand-border rounded">🌐 हिन्दी</span>
+                        <span class="px-sm py-[2px] bg-surface-container border border-brand-border rounded">🌐 中文</span>
+                        <span class="px-sm py-[2px] bg-surface-container border border-brand-border rounded">+ More</span>
+                    </div>
+                </div>
+                <a href="https://hosted.weblate.org/engage/librecuts/" target="_blank" class="glow-button font-headline-sm text-headline-sm px-xl py-md rounded-lg flex items-center gap-sm decoration-none whitespace-nowrap">
+                    <span class="material-symbols-outlined">language</span>
+                    Translate on Weblate
+                </a>
+            </div>
+        </section>
+
+        <!-- Keep Android Open Campaign Banner -->
+        <section class="max-w-5xl mx-auto px-container-padding py-xl mb-2xl">
+            <div class="bg-surface-container border border-surface-variant rounded-2xl p-lg flex flex-col md:flex-row items-center gap-lg">
+                <div class="flex-shrink-0 flex items-center justify-center w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-400">
+                    <span class="material-symbols-outlined text-[40px]">android</span>
+                </div>
+                <div class="flex-1 text-center md:text-left">
+                    <h3 class="font-headline-sm text-headline-sm text-white mb-xs">Keep Android Open</h3>
+                    <p class="font-body-md text-body-md text-on-surface-variant">
+                        Google's developer policy mandates centrally register developers, threatening user privacy and FOSS sideloading. We stand with the movement to defend open platforms.
+                    </p>
+                </div>
+                <a href="https://keepandroidopen.org/" target="_blank" class="flex-shrink-0 ghost-button text-white font-label-mono text-label-mono px-lg py-md rounded-lg flex items-center gap-xs decoration-none">
+                    Support Campaign
+                    <span class="material-symbols-outlined text-[16px]">open_in_new</span>
+                </a>
+            </div>
+        </section>
+
+        <!-- Support / Sponsorship Section -->
+        <section class="max-w-7xl mx-auto px-container-padding py-2xl border-t border-brand-border" id="support">
+            <div class="flex flex-col md:flex-row gap-2xl items-center">
+                <div class="flex-1 flex flex-col gap-md text-center md:text-left">
+                    <h2 class="font-display-lg text-display-lg text-white">Support LibreCuts</h2>
+                    <p class="font-body-lg text-body-lg text-on-surface-variant max-w-md">
+                        LibreCuts is built with passion and provided completely free. If this app helped you create, consider supporting its continued development!
+                    </p>
+                </div>
+
+                <!-- Sponsor Platforms Links -->
+                <div class="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-md w-full">
+                    <a href="https://github.com/sponsors/tharunbirla" target="_blank" class="bento-card flex flex-col items-center justify-center p-lg gap-sm text-center border-brand-border hover:border-brand-pink decoration-none">
+                        <span class="material-symbols-outlined text-brand-pink text-[32px]">favorite</span>
+                        <span class="font-label-mono text-label-mono text-white">GitHub Sponsors</span>
+                    </a>
+                    <a href="https://www.patreon.com/tharunbirla" target="_blank" class="bento-card flex flex-col items-center justify-center p-lg gap-sm text-center border-brand-border hover:border-brand-pink decoration-none">
+                        <span class="material-symbols-outlined text-brand-amber text-[32px]">workspace_premium</span>
+                        <span class="font-label-mono text-label-mono text-white">Patreon</span>
+                    </a>
+                    <a href="https://ko-fi.com/tharunbirla" target="_blank" class="bento-card flex flex-col items-center justify-center p-lg gap-sm text-center border-brand-border hover:border-brand-pink decoration-none">
+                        <span class="material-symbols-outlined text-tertiary text-[32px]">local_cafe</span>
+                        <span class="font-label-mono text-label-mono text-white">Ko-Fi</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-background w-full py-xl border-t border-surface-variant flat no shadows mt-auto relative z-10">
+        <div class="flex flex-col md:flex-row justify-between items-center px-container-padding gap-md max-w-7xl mx-auto">
+            <div class="flex flex-col gap-unit text-center md:text-left">
+                <span class="font-headline-sm text-headline-sm text-white">Libre<span class="text-brand-pink">Cuts</span></span>
+                <span class="font-label-mono text-label-mono text-on-surface-variant opacity-80">
+                    © 2026 LibreCuts. FOSS Video Editing. MIT Licensed.
+                </span>
+            </div>
+            <nav class="flex flex-wrap justify-center gap-lg font-label-mono text-label-mono">
+                <a class="text-on-surface-variant hover:text-tertiary transition-colors opacity-80 hover:opacity-100" href="https://github.com/tharunbirla/LibreCuts" target="_blank">GitHub</a>
+                <a class="text-on-surface-variant hover:text-tertiary transition-colors opacity-80 hover:opacity-100" href="https://github.com/tharunbirla/LibreCuts/releases/latest" target="_blank">Releases</a>
+                <a class="text-on-surface-variant hover:text-tertiary transition-colors opacity-80 hover:opacity-100" href="https://discord.gg/gwr3nE7YW" target="_blank">Discord</a>
+                <a class="text-on-surface-variant hover:text-tertiary transition-colors opacity-80 hover:opacity-100" href="https://hosted.weblate.org/engage/librecuts/" target="_blank">Weblate</a>
+            </nav>
+        </div>
+    </footer>
+</body>
+</html>
