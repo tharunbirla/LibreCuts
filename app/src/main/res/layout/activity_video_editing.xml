@@ -580,6 +580,15 @@
             android:layout_marginTop="8dp"
             android:visibility="gone" />
 
+        <!-- Rotate Editing Toolbar (inline mode, hidden by default) -->
+        <include
+            android:id="@+id/rotateEditingToolbar"
+            layout="@layout/rotate_editing_toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
+
         <!-- Speed Editing Toolbar (inline mode, hidden by default) -->
         <include
             android:id="@+id/speedEditingToolbar"

@@ -198,6 +198,44 @@ class VideoEditingViewModel : ViewModel() {
         }
     }
 
+    fun rotateMainVideo() {
+        viewModelScope.launch {
+            _project.update { current ->
+                if (current == null) return@update null
+
+                val ops = current.operations.toMutableList()
+                val rotateIndex = ops.indexOfFirst { it is EditOperation.RotateMain }
+                val currentDegrees = if (rotateIndex != -1) {
+                    (ops[rotateIndex] as EditOperation.RotateMain).rotationDegrees
+                } else {
+                    0
+                }
+                val newDegrees = (currentDegrees + 90) % 360
+
+                if (rotateIndex != -1) {
+                    if (newDegrees == 0) {
+                        ops.removeAt(rotateIndex)
+                    } else {
+                        ops[rotateIndex] = EditOperation.RotateMain(newDegrees)
+                    }
+                } else if (newDegrees != 0) {
+                    ops.add(EditOperation.RotateMain(newDegrees))
+                }
+
+                _undoStack.value = _undoStack.value + current
+                _redoStack.value = emptyList()
+                current.copy(operations = ops)
+            }
+            updateUiState { state ->
+                state.copy(
+                    pendingOperationCount = _project.value?.getOperationCount() ?: 0,
+                    canUndo = _undoStack.value.isNotEmpty(),
+                    canRedo = false
+                )
+            }
+        }
+    }
+
     fun toggleMergeItemMirror(index: Int) {
         viewModelScope.launch {
             _project.update { current ->
@@ -210,6 +248,79 @@ class VideoEditingViewModel : ViewModel() {
                     if (index >= 0 && index < items.size) {
                         val item = items[index]
                         items[index] = item.copy(isMirrored = !item.isMirrored)
+                        ops[mergeIdx] = mergeOp.copy(items = items)
+                    }
+                }
+                _undoStack.value = _undoStack.value + current
+                _redoStack.value = emptyList()
+                current.copy(operations = ops)
+            }
+            updateUiState { state ->
+                state.copy(
+                    pendingOperationCount = _project.value?.getOperationCount() ?: 0,
+                    canUndo = _undoStack.value.isNotEmpty(),
+                    canRedo = false
+                )
+            }
+        }
+    }
+
+    fun setClipRotation(clipIndex: Int, degrees: Int) {
+        viewModelScope.launch {
+            _project.update { current ->
+                if (current == null) return@update null
+                val ops = current.operations.toMutableList()
+                if (clipIndex == 0) {
+                    val rotateIndex = ops.indexOfFirst { it is EditOperation.RotateMain }
+                    if (rotateIndex != -1) {
+                        if (degrees == 0) {
+                            ops.removeAt(rotateIndex)
+                        } else {
+                            ops[rotateIndex] = EditOperation.RotateMain(degrees)
+                        }
+                    } else if (degrees != 0) {
+                        ops.add(EditOperation.RotateMain(degrees))
+                    }
+                } else {
+                    val mergeIdx = ops.indexOfFirst { it is EditOperation.Merge }
+                    if (mergeIdx != -1) {
+                        val mergeOp = ops[mergeIdx] as EditOperation.Merge
+                        val items = mergeOp.items.toMutableList()
+                        val targetIdx = clipIndex - 1
+                        if (targetIdx >= 0 && targetIdx < items.size) {
+                            items[targetIdx] = items[targetIdx].copy(rotationDegrees = degrees)
+                            ops[mergeIdx] = mergeOp.copy(items = items)
+                        }
+                    }
+                }
+                _undoStack.value = _undoStack.value + current
+                _redoStack.value = emptyList()
+                current.copy(operations = ops)
+            }
+            updateUiState { state ->
+                state.copy(
+                    pendingOperationCount = _project.value?.getOperationCount() ?: 0,
+                    canUndo = _undoStack.value.isNotEmpty(),
+                    canRedo = false
+                )
+            }
+        }
+    }
+
+    fun toggleMergeItemRotate(index: Int) {
+        viewModelScope.launch {
+            _project.update { current ->
+                if (current == null) return@update null
+                val ops = current.operations.toMutableList()
+                val mergeIdx = ops.indexOfFirst { it is EditOperation.Merge }
+                if (mergeIdx != -1) {
+                    val mergeOp = ops[mergeIdx] as EditOperation.Merge
+                    val items = mergeOp.items.toMutableList()
+                    val targetIdx = if (index > 0 && index <= items.size) index - 1 else index
+                    if (targetIdx >= 0 && targetIdx < items.size) {
+                        val item = items[targetIdx]
+                        val nextRotation = (item.rotationDegrees + 90) % 360
+                        items[targetIdx] = item.copy(rotationDegrees = nextRotation)
                         ops[mergeIdx] = mergeOp.copy(items = items)
                     }
                 }
@@ -1035,6 +1146,7 @@ class VideoEditingViewModel : ViewModel() {
                             is EditOperation.ColorFilter -> op.id == operationId
                             is EditOperation.Adjust -> op.id == operationId
                             is EditOperation.MirrorMain -> op.id == operationId
+                            is EditOperation.RotateMain -> op.id == operationId
                             is EditOperation.MaskMain -> op.id == operationId
                             is EditOperation.CanvasBackground -> op.id == operationId
                         }
@@ -1540,12 +1652,27 @@ class VideoEditingViewModel : ViewModel() {
             }
         }
 
-        // Process crop at the end so it crops the video and all overlays together, matching the preview.
+        // Process crop and rotation at the end so it crops and rotates the video and all overlays together, matching the preview.
         for (op in cropOps) {
             val filterExpr = buildCropFilterExpr(op)
             if (filterExpr != null) {
                 val nextLabel = "[v$stageIndex]"
                 stages.add("$currentLabel$filterExpr$nextLabel")
+                currentLabel = nextLabel
+                stageIndex++
+            }
+        }
+
+        for (op in operations.filterIsInstance<EditOperation.RotateMain>()) {
+            val transposeExpr = when (op.rotationDegrees) {
+                90 -> "transpose=1"
+                180 -> "transpose=1,transpose=1"
+                270 -> "transpose=2"
+                else -> null
+            }
+            if (transposeExpr != null) {
+                val nextLabel = "[v$stageIndex]"
+                stages.add("$currentLabel$transposeExpr$nextLabel")
                 currentLabel = nextLabel
                 stageIndex++
             }
@@ -1602,7 +1729,11 @@ class VideoEditingViewModel : ViewModel() {
         val trimOp = operations.filterIsInstance<EditOperation.Trim>().lastOrNull()
         val audioOps = operations.filterIsInstance<EditOperation.AddBackgroundAudio>()
         val audioMuted = operations.any { it is EditOperation.MuteAudio }
-        val videoOps = nonMergeOps.filter { it is EditOperation.Crop || it is EditOperation.AddText || it is EditOperation.AddImageOverlay || it is EditOperation.AddSubtitles }
+        val videoOps = if (mergeOp != null) {
+            nonMergeOps.filter { it is EditOperation.Crop || it is EditOperation.AddText || it is EditOperation.AddImageOverlay || it is EditOperation.AddSubtitles }
+        } else {
+            nonMergeOps.filter { it is EditOperation.Crop || it is EditOperation.AddText || it is EditOperation.AddImageOverlay || it is EditOperation.AddSubtitles || it is EditOperation.RotateMain }
+        }
         val imageOps = operations.filterIsInstance<EditOperation.AddImageOverlay>()
 
         // ── Unified Input Indexing ────────────────────────────────────────────
@@ -1809,21 +1940,25 @@ class VideoEditingViewModel : ViewModel() {
                 }
                 
                 val maskConfig = if (i == 0) {
-                    val mainMask = operations.filterIsInstance<EditOperation.MaskMain>().lastOrNull()?.maskConfig
-                    if (mainMask != null && mainMask.shape != EditOperation.MaskShape.NONE) {
-                        mainMask
-                    } else {
-                        mergeOp?.items?.getOrNull(0)?.maskConfig ?: EditOperation.MaskConfig()
-                    }
+                    operations.filterIsInstance<EditOperation.MaskMain>().lastOrNull()?.maskConfig ?: EditOperation.MaskConfig()
                 } else {
                     mergeOp?.items?.getOrNull(i - 1)?.maskConfig ?: EditOperation.MaskConfig()
                 }
                 
+                val rotationDegrees = if (i == 0) {
+                    operations.filterIsInstance<EditOperation.RotateMain>().lastOrNull()?.rotationDegrees ?: 0
+                } else {
+                    mergeOp?.items?.getOrNull(i - 1)?.rotationDegrees ?: 0
+                }
+
                 // 1. Prepare raw video with basic visual filters
                 var preFilters = "setpts=PTS-STARTPTS"
                 if (lutFilterExpr != null) preFilters += ",$lutFilterExpr"
                 if (adjustFilterExpr != null) preFilters += ",$adjustFilterExpr"
                 if (isMirrored) preFilters += ",hflip"
+                if (rotationDegrees == 90) preFilters += ",transpose=1"
+                else if (rotationDegrees == 180) preFilters += ",transpose=1,transpose=1"
+                else if (rotationDegrees == 270) preFilters += ",transpose=2"
                 
                 if (maskConfig.shape != EditOperation.MaskShape.NONE) {
                     val mc = maskConfig

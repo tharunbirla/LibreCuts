@@ -53,6 +53,21 @@ sealed class EditOperation : Serializable {
     ) : EditOperation()
     
     /**
+     * Rotate operation for the main video.
+     * rotationDegrees: 0, 90, 180, 270 degrees.
+     */
+    data class RotateMain(
+        val rotationDegrees: Int,
+        val id: String = System.nanoTime().toString()
+    ) : EditOperation() {
+        init {
+            require(rotationDegrees in listOf(0, 90, 180, 270)) {
+                "Unsupported rotation angle: $rotationDegrees"
+            }
+        }
+    }
+    
+    /**
      * Crop operation: Crops video to a specified aspect ratio.
      * Supported aspects: "16:9", "9:16", "1:1"
      * Uses FFmpeg's crop filter with video re-encoding.
@@ -230,6 +245,7 @@ sealed class EditOperation : Serializable {
         val proxyUri: Uri? = null,
         val isReversed: Boolean = false,
         val isMirrored: Boolean = false,
+        val rotationDegrees: Int = 0,
         val maskConfig: MaskConfig = MaskConfig()
     ) : Serializable {
         val trimmedDurationMs: Long
@@ -471,6 +487,7 @@ val EditOperation.id: String
         is EditOperation.SpeedMain -> id
         is EditOperation.ReverseMain -> id
         is EditOperation.MirrorMain -> id
+        is EditOperation.RotateMain -> id
         is EditOperation.MaskMain -> id
         is EditOperation.Crop -> id
         is EditOperation.AddText -> id

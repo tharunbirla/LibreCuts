@@ -174,7 +174,82 @@ class VideoEditingActivity : AppCompatActivity() {
     
     private var bgPreviewImageView: ImageView? = null
     private var lastActiveClipIndexForBlur: Int = 0
+    private var lastActiveClipIndexForRotation: Int = -1
+    private var lastClipRotationDegrees: Int = -1
     private var currentBlurJob: Job? = null
+
+    /**
+     * Returns the effective aspect ratio for the clip at [clipIndex] taking its rotation into account.
+     * If the clip is rotated by 90° or 270°, the width/height are swapped.
+     * Falls back to the primary video aspect ratio or a default 16:9.
+     */
+    /**
+     * Returns the effective aspect ratio for the clip at [clipIndex] taking its rotation into account.
+     * If the clip is rotated by 90° or 270°, the width/height are swapped.
+     * Falls back to the primary video aspect ratio or a default 16:9.
+     */
+    private fun getClipAspectRatio(clipIndex: Int = selectedVideoIndex ?: 0): Float {
+        val seqItems = getSequenceItems()
+        val rotation = if (clipIndex >= 0 && clipIndex < seqItems.size) {
+            seqItems[clipIndex].rotationDegrees
+        } else {
+            0
+        }
+        // Base ratio before rotation – either stored primary ratio or derived from the video format.
+        val baseRatio = if (primaryVideoAspectRatio > 0f) primaryVideoAspectRatio else {
+            val fmt = if (::player.isInitialized) player.videoFormat else null
+            if (fmt != null && fmt.width > 0 && fmt.height > 0) {
+                fmt.width.toFloat() / fmt.height.toFloat()
+            } else 16f / 9f
+        }
+        // If rotated 90/270 swap the ratio.
+        return if ((rotation % 360 + 360) % 360 == 90 || (rotation % 360 + 360) % 360 == 270) {
+            if (baseRatio > 0f) 1f / baseRatio else 9f / 16f
+        } else {
+            baseRatio
+        }
+    }
+
+    /**
+     * Re‑computes the cached primary video aspect ratio using the first clip in the sequence.
+     * Called after any reorder that might change which clip is considered primary.
+     */
+    private fun updatePrimaryAspectRatio() {
+        val seqItems = getSequenceItems()
+        if (seqItems.isNotEmpty()) {
+            // Use the same logic as getClipAspectRatio but force index 0 (first clip)
+            val rotation = seqItems[0].rotationDegrees
+            val fmt = if (::player.isInitialized) player.videoFormat else null
+            val base = if (fmt != null && fmt.width > 0 && fmt.height > 0) {
+                fmt.width.toFloat() / fmt.height.toFloat()
+            } else 16f / 9f
+            primaryVideoAspectRatio = if ((rotation % 360 + 360) % 360 == 90 || (rotation % 360 + 360) % 360 == 270) {
+                if (base > 0f) 1f / base else 9f / 16f
+            } else {
+                base
+            }
+        }
+    }
+        val seqItems = getSequenceItems()
+        val rotation = if (clipIndex >= 0 && clipIndex < seqItems.size) {
+            seqItems[clipIndex].rotationDegrees
+        } else {
+            0
+        }
+        // Base ratio before rotation – either stored primary ratio or derived from the video format.
+        val baseRatio = if (primaryVideoAspectRatio > 0f) primaryVideoAspectRatio else {
+            val fmt = if (::player.isInitialized) player.videoFormat else null
+            if (fmt != null && fmt.width > 0 && fmt.height > 0) {
+                fmt.width.toFloat() / fmt.height.toFloat()
+            } else 16f / 9f
+        }
+        // If rotated 90/270 swap the ratio.
+        return if ((rotation % 360 + 360) % 360 == 90 || (rotation % 360 + 360) % 360 == 270) {
+            if (baseRatio > 0f) 1f / baseRatio else 9f / 16f
+        } else {
+            baseRatio
+        }
+    }
     
     private val activeExtractionUris = mutableSetOf<Uri>()
     private val frameExtractionSemaphore = kotlinx.coroutines.sync.Semaphore(2)
@@ -405,6 +480,7 @@ class VideoEditingActivity : AppCompatActivity() {
     private var backgroundEditingToolbar: View? = null
     private var speedEditingToolbar: View? = null
     private var cropEditingToolbar: View? = null
+    private var rotateEditingToolbar: View? = null
     private var cropOverlayView: com.tharunbirla.librecuts.customviews.CropOverlayView? = null
     private var videoMaskOverlayView: com.tharunbirla.librecuts.customviews.VideoMaskOverlayView? = null
     private var mainVideoMaskContainer: com.tharunbirla.librecuts.customviews.MaskedFrameLayout? = null
@@ -1439,6 +1515,12 @@ class VideoEditingActivity : AppCompatActivity() {
                     }
                 }
 
+                toolbar.findViewById<ImageButton>(R.id.btnVideoRotate)?.setBounceClickListener {
+                    selectedVideoIndex?.let { index ->
+                        showRotateEditingToolbar(index)
+                    }
+                }
+
                 toolbar.findViewById<ImageButton>(R.id.btnVideoMute)?.setBounceClickListener {
                     selectedVideoIndex?.let { index ->
                         viewModel.toggleMuteClip(index)
@@ -1724,6 +1806,13 @@ class VideoEditingActivity : AppCompatActivity() {
             }
         } catch (e: Exception) {
             Log.w(TAG, "Crop editing toolbar not found: ${e.message}")
+            null
+        }
+
+        rotateEditingToolbar = try {
+            findViewById<View>(R.id.rotateEditingToolbar)
+        } catch (e: Exception) {
+            Log.w(TAG, "Rotate editing toolbar not found: ${e.message}")
             null
         }
 
@@ -2110,6 +2199,11 @@ class VideoEditingActivity : AppCompatActivity() {
                     } else {
                         resetCropPreview()
                     }
+
+                    if (cropEditingToolbar?.visibility == View.VISIBLE) {
+                        val currentRatio = cropOps.lastOrNull()?.aspectRatio ?: "Original"
+                        updateCropUi(currentRatio)
+                    }
                     
                     updateCanvasBackgroundPreview()
                     renderTracks(project)
@@ -2291,7 +2385,8 @@ class VideoEditingActivity : AppCompatActivity() {
             val containerHeight = activeParent.height
             if (containerWidth <= 0 || containerHeight <= 0) return@post
 
-            val baseVideoRatio = if (primaryVideoAspectRatio > 0f) primaryVideoAspectRatio else 16f / 9f
+            val clipIdx = selectedVideoIndex ?: 0
+            val baseVideoRatio = getClipAspectRatio(clipIdx)
             val containerRatio = containerWidth.toFloat() / containerHeight.toFloat()
             var finalWidth = containerWidth
             var finalHeight = containerHeight
@@ -2794,6 +2889,7 @@ class VideoEditingActivity : AppCompatActivity() {
         videoEditingToolbar?.visibility = View.GONE
         audioEditingToolbar?.visibility = View.GONE
         cropEditingToolbar?.visibility = View.GONE
+        rotateEditingToolbar?.visibility = View.GONE
         subtitlesEditingToolbar?.visibility = View.GONE
         backgroundEditingToolbar?.visibility = View.GONE
     }
@@ -3502,6 +3598,9 @@ class VideoEditingActivity : AppCompatActivity() {
                 selectedVideoIndex = null
                 exitVideoEditingMode()
                 viewModel.updateSequenceOrder(newItems)
+                // Re‑calculate primary video aspect ratio after re‑ordering clips
+                updatePrimaryAspectRatio()
+                resetCropPreview()
                 Toast.makeText(this@VideoEditingActivity, R.string.toast_freeze_frame_added_to_sequence, Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(this@VideoEditingActivity, R.string.toast_failed_to_create_freeze_frame, Toast.LENGTH_SHORT).show()
@@ -3510,7 +3609,8 @@ class VideoEditingActivity : AppCompatActivity() {
     }
 
     private fun exitVideoEditingMode() {
-        videoEditingToolbar?.visibility = View.GONE
+        selectedVideoIndex = null
+        closeActiveEditingModes()
         editingControlsWrapper.visibility = View.VISIBLE
         setActiveToolButton(0)
     }
@@ -3650,10 +3750,9 @@ class VideoEditingActivity : AppCompatActivity() {
             val videoWidth = if (rotation == 90 || rotation == 270) format.height else format.width
             val videoHeight = if (rotation == 90 || rotation == 270) format.width else format.height
             videoWidth.toFloat() / videoHeight
-        } else if (primaryVideoAspectRatio > 0f) {
-            primaryVideoAspectRatio
         } else {
-            16f / 9f
+            val clipIdx = selectedVideoIndex ?: 0
+            getClipAspectRatio(clipIdx)
         }
         val targetRatio = when (aspectRatio) {
             "16:9" -> 16f / 9f
@@ -3710,8 +3809,13 @@ class VideoEditingActivity : AppCompatActivity() {
     private fun exitCropEditingMode() {
         cropEditingToolbar?.visibility = View.GONE
         cropOverlayView?.visibility = View.GONE
-        editingControlsWrapper.visibility = View.VISIBLE
-        setActiveToolButton(0)
+        val idx = selectedVideoIndex
+        if (idx != null) {
+            videoEditingToolbar?.visibility = View.VISIBLE
+        } else {
+            editingControlsWrapper.visibility = View.VISIBLE
+            setActiveToolButton(0)
+        }
 
         val cropOp = viewModel.project.value?.operations
             ?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.Crop>()
@@ -4118,6 +4222,79 @@ class VideoEditingActivity : AppCompatActivity() {
         }
 
         cropOverlayView?.visibility = if (ratio == "Custom") View.VISIBLE else View.GONE
+    }
+
+    private fun showRotateEditingToolbar(clipIndex: Int) {
+        closeActiveEditingModes()
+        rotateEditingToolbar?.visibility = View.VISIBLE
+        findViewById<View>(R.id.editingControlsWrapper)?.visibility = View.GONE
+        
+        val sequenceItems = getSequenceItems()
+        val currentDegrees = if (clipIndex >= 0 && clipIndex < sequenceItems.size) {
+            sequenceItems[clipIndex].rotationDegrees
+        } else 0
+        updateRotateUi(currentDegrees)
+
+        rotateEditingToolbar?.findViewById<ImageButton>(R.id.btnCloseSheet)?.setBounceClickListener {
+            rotateEditingToolbar?.visibility = View.GONE
+            val idx = selectedVideoIndex
+            if (idx != null) {
+                videoEditingToolbar?.visibility = View.VISIBLE
+            } else {
+                findViewById<View>(R.id.editingControlsWrapper)?.visibility = View.VISIBLE
+            }
+        }
+
+        rotateEditingToolbar?.findViewById<ImageButton>(R.id.btnRotateDone)?.setBounceClickListener {
+            rotateEditingToolbar?.visibility = View.GONE
+            val idx = selectedVideoIndex
+            if (idx != null) {
+                videoEditingToolbar?.visibility = View.VISIBLE
+            } else {
+                findViewById<View>(R.id.editingControlsWrapper)?.visibility = View.VISIBLE
+            }
+        }
+
+        val angleMap = mapOf(
+            R.id.frameRotate0 to 0,
+            R.id.frameRotate90 to 90,
+            R.id.frameRotate180 to 180,
+            R.id.frameRotate270 to 270
+        )
+
+        for ((frameId, degrees) in angleMap) {
+            rotateEditingToolbar?.findViewById<LinearLayout>(frameId)?.setBounceClickListener {
+                viewModel.setClipRotation(clipIndex, degrees)
+                updateRotateUi(degrees)
+                resetCropPreview()
+                viewModel.project.value?.let { renderTracks(it) }
+                syncUiWithPlayer()
+            }
+        }
+    }
+
+    private fun updateRotateUi(selectedDegrees: Int) {
+        val toolbar = rotateEditingToolbar ?: return
+        val items = listOf(
+            Triple(R.id.bgRotate0, R.id.icRotate0, R.id.txtRotate0) to 0,
+            Triple(R.id.bgRotate90, R.id.icRotate90, R.id.txtRotate90) to 90,
+            Triple(R.id.bgRotate180, R.id.icRotate180, R.id.txtRotate180) to 180,
+            Triple(R.id.bgRotate270, R.id.icRotate270, R.id.txtRotate270) to 270
+        )
+        for ((views, deg) in items) {
+            val isActive = selectedDegrees == deg
+            toolbar.findViewById<View>(views.first)?.setBackgroundResource(
+                if (isActive) R.drawable.bg_aspect_ratio_selected else R.drawable.bg_aspect_ratio_item
+            )
+            toolbar.findViewById<TextView>(views.second)?.apply {
+                setTextColor(resources.getColor(if (isActive) R.color.onPrimaryContainer else R.color.iconSecondary, null))
+                paint.isFakeBoldText = true
+            }
+            toolbar.findViewById<TextView>(views.third)?.apply {
+                setTextColor(resources.getColor(if (isActive) R.color.colorOnPrimary else R.color.toolTextInactive, null))
+                paint.isFakeBoldText = isActive
+            }
+        }
     }
 
     private fun splitSelectedVideo() {
@@ -5181,6 +5358,8 @@ class VideoEditingActivity : AppCompatActivity() {
         val proxyUri = reverseOp?.proxyUri ?: speedOp?.proxyUri
         val mirrorOp = viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.MirrorMain>()?.lastOrNull()
         val isMirrored = mirrorOp?.isMirrored ?: false
+        val rotateOp = viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.RotateMain>()?.lastOrNull()
+        val rotationDegrees = rotateOp?.rotationDegrees ?: 0
         val maskMainOp = viewModel.project.value?.operations?.filterIsInstance<com.tharunbirla.librecuts.models.EditOperation.MaskMain>()?.lastOrNull()
         val maskConfig = maskMainOp?.maskConfig ?: com.tharunbirla.librecuts.models.EditOperation.MaskConfig()
 
@@ -5192,6 +5371,7 @@ class VideoEditingActivity : AppCompatActivity() {
             speed = speed,
             isReversed = isReversed,
             isMirrored = isMirrored,
+            rotationDegrees = rotationDegrees,
             proxyUri = proxyUri,
             maskConfig = maskConfig
         ))
@@ -5413,11 +5593,42 @@ class VideoEditingActivity : AppCompatActivity() {
                     ?.firstOrNull()?.items?.getOrNull(activeClipIndex - 1)?.isMirrored == true
             }
             
-            val videoSurface = playerView.videoSurfaceView
-            if (videoSurface != null) {
-                videoSurface.scaleX = if (isMirrored) -1f else 1f
+            val clipRotation = if (activeClipIndex >= 0 && activeClipIndex < sequenceItems.size) {
+                sequenceItems[activeClipIndex].rotationDegrees
             } else {
-                findTextureView(playerView)?.scaleX = if (isMirrored) -1f else 1f
+                0
+            }
+
+            // Detect rotation change and refresh preview layout
+            if (activeClipIndex != lastActiveClipIndexForRotation || clipRotation != lastClipRotationDegrees) {
+                lastActiveClipIndexForRotation = activeClipIndex
+                lastClipRotationDegrees = clipRotation
+                resetCropPreview()
+            }
+
+            val videoSurface = playerView.videoSurfaceView ?: findTextureView(playerView)
+            if (videoSurface != null) {
+                val rot = (clipRotation % 360 + 360) % 360
+                videoSurface.rotation = rot.toFloat()
+                if (rot == 90 || rot == 270) {
+                    // Scale to fill canvasContainer (scale applied before rotation)
+                    val sw = videoSurface.width.toFloat()
+                    val sh = videoSurface.height.toFloat()
+                    val cw = canvasContainer.width.toFloat()
+                    val ch = canvasContainer.height.toFloat()
+                    if (sw > 0f && sh > 0f && cw > 0f && ch > 0f) {
+                        val sx = ch / sw
+                        val sy = cw / sh
+                        videoSurface.scaleX = if (isMirrored) -sx else sx
+                        videoSurface.scaleY = sy
+                    } else {
+                        videoSurface.scaleX = if (isMirrored) -1f else 1f
+                        videoSurface.scaleY = 1f
+                    }
+                } else {
+                    videoSurface.scaleX = if (isMirrored) -1f else 1f
+                    videoSurface.scaleY = 1f
+                }
             }
 
             // Real-time transition preview overlay update
@@ -6002,22 +6213,30 @@ class VideoEditingActivity : AppCompatActivity() {
             
             trackTrimView.onTrackClicked = {
                 if (selectedVideoIndex == index) {
-                    selectedVideoIndex = null
                     exitVideoEditingMode()
                 } else {
+                    val wasRotateActive = rotateEditingToolbar?.visibility == View.VISIBLE
                     selectedVideoIndex = index
-                    enterVideoEditingMode()
+                    if (wasRotateActive) {
+                        showRotateEditingToolbar(index)
+                    } else {
+                        enterVideoEditingMode()
+                    }
                 }
                 viewModel.project.value?.let { renderTracks(it) }
             }
             
             segmentView.setBounceClickListener {
                 if (selectedVideoIndex == index) {
-                    selectedVideoIndex = null
                     exitVideoEditingMode()
                 } else {
+                    val wasRotateActive = rotateEditingToolbar?.visibility == View.VISIBLE
                     selectedVideoIndex = index
-                    enterVideoEditingMode()
+                    if (wasRotateActive) {
+                        showRotateEditingToolbar(index)
+                    } else {
+                        enterVideoEditingMode()
+                    }
                 }
                 viewModel.project.value?.let { renderTracks(it) }
             }

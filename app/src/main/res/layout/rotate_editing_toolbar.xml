@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@android:color/transparent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="6dp"
+        android:background="@drawable/bg_bottom_nav_docked"
+        android:paddingVertical="16dp"
+        android:elevation="12dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:paddingHorizontal="24dp">
+
+            <ImageButton
+                android:id="@+id/btnCloseSheet"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_alignParentStart="true"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_close_24"
+                android:padding="8dp"
+                android:scaleType="fitCenter"
+                app:tint="@color/activeTool" />
+
+            <TextView
+                android:id="@+id/tvTitleRotate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:fontFamily="sans-serif-medium"
+                android:text="@string/str_rotate"
+                android:textColor="@color/textColor"
+                android:textSize="18sp" />
+
+            <ImageButton
+                android:id="@+id/btnRotateDone"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_alignParentEnd="true"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_check_24"
+                android:padding="8dp"
+                android:scaleType="fitCenter"
+                app:tint="@color/activeTool" />
+        </RelativeLayout>
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:overScrollMode="never"
+            android:scrollbars="none"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:layout_gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="24dp">
+
+                <!-- 0° Original -->
+                <LinearLayout
+                    android:id="@+id/frameRotate0"
+                    android:layout_width="64dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="16dp"
+                    android:gravity="center"
+                    android:orientation="vertical">
+                    <FrameLayout
+                        android:id="@+id/bgRotate0"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:background="@drawable/bg_aspect_ratio_item">
+                        <TextView
+                            android:id="@+id/icRotate0"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:text="0°"
+                            android:fontFamily="sans-serif-bold"
+                            android:textColor="@color/iconSecondary"
+                            android:textSize="15sp" />
+                    </FrameLayout>
+                    <TextView
+                        android:id="@+id/txtRotate0"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="0°"
+                        android:textColor="@color/toolTextInactive"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <!-- 90° -->
+                <LinearLayout
+                    android:id="@+id/frameRotate90"
+                    android:layout_width="64dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="16dp"
+                    android:gravity="center"
+                    android:orientation="vertical">
+                    <FrameLayout
+                        android:id="@+id/bgRotate90"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:background="@drawable/bg_aspect_ratio_item">
+                        <TextView
+                            android:id="@+id/icRotate90"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:text="90°"
+                            android:fontFamily="sans-serif-bold"
+                            android:textColor="@color/iconSecondary"
+                            android:textSize="15sp" />
+                    </FrameLayout>
+                    <TextView
+                        android:id="@+id/txtRotate90"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="90°"
+                        android:textColor="@color/toolTextInactive"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <!-- 180° -->
+                <LinearLayout
+                    android:id="@+id/frameRotate180"
+                    android:layout_width="64dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="16dp"
+                    android:gravity="center"
+                    android:orientation="vertical">
+                    <FrameLayout
+                        android:id="@+id/bgRotate180"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:background="@drawable/bg_aspect_ratio_item">
+                        <TextView
+                            android:id="@+id/icRotate180"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:text="180°"
+                            android:fontFamily="sans-serif-bold"
+                            android:textColor="@color/iconSecondary"
+                            android:textSize="15sp" />
+                    </FrameLayout>
+                    <TextView
+                        android:id="@+id/txtRotate180"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="180°"
+                        android:textColor="@color/toolTextInactive"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <!-- 270° -->
+                <LinearLayout
+                    android:id="@+id/frameRotate270"
+                    android:layout_width="64dp"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical">
+                    <FrameLayout
+                        android:id="@+id/bgRotate270"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:background="@drawable/bg_aspect_ratio_item">
+                        <TextView
+                            android:id="@+id/icRotate270"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:text="270°"
+                            android:fontFamily="sans-serif-bold"
+                            android:textColor="@color/iconSecondary"
+                            android:textSize="15sp" />
+                    </FrameLayout>
+                    <TextView
+                        android:id="@+id/txtRotate270"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="270°"
+                        android:textColor="@color/toolTextInactive"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+            </LinearLayout>
+        </HorizontalScrollView>
+    </LinearLayout>
+</LinearLayout>

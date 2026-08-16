@@ -67,6 +67,8 @@
     <string name="str_ducking">Ducking</string>
     <string name="str_fade">Fade</string>
     <string name="str_crop_aspect_ratio">Crop Aspect Ratio</string>
+    <string name="str_crop_transform">Crop &amp; Transform</string>
+    <string name="str_rotate">Rotate</string>
     <string name="str_16_9">16:9</string>
     <string name="str_9_16">9:16</string>
     <string name="str_1_1">1:1</string>
