@@ -3,7 +3,7 @@
     <string name="str_loop">Ciclo</string>
     <string name="app_name">LibreCuts</string>
     <string name="trim">Taglio</string>
-    <string name="split">Split</string>
+    <string name="split">Dividi</string>
     <string name="export">Esportazione</string>
     <string name="delete">Elimina</string>
     <string name="loading">Importo Video…</string>
@@ -64,7 +64,7 @@
     <string name="str_audio_segment">Segmento Audio</string>
     <string name="str_0_0s_0_0s">0.0s - 0.0s</string>
     <string name="str_beats">Beat</string>
-    <string name="str_ducking">Ducking</string>
+    <string name="str_ducking">Ducking audio</string>
     <string name="str_fade">Dissolvenza</string>
     <string name="str_crop_aspect_ratio">Ritaglia Rapporto d\'Aspetto</string>
     <string name="str_16_9">16:9</string>
