@@ -24,7 +24,7 @@
     <string name="str_timeline_empty">Časová os je prázdna</string>
     <string name="str_import_video">Načítať video</string>
     <string name="str_text">Text</string>
-    <string name="str_overlay">Prekrývanie</string>
+    <string name="str_overlay">Vrstva</string>
     <string name="str_audio">Zvuk</string>
     <string name="str_voice">Hlas</string>
     <string name="str_subtitles">Titulky</string>
@@ -89,7 +89,7 @@
     <string name="toast_drag_the_handles_on_the_timeli">Na skrátenie videa posuňte úchytky na hlavnej časovej osi.</string>
     <string name="toast_failed_to_start_recording">Nepodarilo sa spustiť nahrávanie</string>
     <string name="toast_subtitles_removed">Titulky boli odstránené</string>
-    <string name="toast_failed_to_load_overlay_file">Nepodarilo sa načítať súbor prekrývania</string>
+    <string name="toast_failed_to_load_overlay_file">Nepodarilo sa načítať súbor vrstvy</string>
     <string name="toast_freeze_frame_added_to_sequence">Do sekvencie bol pridaný statický snímok</string>
     <string name="toast_failed_to_create_freeze_frame">Nepodarilo sa vytvoriť statický snímok</string>
     <string name="toast_failed_to_apply_speed_reset">Nepodarilo sa vynulovať rýchlosť</string>
