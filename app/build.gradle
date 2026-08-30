@@ -85,21 +85,23 @@ android {
 }
 
 dependencies {
-    implementation 'com.google.android.exoplayer:exoplayer-core:2.19.1'
-    implementation 'com.google.android.exoplayer:exoplayer-ui:2.19.1'
-    implementation("com.antonkarpenko:ffmpeg-kit-full-gpl:2.1.0")
-    implementation 'com.google.android.material:material:1.9.0'
-    implementation 'com.airbnb.android:lottie:3.4.0'
-    implementation "com.mikepenz:aboutlibraries-core:11.2.3"
-    implementation "com.mikepenz:aboutlibraries:11.2.3"
+
+    testImplementation libs.junit
+    androidTestImplementation libs.androidx.junit
+    androidTestImplementation libs.androidx.espresso.core
+
+    implementation libs.exoplayer.core
+    implementation libs.exoplayer.ui
+    implementation libs.ffmpeg.kit.full.gpl
+    implementation libs.google.material
+    implementation libs.lottie
+    implementation libs.about.libraries.core
+    implementation libs.about.libraries
     implementation libs.androidx.core.ktx
     implementation libs.androidx.lifecycle.runtime.ktx
     implementation libs.androidx.lifecycle.viewmodel.ktx
     implementation libs.androidx.appcompat
     implementation libs.androidx.constraintlayout
     implementation libs.androidx.recyclerview
-    testImplementation libs.junit
-    androidTestImplementation libs.androidx.junit
-    androidTestImplementation libs.androidx.espresso.core
-    implementation 'com.google.code.gson:gson:2.10.1'
+    implementation libs.gson
 }
