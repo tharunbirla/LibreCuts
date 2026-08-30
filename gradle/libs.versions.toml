@@ -1,21 +1,22 @@
 [versions]
-agp = "8.7.1"
-kotlin = "2.0.21"
-coreKtx = "1.13.1"
+agp = "9.1.1"
+kotlin = "2.4.10"
+coreKtx = "1.19.0"
 junit = "4.13.2"
-junitVersion = "1.2.1"
-espressoCore = "3.6.1"
-lifecycleRuntimeKtx = "2.8.6"
-lifecycleViewmodelKtx = "2.8.6"
-appcompat = "1.7.0"
-constraintlayout = "2.1.4"
-recyclerview = "1.3.2"
+junitVersion = "1.3.0"
+espressoCore = "3.7.0"
+lifecycleRuntimeKtx = "2.11.0"
+lifecycleViewmodelKtx = "2.11.0"
+appcompat = "1.8.0"
+constraintlayout = "2.2.2"
+recyclerview = "1.4.0"
 exoplayer = "2.19.1"
-ffmpegkit = "2.1.0"
-material = "1.9.0"
-lottie = "3.4.0"
-aboutlibraries = "11.2.3"
-gson = "2.10.1"
+ffmpegkit = "2.2.1"
+material = "1.14.0"
+lottie = "6.7.1"
+aboutlibraries = "14.2.1"
+aboutlibrariescore = "15.2.0"
+gson = "2.14.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -33,7 +34,7 @@ ffmpeg-kit-full-gpl = { group = "com.antonkarpenko" , name="ffmpeg-kit-full-gpl"
 google-material = { group = "com.google.android.material" , name="material", version.ref = "material"}
 lottie = { group = "com.airbnb.android" , name="lottie", version.ref = "lottie"}
 about-libraries = { group = "com.mikepenz" , name="aboutlibraries", version.ref = "aboutlibraries"}
-about-libraries-core = { group = "com.mikepenz" , name="aboutlibraries-core", version.ref = "aboutlibraries"}
+about-libraries-core = { group = "com.mikepenz" , name="aboutlibraries-core", version.ref = "aboutlibrariescore"}
 gson = { group = "com.google.code.gson" , name="gson", version.ref = "gson"}
 
 [plugins]

@@ -1,6 +1,7 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.jetbrains.kotlin.android)
 }
 
 apply plugin: 'com.mikepenz.aboutlibraries.plugin'
@@ -11,7 +12,7 @@ aboutLibraries {
 
 android {
     namespace 'com.tharunbirla.librecuts'
-    compileSdk 34
+    compileSdk 37
 
     androidResources {
         generateLocaleConfig = true
@@ -24,7 +25,7 @@ android {
     defaultConfig {
         applicationId "com.tharunbirla.librecuts"
         minSdk 26
-        targetSdk 34
+        targetSdk 37
         versionCode project.hasProperty('versionCode') ? project.property('versionCode').toInteger() : 10
         versionName "1.0-beta7"
 
@@ -50,8 +51,10 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = '17'
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+        }
     }
     buildFeatures {
         viewBinding true
@@ -71,17 +74,21 @@ android {
             universalApk false
         }
     }
+}
 
-    applicationVariants.all { variant ->
+androidComponents {
+    onVariants(selector().all(), { variant ->
         def abiCodes = ['armeabi-v7a': 0, 'arm64-v8a': 1, 'x86_64': 2]
 
         variant.outputs.each { output ->
-            def abi = output.getFilter(com.android.build.OutputFile.ABI)
-            if (abi != null && abiCodes.containsKey(abi)) {
-                output.versionCodeOverride = variant.versionCode + abiCodes.get(abi)
+            // Get the current output's ABI filter
+            def filter = output.filters.find { it.filterType == "ABI" }
+            if (filter != null && abiCodes.containsKey(filter.identifier)) {
+                def mainVersionCode = variant.outputs[0].versionCode.get()
+                output.versionCode.set(mainVersionCode + abiCodes.get(filter.identifier))
             }
         }
-    }
+    })
 }
 
 dependencies {

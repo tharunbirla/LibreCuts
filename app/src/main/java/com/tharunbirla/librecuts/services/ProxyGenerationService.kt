@@ -10,8 +10,8 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.tharunbirla.librecuts.R
+import com.tharunbirla.librecuts.utils.AppEventManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -135,12 +135,9 @@ class ProxyGenerationService : Service() {
     }
 
     private fun broadcastSuccess(sourceUriStr: String, proxyUriStr: String, dependencyId: String) {
-        val intent = Intent(ACTION_PROXY_GENERATED).apply {
-            putExtra(EXTRA_SOURCE_URI, sourceUriStr)
-            putExtra(EXTRA_PROXY_URI, proxyUriStr)
-            putExtra(EXTRA_DEPENDENCY_ID, dependencyId)
+        serviceScope.launch {
+            AppEventManager.sendEvent(AppEventManager.AppEvents.ProxyGenerated(sourceUriStr,proxyUriStr,dependencyId))
         }
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
