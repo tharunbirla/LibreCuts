@@ -13,11 +13,10 @@ import android.os.Environment
 import android.os.IBinder
 import android.provider.MediaStore
 import android.util.Log
-import android.widget.Toast
 import androidx.core.app.NotificationCompat
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.tharunbirla.librecuts.MainActivity
 import com.tharunbirla.librecuts.R
+import com.tharunbirla.librecuts.utils.AppEventManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -35,13 +34,6 @@ class ExportService : Service() {
     private lateinit var ffmpegEngine: FFmpegRenderEngine
 
     companion object {
-        const val ACTION_EXPORT_PROGRESS = "com.tharunbirla.librecuts.ACTION_EXPORT_PROGRESS"
-        const val ACTION_EXPORT_SUCCESS = "com.tharunbirla.librecuts.ACTION_EXPORT_SUCCESS"
-        const val ACTION_EXPORT_FAILURE = "com.tharunbirla.librecuts.ACTION_EXPORT_FAILURE"
-
-        const val EXTRA_PROGRESS = "extra_progress"
-        const val EXTRA_SAVED_URI = "extra_saved_uri"
-        const val EXTRA_ERROR = "extra_error"
 
         const val EXTRA_COMMAND = "extra_command"
         const val EXTRA_TEMP_OUTPUT_PATH = "extra_temp_output_path"
@@ -186,24 +178,22 @@ class ExportService : Service() {
     }
 
     private fun broadcastProgress(progress: Int) {
-        val intent = Intent(ACTION_EXPORT_PROGRESS).apply {
-            putExtra(EXTRA_PROGRESS, progress)
+        serviceScope.launch {
+            AppEventManager.sendEvent(AppEventManager.AppEvents.ExportProgress(progress))
         }
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+
     }
 
     private fun broadcastSuccess(savedUri: String) {
-        val intent = Intent(ACTION_EXPORT_SUCCESS).apply {
-            putExtra(EXTRA_SAVED_URI, savedUri)
+        serviceScope.launch {
+            AppEventManager.sendEvent(AppEventManager.AppEvents.ExportSuccess(savedUri))
         }
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
     }
 
     private fun broadcastFailure(error: String) {
-        val intent = Intent(ACTION_EXPORT_FAILURE).apply {
-            putExtra(EXTRA_ERROR, error)
+        serviceScope.launch {
+            AppEventManager.sendEvent(AppEventManager.AppEvents.ExportFailure(error))
         }
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
     }
 
     private fun saveVideoToGallery(videoFile: File, isAudioOnly: Boolean): Uri? {
