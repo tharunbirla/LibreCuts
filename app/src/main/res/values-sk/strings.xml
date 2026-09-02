@@ -2,7 +2,7 @@
 <resources>
     <string name="str_loop">Slučka</string>
     <string name="app_name">LibreCuts</string>
-    <string name="trim">Orezanie</string>
+    <string name="trim">Strih</string>
     <string name="split">Rozdeliť</string>
     <string name="export">Exportovať</string>
     <string name="delete">Vymazať</string>
