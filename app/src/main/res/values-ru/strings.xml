@@ -120,4 +120,5 @@
     <string name="toast_failed_to_load_overlay_file">Не удалось загрузить оверлей</string>
     <string name="toast_freeze_frame_added_to_sequence">Стоп-кадр добавлен в очередь</string>
     <string name="toast_failed_to_create_freeze_frame">Не удалось создать стоп-кадр</string>
+    <string name="toast_failed_to_apply_speed_reset">Не удалость применить сброс скорости</string>
 </resources>
