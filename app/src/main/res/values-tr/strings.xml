@@ -99,4 +99,22 @@
     <string name="str_version_1_0">Sürüm 1.0</string>
     <string name="str_free_open_source_limitless">Ücretsiz. Açık kaynak. Sınırsız.</string>
     <string name="str_community_amp_support">TOPLULUK VE DESTEK</string>
+    <string name="str_show_your_appreciation_by_star">GitHub\'da yıldız vererekdesteğini göster</string>
+    <string name="str_github_sponsors">GitHub\'da Sponsor Ol</string>
+    <string name="str_support_our_open_source_develo">Açık kaynak geliştirmemize doğrudan destek olun.</string>
+    <string name="str_discord_server">Discord Sunucusu</string>
+    <string name="str_join_us_for_app_updates_and_co">Uygulama güncellemeleri ve topluluk sohbeti için bize katılın</string>
+    <string name="str_troubleshooting_amp_wiki_guide">Sorun Giderme ve Wiki Rehberi</string>
+    <string name="str_if_you_encounter_any_export_is">Dışa aktarma sorunları veya işleme hatalarıyla karşılaşırsanız, sorun giderme ve hata kodları için wiki rehberimizi okumak üzere buraya dokunun.</string>
+    <string name="str_get_started">Başlayalım</string>
+    <string name="toast_microphone_permission_required">Seslendirme için mikrofon izni gerekli</string>
+    <string name="toast_snapping_enabled">Yapışma etkin</string>
+    <string name="toast_snapping_disabled">Yapışma devre dışı</string>
+    <string name="toast_log_copied_to_clipboard">Günlük panoya kopyalandı</string>
+    <string name="toast_beats_cleared">Ritimler temizlendi</string>
+    <string name="toast_analyzing_beats">Ritimler analiz ediliyor…</string>
+    <string name="toast_no_clear_beats_found">Belirgin ritim bulunamadı.</string>
+    <string name="toast_drag_the_handles_on_the_timeli">Kesmek için ana video izindeki tutamaçları sürükleyin.</string>
+    <string name="toast_failed_to_start_recording">Kayıt başlatılamadı</string>
+    <string name="toast_subtitles_removed">Altyazılar kaldırıldı</string>
 </resources>
