@@ -117,4 +117,11 @@
     <string name="toast_drag_the_handles_on_the_timeli">Kesmek için ana video izindeki tutamaçları sürükleyin.</string>
     <string name="toast_failed_to_start_recording">Kayıt başlatılamadı</string>
     <string name="toast_subtitles_removed">Altyazılar kaldırıldı</string>
+    <string name="toast_failed_to_load_overlay_file">Kaplama dosyası yüklenemedi</string>
+    <string name="toast_freeze_frame_added_to_sequence">Kare dondurma sekansa eklendi</string>
+    <string name="toast_failed_to_create_freeze_frame">Kare dondurma oluşturulamadı</string>
+    <string name="toast_failed_to_apply_speed_reset">Hız uygulanamadı</string>
+    <string name="toast_failed_to_reverse_speed_proxy">Failed to reverse speed proxy</string>
+    <string name="toast_failed_to_apply_speed">Hız uygulanamadı</string>
+    <string name="toast_failed_to_reverse_video">Video ters oynatılamadı</string>
 </resources>
