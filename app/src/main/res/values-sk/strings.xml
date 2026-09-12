@@ -2,7 +2,7 @@
 <resources>
     <string name="str_loop">Slučka</string>
     <string name="app_name">LibreCuts</string>
-    <string name="trim">Orezanie</string>
+    <string name="trim">Strih</string>
     <string name="split">Rozdeliť</string>
     <string name="export">Exportovať</string>
     <string name="delete">Vymazať</string>
@@ -18,13 +18,13 @@
     <string name="str_low_quality_fastest">Nízka kvalita (najrýchlejšie)</string>
     <string name="str_smallest_file_size_fastest_exp">Najmenšia veľkosť súboru, najrýchlejší export</string>
     <string name="str_export_location">Miesto exportu</string>
-    <string name="str_downloads_librecuts">Stiahnuť/LibreCuts</string>
+    <string name="str_downloads_librecuts">Downloads/LibreCuts</string>
     <string name="str_preview">NÁHĽAD</string>
     <string name="str_0_00_0_00">0:00 / 0:00</string>
     <string name="str_timeline_empty">Časová os je prázdna</string>
     <string name="str_import_video">Načítať video</string>
     <string name="str_text">Text</string>
-    <string name="str_overlay">Prekrývanie</string>
+    <string name="str_overlay">Vrstva</string>
     <string name="str_audio">Zvuk</string>
     <string name="str_voice">Hlas</string>
     <string name="str_subtitles">Titulky</string>
@@ -89,7 +89,7 @@
     <string name="toast_drag_the_handles_on_the_timeli">Na skrátenie videa posuňte úchytky na hlavnej časovej osi.</string>
     <string name="toast_failed_to_start_recording">Nepodarilo sa spustiť nahrávanie</string>
     <string name="toast_subtitles_removed">Titulky boli odstránené</string>
-    <string name="toast_failed_to_load_overlay_file">Nepodarilo sa načítať súbor prekrývania</string>
+    <string name="toast_failed_to_load_overlay_file">Nepodarilo sa načítať súbor vrstvy</string>
     <string name="toast_freeze_frame_added_to_sequence">Do sekvencie bol pridaný statický snímok</string>
     <string name="toast_failed_to_create_freeze_frame">Nepodarilo sa vytvoriť statický snímok</string>
     <string name="toast_failed_to_apply_speed_reset">Nepodarilo sa vynulovať rýchlosť</string>

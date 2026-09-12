@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="export">Εξαγωγή</string>
+    <string name="delete">Διαγραφή</string>
+    <string name="cancel">Ακύρωση</string>
+    <string name="done">Έτοιμο</string>
+    <string name="str_export_settings">Εξαγωγή Ρυθμίσεων</string>
+    <string name="str_0_00_0_00">0:00 / 0:00</string>
+    <string name="str_text">Κείμενο</string>
+    <string name="str_audio">Ήχος</string>
+    <string name="str_voice">Φωνή</string>
+    <string name="str_subtitles">Υπότιτλοι</string>
+    <string name="str_adjust">Προσαρμογή</string>
+    <string name="str_filters">Φίλτρα</string>
+    <string name="str_speed">Ταχύτητα</string>
+    <string name="str_freeze">Πάγωμα</string>
+    <string name="str_saving_video">Αποθήκευση βίντεο…</string>
+    <string name="str_0">0%</string>
+    <string name="str_color_filters">Χρωματικά Φίλτρα</string>
+    <string name="str_00_00_00_00_00_00">00:00 - 00:00 (00:00)</string>
+    <string name="str_keyboard">Πληκτρολόγιο</string>
+    <string name="str_color">Χρώμα</string>
+    <string name="str_duplicate">Διπλότυπο</string>
+    <string name="str_subtitles_srt">υπότιτλοι.srt</string>
+    <string name="str_22">22</string>
+    <string name="str_remove">Αφαίρεση</string>
+    <string name="str_save">Αποθήκευση</string>
+    <string name="str_video_speed">Ταχύτητα Βίντεο</string>
+    <string name="str_0_5x">0.5x</string>
+    <string name="str_1x">1x</string>
+    <string name="str_1_5x">1.5x</string>
+    <string name="str_2x">2x</string>
+    <string name="str_0_1">0°</string>
+    <string name="str_100">100%</string>
+    <string name="str_16_9">16:9</string>
+    <string name="str_9_16">9:16</string>
+    <string name="str_1_1">1:1</string>
+    <string name="str_new_project">ΝΕΟ ΠΡΟΤΖΕΚΤ</string>
+    <string name="str_settings">Ρυθμίσεις</string>
+    <string name="str_general">Γενικές</string>
+    <string name="str_export_folder">Εξαγωγή Φακέλου</string>
+    <string name="str_star_on_github">Αστέρι στο GitHub</string>
+    <string name="str_0_0s">0.0s</string>
+    <string name="str_version_1_0">Έκδοση 1.0</string>
+    <string name="toast_failed_to_start_recording">Αποτυχία έναρξης ηχογράφησης</string>
+    <string name="toast_subtitles_removed">Οι υπότιτλοι αφαιρέθηκαν</string>
+</resources>
