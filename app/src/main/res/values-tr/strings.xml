@@ -124,4 +124,16 @@
     <string name="toast_failed_to_reverse_speed_proxy">Failed to reverse speed proxy</string>
     <string name="toast_failed_to_apply_speed">Hız uygulanamadı</string>
     <string name="toast_failed_to_reverse_video">Video ters oynatılamadı</string>
+    <string name="toast_failed_to_restore_video_speed">Failed to restore video speed proxy</string>
+    <string name="toast_seeker_is_not_over_the_selecte">Oynatma çubuğu seçili klipin üzerinde değil</string>
+    <string name="toast_audio_extracted_to_new_layer">Ses yeni katmana ayıklandı</string>
+    <string name="toast_failed_to_extract_audio">Ses ayıklanamadı</string>
+    <string name="toast_failed_to_load_selected_video">Seçilen video(lar) yüklenemedi</string>
+    <string name="toast_audio_track_added">Ses izi eklendi</string>
+    <string name="toast_failed_to_parse_subtitle_file">Altyazı dosyası çözümlenemedi. Geçerli bir SRT dosyası olduğundan emin olun.</string>
+    <string name="toast_export_location_updated_succes">Dışa aktarma konumu güncellendi!</string>
+    <string name="toast_failed_to_select_folder">Klasör seçilemedi</string>
+    <string name="toast_video_exported_to_gallery_succ">Video Galeri\'ye başarıyla aktarıldı!</string>
+    <string name="toast_failed_to_save_video_to_galler">Video Galeri\'ye kaydedilemedi</string>
+    <string name="toast_export_cancelled">Dışa aktarma iptal edildi</string>
 </resources>
