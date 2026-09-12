@@ -18,7 +18,7 @@
     <string name="str_low_quality_fastest">Nízka kvalita (najrýchlejšie)</string>
     <string name="str_smallest_file_size_fastest_exp">Najmenšia veľkosť súboru, najrýchlejší export</string>
     <string name="str_export_location">Miesto exportu</string>
-    <string name="str_downloads_librecuts">Stiahnuť/LibreCuts</string>
+    <string name="str_downloads_librecuts">Downloads/LibreCuts</string>
     <string name="str_preview">NÁHĽAD</string>
     <string name="str_0_00_0_00">0:00 / 0:00</string>
     <string name="str_timeline_empty">Časová os je prázdna</string>
