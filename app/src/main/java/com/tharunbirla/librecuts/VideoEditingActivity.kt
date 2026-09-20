@@ -51,6 +51,8 @@ import com.google.android.material.textfield.TextInputEditText
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.widget.SeekBar
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.tharunbirla.librecuts.customviews.HandwritingCanvasView
 import com.tharunbirla.librecuts.customviews.BrushSizeDotView
 import com.google.android.material.slider.Slider
@@ -74,6 +76,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Locale
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
+import com.tharunbirla.librecuts.utils.AppEventManager
 
 
 @Suppress("DEPRECATION")
@@ -200,41 +203,37 @@ class VideoEditingActivity : AppCompatActivity() {
             }
         }
     }
-    
-    private val exportReceiver = object : android.content.BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            when (intent?.action) {
-                com.tharunbirla.librecuts.services.ExportService.ACTION_EXPORT_PROGRESS -> {
-                    val progress = intent.getIntExtra(com.tharunbirla.librecuts.services.ExportService.EXTRA_PROGRESS, 0)
-                    viewModel.updateExportProgress(progress)
-                }
-                com.tharunbirla.librecuts.services.ExportService.ACTION_EXPORT_SUCCESS -> {
-                    val uri = intent.getStringExtra(com.tharunbirla.librecuts.services.ExportService.EXTRA_SAVED_URI)
-                    viewModel.finishExport()
-                    android.widget.Toast.makeText(this@VideoEditingActivity, R.string.toast_video_exported_to_gallery_succ, android.widget.Toast.LENGTH_LONG).show()
-                }
-                com.tharunbirla.librecuts.services.ExportService.ACTION_EXPORT_FAILURE -> {
-                    val error = intent.getStringExtra(com.tharunbirla.librecuts.services.ExportService.EXTRA_ERROR) ?: "Unknown Error"
-                    viewModel.exportError(error)
-                    showProErrorDialog(ErrorCode.FFMPEG_EXECUTION_FAILED, error)
-                }
-            }
-        }
-    }
-    
-    private val proxyReceiver = object : android.content.BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == com.tharunbirla.librecuts.services.ProxyGenerationService.ACTION_PROXY_GENERATED) {
-                val proxyUriStr = intent.getStringExtra(com.tharunbirla.librecuts.services.ProxyGenerationService.EXTRA_PROXY_URI)
-                val dependencyId = intent.getStringExtra(com.tharunbirla.librecuts.services.ProxyGenerationService.EXTRA_DEPENDENCY_ID)
-                if (proxyUriStr != null && dependencyId != null) {
-                    val proxyUri = Uri.parse(proxyUriStr)
-                    viewModel.setScrubProxyUri(dependencyId, proxyUri)
-                    Log.d(TAG, "Scrub proxy set for $dependencyId")
+
+    private fun registerReceivers() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                AppEventManager.events.collect { event ->
+                    when (event) {
+                        is AppEventManager.AppEvents.ExportProgress -> {
+                            viewModel.updateExportProgress(event.progress)
+                        }
+                        is AppEventManager.AppEvents.ExportSuccess -> {
+                            val uri = event.savedUri
+                            viewModel.finishExport()
+                            Toast.makeText(this@VideoEditingActivity, R.string.toast_video_exported_to_gallery_succ, Toast.LENGTH_LONG).show()
+                        }
+                        is AppEventManager.AppEvents.ExportFailure -> {
+                            viewModel.exportError(event.error)
+                            showProErrorDialog(ErrorCode.FFMPEG_EXECUTION_FAILED, event.error)
+                        }
+                        is AppEventManager.AppEvents.ProxyGenerated -> {
+                            if (event.proxyUri.isNotEmpty() && event.dependencyId.isNotEmpty()) {
+                                val proxyUri = Uri.parse(event.proxyUri)
+                                viewModel.setScrubProxyUri(event.dependencyId, proxyUri)
+                                Log.d(TAG, "Scrub proxy set for ${event.dependencyId}")
+                            }
+                        }
+                    }
                 }
             }
         }
     }
+
     private var activeDirectoryTitleView: TextView? = null
     private var activeDirectoryPathView: TextView? = null
 
@@ -547,20 +546,8 @@ class VideoEditingActivity : AppCompatActivity() {
         // Initialize ViewModel and engine
         viewModel = ViewModelProvider(this).get(VideoEditingViewModel::class.java)
         ffmpegEngine = FFmpegRenderEngine(this)
-        
-        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this).registerReceiver(
-            exportReceiver,
-            android.content.IntentFilter().apply {
-                addAction(com.tharunbirla.librecuts.services.ExportService.ACTION_EXPORT_PROGRESS)
-                addAction(com.tharunbirla.librecuts.services.ExportService.ACTION_EXPORT_SUCCESS)
-                addAction(com.tharunbirla.librecuts.services.ExportService.ACTION_EXPORT_FAILURE)
-            }
-        )
-        
-        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this).registerReceiver(
-            proxyReceiver,
-            android.content.IntentFilter(com.tharunbirla.librecuts.services.ProxyGenerationService.ACTION_PROXY_GENERATED)
-        )
+
+        registerReceivers()
 
         // Register back-press callback to prompt for quit confirmation
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -7642,8 +7629,6 @@ class VideoEditingActivity : AppCompatActivity() {
         if (::sequenceTrackContainer.isInitialized) {
             pendingRenderRunnable?.let { sequenceTrackContainer.removeCallbacks(it) }
         }
-        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this).unregisterReceiver(exportReceiver)
-        androidx.localbroadcastmanager.content.LocalBroadcastManager.getInstance(this).unregisterReceiver(proxyReceiver)
         frameExtractionJob?.cancel()
         previewJob?.cancel()
         clearFrameCache()
