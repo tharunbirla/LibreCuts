@@ -145,4 +145,16 @@
     <string name="str_export_format_set_to_audio_only">Formato de exportacion puesto a Solo Audio</string>
     <string name="str_open_source_licenses">Licencias de codigo abierto</string>
     <string name="str_view_third_party_software_licenses">Ver licencia</string>
+    <string name="toast_failed_to_reverse_speed_proxy">Error al invertir el proxy de velocidad</string>
+    <string name="str_custom_directory">Directorio personalizado</string>
+    <string name="toast_failed_to_set_export_folder">No se pudo configurar la carpeta de exportación</string>
+    <string name="str_video_export_folder">Carpeta de exportación de video</string>
+    <string name="str_audio_export_folder">Carpeta de exportación de audio</string>
+    <string name="str_snapshot_export_folder">Carpeta de exportación de capturas</string>
+    <string name="str_default_music_librecuts">Predeterminado (Música/LibreCuts)</string>
+    <string name="str_default_pictures_librecuts">Predeterminado (Pictures/LibreCuts)</string>
+    <string name="str_app_language">Idioma de la aplicación</string>
+    <string name="str_system_default">Predeterminado del sistema</string>
+    <string name="str_opacity">Opacidad</string>
+    <string name="str_reset">Restablecer</string>
 </resources>
