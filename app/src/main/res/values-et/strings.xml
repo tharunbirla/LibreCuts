@@ -128,7 +128,7 @@
     <string name="toast_seeker_is_not_over_the_selecte">Nõel ei asu valitud klipi kohal.</string>
     <string name="toast_audio_extracted_to_new_layer">Heliriba on eraldatud uuele kihile</string>
     <string name="toast_failed_to_extract_audio">Heliriba eraldamine ei õnnestunud</string>
-    <string name="toast_failed_to_load_selected_video">Valitud video(te) laadimine ei õnnestunud</string>
+    <string name="toast_failed_to_load_selected_video">Valitud video laadimine ei õnnestunud</string>
     <string name="toast_audio_track_added">Heliriba on lisatud</string>
     <string name="toast_failed_to_parse_subtitle_file">Subtiitrifaili parsimine ei õnnestunud. Veendu, et tegemist on kehtiva SRT-failiga.</string>
     <string name="toast_export_location_updated_succes">Eksportimise kausta muutmine õnnestus!</string>

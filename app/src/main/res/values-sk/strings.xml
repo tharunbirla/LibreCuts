@@ -100,7 +100,7 @@
     <string name="toast_seeker_is_not_over_the_selecte">Ukazovateľ sa nenachádza nad vybraným úsekom.</string>
     <string name="toast_audio_extracted_to_new_layer">Zvuk bol extrahovaný do novej vrstvy</string>
     <string name="toast_failed_to_extract_audio">Nepodarilo sa extrahovať zvuk</string>
-    <string name="toast_failed_to_load_selected_video">Vybrané videá sa nepodarilo načítať</string>
+    <string name="toast_failed_to_load_selected_video">Načítanie vybraného videa sa nepodarilo</string>
     <string name="toast_audio_track_added">Pridaná zvuková stopa</string>
     <string name="toast_failed_to_parse_subtitle_file">Nepodarilo sa analyzovať súbor s titulkami. Uistite sa, že ide o platný súbor SRT.</string>
     <string name="toast_export_location_updated_succes">Umiestnenie exportu bolo úspešne aktualizované!</string>
