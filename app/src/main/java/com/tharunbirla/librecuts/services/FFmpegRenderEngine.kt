@@ -8,6 +8,7 @@ import com.antonkarpenko.ffmpegkit.FFmpegKitConfig
 import com.antonkarpenko.ffmpegkit.FFmpegSession
 import com.antonkarpenko.ffmpegkit.Level
 import com.antonkarpenko.ffmpegkit.ReturnCode
+import com.tharunbirla.librecuts.utils.FFmpegTextEscaper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -619,10 +620,7 @@ class FFmpegRenderEngine(private val context: Context) {
         positionParam: String,
         fontFilePath: String?
     ): String {
-        val escapedText = text
-            .replace("\\", "\\\\")
-            .replace("'", "\\\\'")
-            .replace(":", "\\:")
+        val escapedText = FFmpegTextEscaper.escape(text)
 
         val fontPart = if (!fontFilePath.isNullOrBlank()) {
             val escapedFontPath = fontFilePath
@@ -635,7 +633,7 @@ class FFmpegRenderEngine(private val context: Context) {
             ""
         }
 
-        return "drawtext=${fontPart}text='$escapedText':fontcolor=white:fontsize=$fontSize:$positionParam"
+        return "drawtext=${fontPart}text=$escapedText:fontcolor=white:fontsize=$fontSize:$positionParam"
     }
 
     private fun buildCropFilter(aspectRatio: String): String? = when (aspectRatio) {

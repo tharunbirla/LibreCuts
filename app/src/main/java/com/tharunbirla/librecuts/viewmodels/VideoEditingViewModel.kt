@@ -10,6 +10,7 @@ import com.tharunbirla.librecuts.models.EditRecipe
 import com.tharunbirla.librecuts.models.TextPosition
 import com.tharunbirla.librecuts.models.VideoEditingUiState
 import com.tharunbirla.librecuts.models.VideoProject
+import com.tharunbirla.librecuts.utils.FFmpegTextEscaper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -191,10 +192,7 @@ class VideoEditingViewModel : ViewModel() {
 
     /** Build a drawtext filter expression for a text operation. */
     private fun buildDrawtextExpr(op: EditOperation.AddText, fontFilePath: String?): String {
-        val escapedText = op.text
-            .replace("\\", "\\\\")
-            .replace("'", "\\\\'")
-            .replace(":", "\\:")
+        val escapedText = FFmpegTextEscaper.escape(op.text)
 
         val fontToUse = op.fontPath ?: fontFilePath
         val fontPart = if (!fontToUse.isNullOrBlank()) {
@@ -233,7 +231,7 @@ class VideoEditingViewModel : ViewModel() {
         val alignPart = if (op.textAlign.isNotEmpty()) ":text_align=${op.textAlign}" else ""
         val lineSpacingPart = if (op.lineSpacing != 0f) ":line_spacing=${op.lineSpacing.toInt()}" else ""
         
-        return "drawtext=${fontPart}text='$escapedText':fontcolor='${formatColorForFFmpeg(op.color)}':fontsize=${op.fontSize}:$positionPart$enablePart$alphaPart$borderPart$alignPart$lineSpacingPart"
+        return "drawtext=${fontPart}text=$escapedText:fontcolor='${formatColorForFFmpeg(op.color)}':fontsize=${op.fontSize}:$positionPart$enablePart$alphaPart$borderPart$alignPart$lineSpacingPart"
     }
 
     private fun buildFFmpegMaskAlphaExpr(
@@ -583,10 +581,7 @@ class VideoEditingViewModel : ViewModel() {
                         }
 
                         for ((lineIdx, lineText) in lines.withIndex()) {
-                            val escapedLine = lineText
-                                .replace("\\", "\\\\")
-                                .replace("'", "\\\\'")
-                                .replace(":", "\\:")
+                            val escapedLine = FFmpegTextEscaper.escape(lineText)
 
                             val lineOffset = lineIdx * lineSpacing
 
@@ -608,7 +603,7 @@ class VideoEditingViewModel : ViewModel() {
                             }
 
                             val boxPart = ":box=1:boxcolor='0x00000080':boxborderw=$boxBorderW"
-                            val filterExpr = "drawtext=${fontPart}text='$escapedLine':fontcolor='white':fontsize=${scaledFontSize}:${posPart}${boxPart}$enablePart"
+                            val filterExpr = "drawtext=${fontPart}text=$escapedLine:fontcolor='white':fontsize=${scaledFontSize}:${posPart}${boxPart}$enablePart"
                             
                             val nextLabel = "[v$stageIndex]"
                             stages.add("$currentLabel$filterExpr$nextLabel")
