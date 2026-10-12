@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="str_loop">تكرار</string>
-    <string name="app_name">LibreCuts</string>
+    <string name="app_name">لمسة AI</string>
     <string name="trim">قص</string>
     <string name="split">تقسيم</string>
     <string name="export">تصدير</string>
@@ -18,7 +18,7 @@
     <string name="str_low_quality_fastest">جودة منخفضة (الأسرع)</string>
     <string name="str_smallest_file_size_fastest_exp">أصغر حجم ملف، وأسرع عملية تصدير</string>
     <string name="str_export_location">موقع التصدير</string>
-    <string name="str_downloads_librecuts">التنزيلات/LibreCuts</string>
+    <string name="str_downloads_librecuts">التنزيلات/لمسة AI</string>
     <string name="str_preview">معاينة</string>
     <string name="str_0_00_0_00">0:00 / 0:00</string>
     <string name="str_timeline_empty">الجدول الزمني فارغ</string>
@@ -82,17 +82,17 @@
     <string name="str_settings">الإعدادات</string>
     <string name="str_general">عام</string>
     <string name="str_export_folder">تصدير مجلد</string>
-    <string name="str_default_movies_librecuts">الافتراضي (Movies/LibreCuts)</string>
+    <string name="str_default_movies_librecuts">الافتراضي (Movies/لمسة AI)</string>
     <string name="str_check_for_updates">التحقق من التحديثات</string>
     <string name="str_manually_check_for_the_latest">تحقق يدوي من آخر نسخة</string>
     <string name="str_v1_0_beta4">v1.0-beta5</string>
-    <string name="str_a_privacy_friendly_open_source">محرر فيديو مفتوح المصدر صديق للخصوصية لأندوريد.\nتصدير فيديوهات بدون علامة مائية محليًّا.</string>
+    <string name="str_a_privacy_friendly_open_source">محرر فيديو مفتوح المصدر صديق للخصوصية لأندوريد.\nتصدير فيديوهات بدون علامة مائية.</string>
     <string name="str_support_amp_feedback">الدعم والملاحظات</string>
-    <string name="str_librecuts_is_open_source_help">LibreCuts برنامج مفتوح المصدر. ساعدنا في تحسينه من خلال وضع نجمة على المشروع في GitHub أو الإبلاغ عن الأخطاء.</string>
+    <string name="str_librecuts_is_open_source_help">لمسة AI برنامج مفتوح المصدر. ساعدنا في تحسينه من خلال وضع نجمة على المشروع في GitHub أو الإبلاغ عن الأخطاء.</string>
     <string name="str_star_on_github">ضع نجمة على GitHub</string>
     <string name="str_report_a_bug">الإبلاغ عن خطأ</string>
     <string name="str_sponsor_project">مشروع الراعي</string>
-    <string name="str_made_by_tharun_birla">صنع بواسطة Tharun Birla</string>
+    <string name="str_made_by_tharun_birla">صنع بواسطة لمسة AI</string>
     <string name="str_fade_in">تلاشي للداخل</string>
     <string name="str_0_0s">0.0s</string>
     <string name="str_fade_out">تلاشي للخارج</string>
@@ -105,7 +105,7 @@
     <string name="str_discord_server">سيرفر ديسكورد</string>
     <string name="str_join_us_for_app_updates_and_co">انضم إلينا لتلقي تحديثات التطبيق والدردشة المجتمعية</string>
     <string name="str_troubleshooting_amp_wiki_guide">استكشاف الأخطاء وإصلاحها ودليل ويكي</string>
-    <string name="str_if_you_encounter_any_export_is">إذا واجهت أي مشاكل في التصدير أو أخطاء في العرض، فانقر هنا لقراءة دليل ويكي الخاص بنا لحل المشكلات ورموز الأخطاء.</string>
+    <string name="str_if_you_encounter_any_export_is">إذا واجهت أي مشاكل في التصدير أو أخطاء في العرض، فانقر هنا لقراءة دليل ويكي للاستكشاف وإصلاح الأخطاء.</string>
     <string name="str_get_started">ابدأ الآن</string>
     <string name="toast_microphone_permission_required">إذن الميكروفون مطلوب للتعليق الصوتي</string>
     <string name="toast_snapping_enabled">تم تفعيل الالتقاط</string>
@@ -151,13 +151,13 @@
     <string name="str_video_export_folder">مجلد تصدير الفيديو</string>
     <string name="str_audio_export_folder">مجلد تصدير الصوت</string>
     <string name="str_snapshot_export_folder">مجلد تصدير اللقطات</string>
-    <string name="str_default_music_librecuts">الافتراضي (Music/LibreCuts)</string>
-    <string name="str_default_pictures_librecuts">الافتراضي (Pictures/LibreCuts)</string>
+    <string name="str_default_music_librecuts">الافتراضي (Music/لمسة AI)</string>
+    <string name="str_default_pictures_librecuts">الافتراضي (Pictures/لمسة AI)</string>
     <string name="str_app_language">لغة التطبيق</string>
     <string name="str_system_default">افتراضي النظام</string>
     <string name="str_opacity">الشفافية</string>
     <string name="str_reset">إعادة ضبط</string>
-    <string name="str_help_translate">ترجم LibreCuts</string>
+    <string name="str_help_translate">ترجم لمسة AI</string>
     <string name="str_contribute_translations_on_weblate">ساهم بالترجمات على Weblate</string>
     <string name="str_fullscreen_editor">محرر ملء الشاشة</string>
     <string name="str_fullscreen_editor_desc">إخفاء شريط الحالة وشريط التنقل أثناء التحرير</string>

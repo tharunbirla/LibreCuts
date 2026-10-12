@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="str_loop">Loop</string>
-    <string name="app_name">LibreCuts</string>
+    <string name="app_name">Lamsat AI</string>
     <string name="trim">Trim</string>
     <string name="split">Split</string>
     <string name="export">Export</string>
@@ -18,7 +18,7 @@
     <string name="str_low_quality_fastest">Low Quality (Fastest)</string>
     <string name="str_smallest_file_size_fastest_exp">Smallest file size, fastest export</string>
     <string name="str_export_location">Export Location</string>
-    <string name="str_downloads_librecuts">Downloads/LibreCuts</string>
+    <string name="str_downloads_librecuts">Downloads/Lamsat AI</string>
     <string name="str_preview">PREVIEW</string>
     <string name="str_0_00_0_00">0:00 / 0:00</string>
     <string name="str_timeline_empty">Timeline Empty</string>
@@ -82,17 +82,17 @@
     <string name="str_settings">Settings</string>
     <string name="str_general">General</string>
     <string name="str_export_folder">Export Folder</string>
-    <string name="str_default_movies_librecuts">Default (Movies/LibreCuts)</string>
+    <string name="str_default_movies_librecuts">Default (Movies/Lamsat AI)</string>
     <string name="str_check_for_updates">Check for Updates</string>
     <string name="str_manually_check_for_the_latest">Manually check for the latest version</string>
     <string name="str_v1_0_beta4">v1.0-beta5</string>
     <string name="str_a_privacy_friendly_open_source">A privacy friendly, open source video editor for Android.\nExport watermark free videos locally.</string>
     <string name="str_support_amp_feedback">Support &amp; Feedback</string>
-    <string name="str_librecuts_is_open_source_help">LibreCuts is open source. Help us improve by starring the project on GitHub or reporting bugs.</string>
+    <string name="str_librecuts_is_open_source_help">Lamsat AI is open source. Help us improve by starring the project on GitHub or reporting bugs.</string>
     <string name="str_star_on_github">Star on GitHub</string>
     <string name="str_report_a_bug">Report a Bug</string>
     <string name="str_sponsor_project">Sponsor Project</string>
-    <string name="str_made_by_tharun_birla">Made by Tharun Birla</string>
+    <string name="str_made_by_tharun_birla">Made by Lamsat AI</string>
     <string name="str_fade_in">Fade In</string>
     <string name="str_0_0s">0.0s</string>
     <string name="str_fade_out">Fade Out</string>
@@ -151,13 +151,13 @@
     <string name="str_video_export_folder">Video Export Folder</string>
     <string name="str_audio_export_folder">Audio Export Folder</string>
     <string name="str_snapshot_export_folder">Snapshot Export Folder</string>
-    <string name="str_default_music_librecuts">Default (Music/LibreCuts)</string>
-    <string name="str_default_pictures_librecuts">Default (Pictures/LibreCuts)</string>
+    <string name="str_default_music_librecuts">Default (Music/Lamsat AI)</string>
+    <string name="str_default_pictures_librecuts">Default (Pictures/Lamsat AI)</string>
     <string name="str_app_language">App Language</string>
     <string name="str_system_default">System Default</string>
     <string name="str_opacity">Opacity</string>
     <string name="str_reset">Reset</string>
-    <string name="str_help_translate">Translate LibreCuts</string>
+    <string name="str_help_translate">Translate Lamsat AI</string>
     <string name="str_contribute_translations_on_weblate">Contribute translations on Weblate</string>
     <string name="str_fullscreen_editor">Fullscreen Editor</string>
     <string name="str_fullscreen_editor_desc">Hide status bar and navigation bar while editing</string>
