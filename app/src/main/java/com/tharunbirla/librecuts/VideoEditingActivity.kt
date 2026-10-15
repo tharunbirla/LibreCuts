@@ -2088,8 +2088,10 @@ class VideoEditingActivity : AppCompatActivity() {
                 if (project != null) {
                     Log.d(TAG, "Project updated with ${project.getOperationCount()} operations")
 
-                    if (project.sourceUri.scheme == "file") {
-                        val projectSourcePath = project.sourceUri.path
+                    if (project.sourceUri.scheme == "file" || (::tempInputFile.isInitialized && project.sourceUri != videoUri)) {
+                        val projectSourcePath = if (project.sourceUri.scheme == "file") project.sourceUri.path
+                            else withContext(Dispatchers.IO) { getFilePathFromUri(project.sourceUri) }
+                        videoUri = project.sourceUri
                         if (projectSourcePath != null && (!::tempInputFile.isInitialized || tempInputFile.absolutePath != projectSourcePath)) {
                             tempInputFile = File(projectSourcePath)
                             videoFileName = tempInputFile.name
@@ -4303,15 +4305,6 @@ class VideoEditingActivity : AppCompatActivity() {
             return
         }
         
-        if (index == 0) {
-            val nextItem = items[1]
-            val newSourceFile = File(nextItem.uri.path ?: nextItem.uri.toString())
-            tempInputFile = newSourceFile
-            originalMainVideoDurationMs = nextItem.durationMs
-            videoFileName = tempInputFile.name
-            videoUri = nextItem.uri
-        }
-
         viewModel.deleteSequenceSegment(index)
         selectedVideoIndex = null
         exitVideoEditingMode()
