@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="str_loop">Buclă</string>
+    <string name="app_name">LibreCuts</string>
+    <string name="trim">Taie</string>
+    <string name="export">Exportă</string>
+    <string name="delete">Șterge</string>
+    <string name="loading">Se importă Videoul…</string>
+    <string name="cancel">Anulează</string>
+    <string name="loading_tag">Fii atent! Videoclipul se încarcă</string>
+    <string name="done">Gata</string>
+    <string name="str_export_settings">Exportează Setările</string>
+    <string name="str_high_quality_1080p_original">Calitate înaltă (1080p/Originalul)</string>
+    <string name="str_best_visual_quality_larger_fil">Calitate vizuală bună, mărime mai mare de fișier</string>
+    <string name="str_medium_quality_default">Calitate medie (Default)</string>
+    <string name="str_balanced_quality_and_file_size">Calitate și mărime fișier balansată</string>
+    <string name="str_low_quality_fastest">Calitate joasă (Cel mai rapid)</string>
+    <string name="str_smallest_file_size_fastest_exp">Mărime mică a fișierului, exportare rapidă</string>
+    <string name="str_export_location">Locație Export</string>
+    <string name="str_downloads_librecuts">Descărcări/LibreCuts</string>
+    <string name="str_preview">PREVIZUALIZARE</string>
+    <string name="str_0_00_0_00">0:00 / 0:00</string>
+    <string name="str_timeline_empty">Linie de timp Goală</string>
+    <string name="str_import_video">Importă Video</string>
+    <string name="str_text">Text</string>
+</resources>
