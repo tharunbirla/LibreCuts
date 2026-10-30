@@ -1,7 +1,7 @@
 <resources>
 
     <!-- PRIMARY: Electric Pink -->
-    <color name="colorPrimary">#FF2A6D</color>
+    <color name="colorPrimary">#FF6600</color>
     <color name="colorPrimaryVariant">#C81D52</color>
     <color name="colorOnPrimary">#FFFFFF</color>
 
@@ -11,11 +11,11 @@
     <color name="colorOnSecondary">#FFFFFF</color>
 
     <!-- BACKGROUND: OLED Black -->
-    <color name="background">#000000</color>
+    <color name="background">#121212</color>
     <color name="colorOnBackground">#F2F2F2</color>
 
     <!-- SURFACE: Subtle Grays -->
-    <color name="colorSurface">#111114</color>
+    <color name="colorSurface">#1E1E1E</color>
     <color name="colorOnSurface">#F2F2F2</color>
 
     <!-- UI SPECIFIC -->
