@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="str_loop">Loop</string>
-    <string name="app_name">LibreCuts</string>
+    <string name="app_name">Personalist Video Analiz</string>
     <string name="trim">Trim</string>
     <string name="split">Split</string>
     <string name="export">Export</string>

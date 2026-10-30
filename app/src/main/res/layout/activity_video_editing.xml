@@ -7,6 +7,28 @@
     android:background="@color/background"
     android:fitsSystemWindows="true"
     tools:context=".VideoEditingActivity">
+    <!-- Orta Üst Başlık -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="16dp"
+        android:text="Personalist Video Analyse"
+        android:textColor="@color/colorPrimary"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+
+    <!-- Sağ Alt Köşe İmza -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:text="M. Şahin Kundakcı"
+        android:textColor="#AAAAAA"
+        android:textSize="12sp" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -997,5 +1019,13 @@
             </LinearLayout>
         </RelativeLayout>
     </FrameLayout>
-
+      <!-- 3D Spotlight ve Serbest Çizim Katmanı -->
+          <View
+                  android:id="@+id/drawingOverlayView"
+                          android:layout_width="match_parent"
+                                  android:layout_height="match_parent"
+                                          android:background="@android:color/transparent"
+                                                  android:clickable="true"
+                                                          android:focusable="true" />
+                                                          -->  
 </RelativeLayout>

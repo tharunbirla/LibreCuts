@@ -91,6 +91,7 @@ class VideoEditingActivity : AppCompatActivity() {
     private lateinit var btnPlayPause: ImageButton
     private lateinit var btnMoveLayerUp: ImageButton
     private lateinit var btnMoveLayerDown: ImageButton
+private lateinit var drawingOverlayView: View
 
     private lateinit var canvasContainer: FrameLayout
     private lateinit var btnFullscreen: ImageButton
@@ -737,6 +738,7 @@ class VideoEditingActivity : AppCompatActivity() {
         bgPreviewImageView = findViewById(R.id.bgPreviewImageView)
         transitionPreviewOverlayView = findViewById(R.id.transitionPreviewOverlayView)
         canvasContainer = findViewById(R.id.canvasContainer)
+drawingOverlayView = findViewById(R.id.drawingOverlayView)
 
         btnFullscreen = findViewById(R.id.btnFullscreen)
         btnExpandTimeline = findViewById(R.id.btnExpandTimeline)
