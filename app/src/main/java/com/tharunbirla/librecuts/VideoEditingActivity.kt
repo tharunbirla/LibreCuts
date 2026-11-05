@@ -179,6 +179,7 @@ class VideoEditingActivity : AppCompatActivity() {
     private var currentBlurJob: Job? = null
     
     private val activeExtractionUris = mutableSetOf<Uri>()
+    private val activeExtractionJobs = mutableMapOf<Uri, Job>()
     private val frameExtractionSemaphore = kotlinx.coroutines.sync.Semaphore(2)
     private val frameCache = object : android.util.LruCache<Uri, List<Bitmap>>(15) {
         override fun entryRemoved(evicted: Boolean, key: Uri?, oldValue: List<Bitmap>?, newValue: List<Bitmap>?) {
@@ -6578,9 +6579,17 @@ class VideoEditingActivity : AppCompatActivity() {
             keyframeContainer?.visibility = View.GONE
         }
 
-        if (activeExtractionCount == 0 && isImportLoading) {
-            isImportLoading = false
-            loadingScreen.visibility = View.GONE
+        // Let queued thumbnail jobs register before checking whether loading is complete.
+        // Yield when the count is already zero so a replacement queued behind this check
+        // can claim its URI before a transient gap dismisses the opening screen.
+        lifecycleScope.launch(Dispatchers.Main) {
+            if (activeExtractionCount == 0 && isImportLoading) {
+                kotlinx.coroutines.yield()
+                if (activeExtractionCount == 0 && isImportLoading) {
+                    isImportLoading = false
+                    loadingScreen.visibility = View.GONE
+                }
+            }
         }
         updateTimelineAddButtonPosition()
     }
@@ -7090,80 +7099,120 @@ class VideoEditingActivity : AppCompatActivity() {
             return null
         }
 
-        if (activeExtractionUris.contains(uri)) {
-            return lifecycleScope.launch {
-                while (activeExtractionUris.contains(uri) && frameCache.get(uri) == null) {
+        return lifecycleScope.launch(Dispatchers.Main) {
+            val extractionJob = coroutineContext[Job]!!
+            frameCache.get(uri)?.let {
+                adapter.updateFrames(it)
+                return@launch
+            }
+            val existingOwner = activeExtractionJobs[uri]
+            if (existingOwner != null && existingOwner.isActive) {
+                // Non-owning waiter. Cancelling it must not drop the owner's registration.
+                while (existingOwner.isActive && activeExtractionUris.contains(uri) && frameCache.get(uri) == null) {
                     kotlinx.coroutines.delay(100)
                 }
                 frameCache.get(uri)?.let { adapter.updateFrames(it) }
+                return@launch
             }
-        }
 
-        activeExtractionUris.add(uri)
-        activeExtractionCount++
-        if (isImportLoading) {
-            showLoading(getString(R.string.loading), getString(R.string.loading_tag))
-        }
-
-        return lifecycleScope.launch(Dispatchers.IO) {
-            frameExtractionSemaphore.acquire()
-            val retriever = MediaMetadataRetriever()
-            val tempFrames = mutableListOf<Bitmap>()
+            // The URI can still be registered by an owner performRenderTracks just cancelled.
+            // Inherit that slot so this replacement extracts, instead of waiting for a cache
+            // write the cancelled owner will never publish.
+            val inherited = existingOwner != null
+            activeExtractionJobs[uri] = extractionJob
+            if (!inherited) {
+                activeExtractionUris.add(uri)
+                activeExtractionCount++
+            } else if (!activeExtractionUris.contains(uri)) {
+                activeExtractionUris.add(uri)
+            }
             try {
-                val path = getFilePathFromUri(uri)
-                if (path != null) {
-                    retriever.setDataSource(path)
-                } else {
-                    retriever.setDataSource(this@VideoEditingActivity, uri)
+                if (isImportLoading) {
+                    showLoading(getString(R.string.loading), getString(R.string.loading_tag))
                 }
+                withContext(Dispatchers.IO) {
+                    var permitAcquired = false
+                    var retriever: MediaMetadataRetriever? = null
+                    val tempFrames = mutableListOf<Bitmap>()
+                    try {
+                        frameExtractionSemaphore.acquire()
+                        permitAcquired = true
+                        retriever = MediaMetadataRetriever()
+                        val path = getFilePathFromUri(uri)
+                        if (path != null) {
+                            retriever.setDataSource(path)
+                        } else {
+                            retriever.setDataSource(this@VideoEditingActivity, uri)
+                        }
 
-                val frameCount = 15
-                val intervalUs = (durationMs * 1000) / frameCount
+                        val frameCount = 15
+                        val intervalUs = (durationMs * 1000) / frameCount
 
-                for (i in 0 until frameCount) {
-                    if (!coroutineContext.isActive) break
-                    val timeUs = i * intervalUs
-                    val bitmap = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) {
-                        retriever.getScaledFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 200, 150)
-                    } else {
-                        retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
-                    }
-
-                    bitmap?.let {
-                        val finalBitmap = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) it else processBitmap(it)
-                        tempFrames.add(finalBitmap)
-                        val progressPercent = ((i + 1) * 100) / frameCount
-                        withContext(Dispatchers.Main) {
-                            adapter.addFrame(finalBitmap)
-                            if (isImportLoading) {
-                                updateLoadingProgress(progressPercent)
+                        for (i in 0 until frameCount) {
+                            if (!coroutineContext.isActive) break
+                            val timeUs = i * intervalUs
+                            val bitmap = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) {
+                                retriever.getScaledFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 200, 150)
+                            } else {
+                                retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
                             }
+
+                            bitmap?.let {
+                                val finalBitmap = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O_MR1) it else processBitmap(it)
+                                tempFrames.add(finalBitmap)
+                                val progressPercent = ((i + 1) * 100) / frameCount
+                                withContext(Dispatchers.Main) {
+                                    adapter.addFrame(finalBitmap)
+                                    if (isImportLoading) {
+                                        updateLoadingProgress(progressPercent)
+                                    }
+                                }
+                            }
+                        }
+
+                        withContext(Dispatchers.Main) {
+                            if (tempFrames.isNotEmpty()) {
+                                frameCache.put(uri, tempFrames)
+                            }
+                        }
+                    } finally {
+                        try {
+                            retriever?.release()
+                        } finally {
+                            if (permitAcquired) frameExtractionSemaphore.release()
                         }
                     }
                 }
-
-                withContext(Dispatchers.Main) {
-                    if (tempFrames.isNotEmpty()) {
-                        frameCache.put(uri, tempFrames)
-                    }
-                }
             } catch (e: Exception) {
-                if (e !is kotlinx.coroutines.CancellationException) {
-                    Log.e(TAG, "Extraction error for segment: ${e.message}")
-                }
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e(TAG, "Extraction error for segment: ${e.message}")
             } finally {
-                retriever.release()
-                frameExtractionSemaphore.release()
-                withContext(kotlinx.coroutines.NonCancellable) {
-                    withContext(Dispatchers.Main) {
-                        activeExtractionUris.remove(uri)
-                        activeExtractionCount--
-                        if (activeExtractionCount <= 0) {
+                val cancelled = !isActive
+                val deferLoadingDismiss = withContext(kotlinx.coroutines.NonCancellable + Dispatchers.Main) {
+                    if (activeExtractionJobs[uri] !== extractionJob) return@withContext false
+                    activeExtractionJobs.remove(uri)
+                    activeExtractionUris.remove(uri)
+                    activeExtractionCount--
+                    if (activeExtractionCount > 0) return@withContext false
+                    activeExtractionCount = 0
+                    // A replacement launched by the render that cancelled this owner may not
+                    // have registered yet. A zero count here is not import completion.
+                    if (!cancelled || !isImportLoading) {
+                        if (isImportLoading) {
+                            isImportLoading = false
+                            loadingScreen.visibility = View.GONE
+                        }
+                        return@withContext false
+                    }
+                    true
+                }
+                if (deferLoadingDismiss) {
+                    withContext(kotlinx.coroutines.NonCancellable + Dispatchers.Main) {
+                        kotlinx.coroutines.yield()
+                        if (activeExtractionCount <= 0 && isImportLoading) {
                             activeExtractionCount = 0
-                            if (isImportLoading) {
-                                isImportLoading = false
-                                loadingScreen.visibility = View.GONE
-                            }
+                            isImportLoading = false
+                            loadingScreen.visibility = View.GONE
                         }
                     }
                 }
