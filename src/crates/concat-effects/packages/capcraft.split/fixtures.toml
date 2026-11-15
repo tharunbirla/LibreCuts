@@ -1,0 +1,26 @@
+# A cut from one colour to another, a little over a third of the way and
+# two thirds of the way, at the probed pixel near the middle. Pinned from
+# the shader as first written, so the look stays what it was.
+
+[[probe]]
+name = "default"
+input = [0.8, 0.5, 0.3, 1.0]
+to = [0.05, 0.15, 0.4, 1.0]
+progress = 0.37
+expect = [0.04379, 0.13147, 0.35034, 1.0]
+
+[[probe]]
+name = "minimum"
+at = "min"
+input = [0.8, 0.5, 0.3, 1.0]
+to = [0.05, 0.15, 0.4, 1.0]
+progress = 0.37
+expect = [0.04999, 0.15002, 0.3999, 1.0]
+
+[[probe]]
+name = "maximum, later"
+at = "max"
+input = [0.8, 0.5, 0.3, 1.0]
+to = [0.05, 0.15, 0.4, 1.0]
+progress = 0.68
+expect = [0.03989, 0.11969, 0.31909, 1.0]

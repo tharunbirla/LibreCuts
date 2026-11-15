@@ -1,0 +1,27 @@
+format = 2
+
+# CapCraft's flash zoom. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.flash-zoom"
+name = "Flash Zoom"
+version = 1
+kind = "transition"
+category = "Zoom"
+order = 43
+description = "A push into the outgoing shot, a white flash at the cut, and the incoming one settling back."
+
+[[param]]
+key = "flash"
+label = "Flash"
+type = "int"
+min = 0
+max = 100
+default = 70
+step = 1
+unit = "%"
+
+[transition]
+entry = "effect.wgsl"
+xfade = "zoomin"
+fallback = "cross-fade"

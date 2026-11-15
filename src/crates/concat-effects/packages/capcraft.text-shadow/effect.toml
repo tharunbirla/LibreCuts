@@ -1,0 +1,81 @@
+format = 2
+
+# CapCraft's text shadow: the letters' shape cast in a chosen colour, at a
+# distance and angle, softened by a blur. Set from the text panel's Shadow
+# tab rather than the effects list. Written for CapCraft for Android
+# (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.text-shadow"
+name = "Text Shadow"
+version = 1
+kind = "effect"
+category = "Text"
+order = 67
+intensity = "opacity"
+description = "The letters' shadow in a chosen colour, cast at a distance and angle and softened."
+
+# Black, fully opaque.
+[[param]]
+key = "color"
+label = "Colour"
+type = "color"
+min = 0
+max = 4294967295
+default = 255
+
+[[param]]
+key = "opacity"
+label = "Opacity"
+type = "int"
+min = 0
+max = 100
+default = 80
+step = 1
+unit = "%"
+
+[[param]]
+key = "blur"
+label = "Blur"
+type = "int"
+min = 0
+max = 100
+default = 20
+step = 1
+unit = "%"
+
+[[param]]
+key = "distance"
+label = "Distance"
+type = "int"
+min = 0
+max = 100
+default = 20
+step = 1
+unit = "%"
+
+# Which way the shadow falls, clockwise from straight right: down and to
+# the right by default, as from a light above and to the left.
+[[param]]
+key = "angle"
+label = "Angle"
+type = "int"
+min = -180
+max = 180
+default = 45
+step = 1
+unit = "°"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"
+
+# The letters' coverage blurred across the rows, then down the columns, at
+# fewer pixels the softer the shadow; `effect` reads it back moved.
+[[wgsl.pass]]
+target = "across"
+shrink = ["1 + blur / 25", "1"]
+
+[[wgsl.pass]]
+target = "down"
+shrink = ["1 + blur / 25", "1 + blur / 25"]

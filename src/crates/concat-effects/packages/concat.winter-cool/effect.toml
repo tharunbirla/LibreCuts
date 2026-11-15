@@ -1,0 +1,13 @@
+format = 2
+
+[effect]
+id = "concat.winter-cool"
+name = "Winter Cool"
+kind = "filter"
+category = "Scenery"
+order = 59
+description = "Desaturated and blue, the blacks lifted to a matte wintry haze."
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

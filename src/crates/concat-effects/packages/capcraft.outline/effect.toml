@@ -1,0 +1,49 @@
+format = 2
+
+# CapCraft's outline glow, for the body effects: a neon line around what a
+# cutout keeps, drawn on the clear part just outside it. Written for
+# CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.outline"
+name = "Outline Glow"
+version = 1
+kind = "effect"
+category = "Cutout"
+order = 64
+intensity = "strength"
+description = "A glowing line around a cut-out subject, on the clear part just outside its edge."
+
+[[param]]
+key = "width"
+label = "Width"
+type = "int"
+min = 1
+max = 30
+default = 8
+step = 1
+unit = "px"
+
+[[param]]
+key = "strength"
+label = "Strength"
+type = "int"
+min = 0
+max = 100
+default = 90
+step = 1
+unit = "%"
+
+[[param]]
+key = "hue"
+label = "Colour"
+type = "int"
+min = 0
+max = 360
+default = 190
+step = 1
+unit = "°"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

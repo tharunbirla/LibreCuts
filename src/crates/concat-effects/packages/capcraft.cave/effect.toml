@@ -1,0 +1,21 @@
+# CapCraft's own audio effect. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.cave"
+name = "Cave"
+kind = "audio"
+category = "Space"
+order = 88
+intensity = "size"
+description = "Long, dark echoes thrown back from stone walls."
+
+[[param]]
+key = "size"
+label = "Size"
+min = 0
+max = 10
+default = 5
+step = 0.5
+
+[ffmpeg]
+chain = "aecho=0.8:0.6:{fixed(250 + size * 40, 0)}|{fixed(420 + size * 60, 0)}:0.45|0.3,alimiter=limit=0.94"

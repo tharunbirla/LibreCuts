@@ -1,0 +1,50 @@
+format = 2
+
+# CapCraft's word by word animations for titles and captions: the words
+# appearing one after another, or all there and lit one after another in a
+# colour, karaoke-style. Set from the text Animations' In shelf, never
+# listed. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.word-reveal"
+name = "Word by Word"
+version = 1
+kind = "effect"
+category = "Text"
+order = 69
+intensity = "span"
+description = "A title's words appearing, or lighting up, one after another."
+
+# Yellow, fully opaque: the colour the words light up in.
+[[param]]
+key = "color"
+label = "Colour"
+type = "color"
+min = 0
+max = 4294967295
+default = 4291559679
+
+# How long the words take, from the first to the last, in seconds from the
+# clip's start.
+[[param]]
+key = "span"
+label = "Duration"
+min = 0.1
+max = 30
+default = 2
+step = 0.1
+unit = "s"
+
+# 0: the words appear one by one. 1: all there, lit one by one.
+[[param]]
+key = "karaoke"
+label = "Karaoke"
+type = "int"
+min = 0
+max = 1
+default = 0
+step = 1
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

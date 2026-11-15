@@ -1,0 +1,32 @@
+format = 2
+
+[effect]
+id = "concat.vintage"
+name = "Vintage"
+kind = "filter"
+category = "Retro"
+order = 40
+intensity = "age"
+description = "A seventies print: matte blacks and whites, colour faded, greens gone to yellow, a soft vignette."
+
+[[param]]
+key = "age"
+label = "Age"
+min = 0
+max = 100
+default = 60
+step = 1
+unit = "%"
+
+[[param]]
+key = "tint"
+label = "Tint"
+min = 0
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

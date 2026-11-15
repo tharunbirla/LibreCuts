@@ -1,0 +1,25 @@
+format = 2
+
+[effect]
+id = "concat.posterize"
+name = "Posterize"
+version = 2
+kind = "effect"
+category = "Stylize"
+order = 43
+intensity = "levels"
+aliases = ["posterize"]
+description = "Flat bands of colour, like a screen print."
+
+[[param]]
+key = "levels"
+label = "Levels"
+type = "int"
+min = 2
+max = 8
+default = 4
+step = 1
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

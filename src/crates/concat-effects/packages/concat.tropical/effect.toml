@@ -1,0 +1,13 @@
+format = 2
+
+[effect]
+id = "concat.tropical"
+name = "Tropical"
+kind = "filter"
+category = "Scenery"
+order = 60
+description = "Saturated and bright, the water pushed teal."
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

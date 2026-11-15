@@ -1,0 +1,637 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Jareer Abdullah and Concat contributors
+
+//! The editing session: a project, its id mint, and undo.
+//!
+//! Undo is whole-state snapshots, and they are cheap: the project's
+//! timelines and clips sit behind `Arc`, so a snapshot copies pointers and
+//! a command copies only the clip it writes to. Impossible to get wrong in
+//! the way inverse operations are, and a heavy project's two hundred undos
+//! are a few megabytes, not a few hundred.
+//!
+//! Two refinements on "one snapshot per command":
+//!
+//! - A **gesture** is one undo step. A knob being dragged commits on every
+//!   pause of the pointer; the caller names the gesture, and commits that
+//!   name the same gesture as the last recorded step fold into it. See
+//!   [`Editor::apply_within`].
+//! - **View state is not an edit.** Which timeline tab is showing, and the
+//!   order of the tabs, is saved with the document but never recorded in
+//!   history: undo steps back through what changed the picture, not
+//!   through what the person was looking at.
+
+use crate::model::AppliedFilter;
+use std::collections::VecDeque;
+
+use serde_json::Value;
+
+use crate::commands::{Command, CommandError, IdMint, Outcome, apply};
+use crate::doc::{DocumentSettings, from_document, to_document};
+use crate::model::{Clip, Project};
+
+const UNDO_DEPTH: usize = 200;
+
+/// The state before one recorded step, and the gesture it belonged to.
+struct Snapshot {
+    before: Project,
+    /// Set while the gesture that produced this step may still continue;
+    /// cleared by [`Editor::end_gesture`] or by any step of another kind.
+    gesture: Option<String>,
+}
+
+/// One editing session: the project, the id mint that keeps its ids unique,
+/// and the undo/redo stacks. This is the object a host holds per open
+/// project; everything else in the crate is reachable through it.
+pub struct Editor {
+    project: Project,
+    mint: IdMint,
+    /// Oldest snapshot at the front: overflowing the depth cap evicts from
+    /// the front in constant time, where a Vec would shuffle the whole stack.
+    undo: VecDeque<Snapshot>,
+    redo: Vec<Project>,
+    /// Steps recorded since the editor was made; see [`Editor::steps_recorded`].
+    recorded: u64,
+}
+
+impl Editor {
+    /// A fresh, empty project.
+    pub fn new() -> Self {
+        Self::with_video(crate::model::VideoSettings::default())
+    }
+
+    /// A fresh editor whose first timeline renders to `video`.
+    pub fn with_video(video: crate::model::VideoSettings) -> Self {
+        Self {
+            project: Project::with_video(video),
+            mint: IdMint::default(),
+            undo: VecDeque::new(),
+            redo: Vec::new(),
+            recorded: 0,
+        }
+    }
+
+    /// Restores a project from a document, adopting every id it uses so the
+    /// mint can never re-issue one. Returns None when the document holds
+    /// nothing recognisable.
+    pub fn from_document(document: &Value) -> Option<Self> {
+        let project = from_document(document)?;
+        let mut mint = IdMint::default();
+        mint.adopt_project(&project);
+        Some(Self {
+            project,
+            mint,
+            undo: VecDeque::new(),
+            redo: Vec::new(),
+            recorded: 0,
+        })
+    }
+
+    /// Rewrites the picture links `upgrade` changes - one to a retired
+    /// effect, read as a link to the effect that stands in for it - as the
+    /// document is read, before any edit: not a step to undo, since it is
+    /// what the document means now. Returns whether any link changed.
+    pub fn upgrade_links(&mut self, mut upgrade: impl FnMut(&mut AppliedFilter) -> bool) -> bool {
+        use std::sync::Arc;
+        let mut changed = false;
+        for timeline in &mut self.project.timelines {
+            for index in 0..timeline.clips.len() {
+                let mut links = timeline.clips[index].video_effects.clone();
+                let mut any = false;
+                for link in &mut links {
+                    any |= upgrade(link);
+                }
+                if any {
+                    let timeline = Arc::make_mut(timeline);
+                    Arc::make_mut(&mut timeline.clips[index]).video_effects = links;
+                    changed = true;
+                }
+            }
+        }
+        changed
+    }
+
+    /// Turns a link to one of 0.2.4's three mask effects - Mask: Circle,
+    /// Rectangle and Linear, retired in 0.2.5 with the old effect format
+    /// and nothing in their place (#239) - into the clip's own mask, as
+    /// the document is read, like [`Editor::upgrade_links`]. Their knobs
+    /// and the keys on them carry over into the mask's terms; the first
+    /// enabled one on a clip with no mask of its own is taken, and any
+    /// other stays a link to an effect that is not installed. Returns the
+    /// ids of the effects that were turned into masks.
+    pub fn upgrade_mask_effects(&mut self) -> Vec<String> {
+        use std::sync::Arc;
+        let mut upgraded: Vec<String> = Vec::new();
+        for timeline in &mut self.project.timelines {
+            for index in 0..timeline.clips.len() {
+                let clip = &timeline.clips[index];
+                if clip.mask.is_some() || !clip.kind.is_visual() {
+                    continue;
+                }
+                let Some(entry) = clip
+                    .video_effects
+                    .iter()
+                    .position(|link| link.enabled && old_mask(&link.id).is_some())
+                else {
+                    continue;
+                };
+                // The old masks measured some knobs against the frame's
+                // width or height and some against its shorter side; the
+                // media's own shape stands in for the frame's.
+                let (width, height) = self
+                    .project
+                    .media
+                    .iter()
+                    .find(|item| item.id == clip.media_id)
+                    .and_then(|item| Some((f64::from(item.width?), f64::from(item.height?))))
+                    .filter(|(w, h)| *w > 0.0 && *h > 0.0)
+                    .unwrap_or((16.0, 9.0));
+                let short = width.min(height);
+                let (wide, tall) = (width / short, height / short);
+                let link = clip.video_effects[entry].clone();
+                let Some(shape) = old_mask(&link.id) else {
+                    continue;
+                };
+                let mut mask = crate::model::ClipMask::of(shape);
+                mask.invert = link.params.get("invert").copied().unwrap_or(0.0) >= 0.5;
+                if shape == crate::model::MaskShape::Linear {
+                    // A vertical edge keeping what is left of it: the line
+                    // turned a quarter back.
+                    mask.rotation = -90.0;
+                }
+                let mut keys: Vec<crate::model::ClipKey> = Vec::new();
+                for (param, property, fallback, convert) in
+                    old_mask_knobs(shape, wide, tall).into_iter().flatten()
+                {
+                    let value = link.params.get(param).copied().unwrap_or(fallback);
+                    mask.set(property, convert(value));
+                    keys.extend(link.keys_on(param).iter().map(|key| crate::model::ClipKey {
+                        property,
+                        at: key.at,
+                        value: crate::model::ClipMask::clamp(property, convert(key.value)),
+                        ease: key.ease,
+                    }));
+                }
+                if !upgraded.contains(&link.id) {
+                    upgraded.push(link.id.clone());
+                }
+                let timeline = Arc::make_mut(timeline);
+                let clip = Arc::make_mut(&mut timeline.clips[index]);
+                clip.video_effects.remove(entry);
+                clip.mask = Some(mask.tidy());
+                for key in keys {
+                    clip.set_key(key.property, key.at, key.value, key.ease);
+                }
+            }
+        }
+        upgraded
+    }
+
+    /// Takes off the clip fields earlier versions wrote and this one no
+    /// longer reads - 0.2.4's `reverse` flag and its preset animations -
+    /// as the document is read, the way [`Editor::upgrade_links`] does: not
+    /// a step to undo. They rode along unread, so a reversed clip played
+    /// forwards and an animated one sat still with nothing said (audit
+    /// 2026-09-28, #5). Returns the names of the clips that had each, so
+    /// the open can say which; the next save makes it so.
+    pub fn drop_retired_fields(&mut self) -> RetiredFields {
+        use std::sync::Arc;
+        const ANIMATIONS: [&str; 4] = [
+            "animationIn",
+            "animationOut",
+            "animationCombo",
+            "animationLoop",
+        ];
+        let mut found = RetiredFields::default();
+        for timeline in &mut self.project.timelines {
+            for index in 0..timeline.clips.len() {
+                let extra = &timeline.clips[index].extra;
+                let reversed = extra.get("reverse").and_then(|v| v.as_bool()) == Some(true);
+                let animated = ANIMATIONS
+                    .iter()
+                    .any(|key| extra.get(*key).is_some_and(|value| !value.is_null()));
+                let any = extra.contains_key("reverse")
+                    || ANIMATIONS.iter().any(|key| extra.contains_key(*key));
+                if !any {
+                    continue;
+                }
+                let name = timeline.clips[index].name.clone();
+                if reversed && !found.reversed.contains(&name) {
+                    found.reversed.push(name.clone());
+                }
+                if animated && !found.animated.contains(&name) {
+                    found.animated.push(name);
+                }
+                let timeline = Arc::make_mut(timeline);
+                let clip = Arc::make_mut(&mut timeline.clips[index]);
+                clip.extra.remove("reverse");
+                for key in ANIMATIONS {
+                    clip.extra.remove(key);
+                }
+            }
+        }
+        found
+    }
+
+    /// The current state, read-only: all mutation goes through
+    /// [`Editor::apply`] so nothing can change without being undoable.
+    pub fn project(&self) -> &Project {
+        &self.project
+    }
+
+    /// The project, writable around the undo stack: for tests that need a
+    /// state no command makes any more, such as the stacked clips an older
+    /// document can hold.
+    #[cfg(test)]
+    pub(crate) fn project_mut(&mut self) -> &mut Project {
+        &mut self.project
+    }
+
+    /// Applies one command, recording the state before it for undo.
+    ///
+    /// A command that fails leaves the project and history untouched, and
+    /// the snapshot is only kept when the command reports it actually
+    /// changed something ([`Outcome::applied`]), so undo never replays a
+    /// no-op - a missing id, a value already in place.
+    pub fn apply(&mut self, command: Command) -> Result<Outcome, CommandError> {
+        self.apply_within(None, command)
+    }
+
+    /// [`Editor::apply`] as one move of a gesture.
+    ///
+    /// The first command naming a gesture records a step as usual; every
+    /// later command naming the same gesture, with no other step recorded
+    /// in between, folds into that step, so undo lands where the gesture
+    /// began. Commands that set absolute values (every inspector knob) are
+    /// the ones this is for. `None` is a step of its own, and ends any
+    /// gesture in progress.
+    pub fn apply_within(
+        &mut self,
+        gesture: Option<&str>,
+        command: Command,
+    ) -> Result<Outcome, CommandError> {
+        if command.is_view_state() {
+            return apply(&mut self.project, &mut self.mint, command);
+        }
+        let before = self.project.clone();
+        let outcome = apply(&mut self.project, &mut self.mint, command)?;
+        if !outcome.applied {
+            return Ok(outcome);
+        }
+        self.tidy_touched(&before);
+        self.follow_first_hdr(&before);
+        let continues = match (gesture, self.undo.back()) {
+            (Some(gesture), Some(last)) => last.gesture.as_deref() == Some(gesture),
+            _ => false,
+        };
+        if !continues {
+            self.undo.push_back(Snapshot {
+                before,
+                gesture: gesture.map(str::to_owned),
+            });
+            self.recorded += 1;
+            if self.undo.len() > UNDO_DEPTH {
+                self.undo.pop_front();
+            }
+        }
+        self.redo.clear();
+        Ok(outcome)
+    }
+
+    /// Runs [`Clip::tidy`] over every clip the command wrote, so the clamps
+    /// live in one place and a document is the same on screen as it is
+    /// after a save and a reopen (audit 2026-09-23, #13). Only a clip
+    /// whose `Arc` the command replaced is looked at: the rest are still
+    /// the snapshot's, and were tidy already.
+    fn tidy_touched(&mut self, before: &Project) {
+        use std::collections::HashSet;
+        use std::sync::Arc;
+        let previous: std::collections::HashMap<&str, &Arc<crate::model::Timeline>> = before
+            .timelines
+            .iter()
+            .map(|timeline| (timeline.id.as_str(), timeline))
+            .collect();
+        for timeline in &mut self.project.timelines {
+            let old = previous.get(timeline.id.as_str()).copied();
+            if old.is_some_and(|old| Arc::ptr_eq(old, timeline)) {
+                continue;
+            }
+            let kept: HashSet<*const Clip> = old
+                .map(|old| old.clips.iter().map(Arc::as_ptr).collect())
+                .unwrap_or_default();
+            let timeline = Arc::make_mut(timeline);
+            for clip in &mut timeline.clips {
+                if kept.contains(&Arc::as_ptr(clip)) {
+                    continue;
+                }
+                let tidied = (**clip).clone().tidy();
+                if tidied != **clip {
+                    *clip = Arc::new(tidied);
+                }
+            }
+        }
+    }
+
+    /// Makes an SDR timeline HLG when the command put its first HDR clip on
+    /// it - a clip of a file recorded in HLG or PQ, where before it had
+    /// none - in the same step, so an undo takes both back. A timeline set
+    /// back to SDR with HDR clips already on it stays SDR (decided 26 Sept:
+    /// the Modify sheet can change it back), and only a timeline the
+    /// command wrote, and did not make, is looked at.
+    fn follow_first_hdr(&mut self, before: &Project) {
+        use std::collections::HashSet;
+        use std::sync::Arc;
+        let hdr = |project: &Project| -> HashSet<String> {
+            project
+                .media
+                .iter()
+                .filter(|media| media.color_space.is_hdr())
+                .map(|media| media.id.clone())
+                .collect()
+        };
+        let now = hdr(&self.project);
+        if now.is_empty() {
+            return;
+        }
+        let then = hdr(before);
+        let previous: std::collections::HashMap<&str, &Arc<crate::model::Timeline>> = before
+            .timelines
+            .iter()
+            .map(|timeline| (timeline.id.as_str(), timeline))
+            .collect();
+        for timeline in &mut self.project.timelines {
+            if timeline.video.color_space.is_hdr() {
+                continue;
+            }
+            // A timeline the command made keeps the colour it was made
+            // with - a copy of one set back to SDR stays SDR.
+            let Some(old) = previous.get(timeline.id.as_str()).copied() else {
+                continue;
+            };
+            if Arc::ptr_eq(old, timeline) {
+                continue;
+            }
+            let had = old.clips.iter().any(|clip| then.contains(&clip.media_id));
+            let has = timeline
+                .clips
+                .iter()
+                .any(|clip| now.contains(&clip.media_id));
+            if has && !had {
+                Arc::make_mut(timeline).video.color_space = crate::model::ColorSpace::Hlg;
+            }
+        }
+    }
+
+    /// Ends the gesture in progress, if any: the next command naming it
+    /// starts a new step rather than folding into the last one. Called when
+    /// the pointer goes up, or when enough time has passed that a second
+    /// drag of the same knob is a second edit.
+    pub fn end_gesture(&mut self) {
+        if let Some(last) = self.undo.back_mut() {
+            last.gesture = None;
+        }
+    }
+
+    /// Steps back one edit. Returns whether anything changed.
+    pub fn undo(&mut self) -> bool {
+        match self.undo.pop_back() {
+            Some(previous) => {
+                self.redo
+                    .push(std::mem::replace(&mut self.project, previous.before));
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// Steps forward again. Returns whether anything changed.
+    pub fn redo(&mut self) -> bool {
+        match self.redo.pop() {
+            Some(next) => {
+                let before = std::mem::replace(&mut self.project, next);
+                self.undo.push_back(Snapshot {
+                    before,
+                    gesture: None,
+                });
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// Whether [`Editor::undo`] would do anything - what the UI's undo
+    /// button greys out on.
+    pub fn can_undo(&self) -> bool {
+        !self.undo.is_empty()
+    }
+
+    /// Whether [`Editor::redo`] would do anything; the redo button's twin
+    /// of [`Editor::can_undo`].
+    pub fn can_redo(&self) -> bool {
+        !self.redo.is_empty()
+    }
+
+    /// How many steps [`Editor::undo`] can go back through.
+    pub fn undo_depth(&self) -> usize {
+        self.undo.len()
+    }
+
+    /// How many undone steps [`Editor::redo`] can go forward through.
+    pub fn redo_depth(&self) -> usize {
+        self.redo.len()
+    }
+
+    /// How many steps have been recorded since the editor was made, a step
+    /// counted once however many commands of a gesture fold into it: what a
+    /// host that names the steps it undoes tells a new step from a folded
+    /// one by. Undo and redo leave it as it is.
+    pub fn steps_recorded(&self) -> u64 {
+        self.recorded
+    }
+
+    /// The full document for saving.
+    pub fn to_document(&self, settings: &DocumentSettings) -> Value {
+        to_document(settings, &self.project)
+    }
+}
+
+impl Default for Editor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// The clips [`Editor::drop_retired_fields`] found, by name, each once.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct RetiredFields {
+    /// Clips an earlier version played backwards, which now play forwards.
+    pub reversed: Vec<String>,
+    /// Clips an earlier version moved with a preset animation.
+    pub animated: Vec<String>,
+}
+
+/// The shape one of 0.2.4's mask effects keeps, by its package id.
+fn old_mask(id: &str) -> Option<crate::model::MaskShape> {
+    use crate::model::MaskShape;
+    match id {
+        "concat.mask-circle" => Some(MaskShape::Circle),
+        "concat.mask-rectangle" => Some(MaskShape::Rectangle),
+        "concat.mask-linear" => Some(MaskShape::Linear),
+        _ => None,
+    }
+}
+
+/// One knob of an old mask effect: its name, the mask number it becomes,
+/// its old default, and how its value turns into that number's.
+type OldKnob = (
+    &'static str,
+    crate::model::KeyProperty,
+    f64,
+    Box<dyn Fn(f64) -> f64>,
+);
+
+/// The knobs of the old mask effect of `shape` and how each carries over,
+/// for a picture `wide` and `tall` in its shorter side. The arithmetic is
+/// the old shaders' (0.2.4's `concat.mask-*/effect.wgsl`): a circle's size
+/// was its diameter in the shorter side, a rectangle's width and height
+/// fractions of the frame's own, the feathers bands of the shorter side
+/// (the line's of the width), the centres fractions of the frame from its
+/// corner. A mask measures from the picture's centre, in its shorter side,
+/// and its feather is a band of half the shorter side.
+fn old_mask_knobs(shape: crate::model::MaskShape, wide: f64, tall: f64) -> [Option<OldKnob>; 5] {
+    use crate::model::{KeyProperty, MaskShape};
+    let centre = |value: f64| value / 100.0 - 0.5;
+    match shape {
+        MaskShape::Circle => [
+            Some((
+                "size",
+                KeyProperty::MaskWidth,
+                50.0,
+                Box::new(|v| v / 100.0),
+            )),
+            Some((
+                "size",
+                KeyProperty::MaskHeight,
+                50.0,
+                Box::new(|v| v / 100.0),
+            )),
+            Some((
+                "feather",
+                KeyProperty::MaskFeather,
+                10.0,
+                Box::new(|v| v / 100.0),
+            )),
+            Some(("x", KeyProperty::MaskX, 50.0, Box::new(centre))),
+            Some(("y", KeyProperty::MaskY, 50.0, Box::new(centre))),
+        ],
+        MaskShape::Rectangle => [
+            Some((
+                "width",
+                KeyProperty::MaskWidth,
+                50.0,
+                Box::new(move |v| v / 100.0 * wide),
+            )),
+            Some((
+                "height",
+                KeyProperty::MaskHeight,
+                50.0,
+                Box::new(move |v| v / 100.0 * tall),
+            )),
+            Some((
+                "feather",
+                KeyProperty::MaskFeather,
+                10.0,
+                Box::new(|v| v / 100.0),
+            )),
+            Some(("x", KeyProperty::MaskX, 50.0, Box::new(centre))),
+            Some(("y", KeyProperty::MaskY, 50.0, Box::new(centre))),
+        ],
+        _ => [
+            Some(("position", KeyProperty::MaskX, 50.0, Box::new(centre))),
+            Some((
+                "feather",
+                KeyProperty::MaskFeather,
+                20.0,
+                Box::new(move |v| v / 50.0 * wide),
+            )),
+            None,
+            None,
+            None,
+        ],
+    }
+}
+
+#[cfg(test)]
+mod mask_upgrade_tests {
+    use super::*;
+    use crate::model::{AppliedFilter, ClipKind, KeyEase, KeyProperty, MaskShape};
+
+    fn with_link(link: AppliedFilter, size: (u32, u32)) -> Editor {
+        let mut editor = Editor::new();
+        editor.project.media.push(crate::model::MediaItem {
+            id: "m1".into(),
+            width: Some(size.0),
+            height: Some(size.1),
+            ..Default::default()
+        });
+        let timeline = std::sync::Arc::make_mut(&mut editor.project.timelines[0]);
+        let track = timeline.tracks[0].id.clone();
+        let mut clip = Clip::blank("c1", track, ClipKind::Video, "Mirror", 0.0, 4.0);
+        clip.media_id = "m1".into();
+        clip.video_effects = vec![AppliedFilter::new("concat.mono"), link];
+        timeline.clips.push(std::sync::Arc::new(clip));
+        editor
+    }
+
+    /// 0.2.4's Mask: Circle on a clip opens as the clip's own circle,
+    /// the same size, softness and place, and the link goes; its keys
+    /// carry over as the mask's.
+    #[test]
+    fn an_old_circle_mask_opens_as_the_clips_mask() {
+        let mut link = AppliedFilter::new("concat.mask-circle");
+        link.params.insert("size".into(), 40.0);
+        link.params.insert("feather".into(), 20.0);
+        link.params.insert("x".into(), 75.0);
+        link.params.insert("invert".into(), 1.0);
+        link.set_key("y", 0.0, 50.0, KeyEase::LINEAR);
+        link.set_key("y", 1.0, 25.0, KeyEase::LINEAR);
+        let mut editor = with_link(link, (1920, 1080));
+        assert_eq!(editor.upgrade_mask_effects(), vec!["concat.mask-circle"]);
+        let clip = &editor.project.timelines[0].clips[0];
+        let mask = clip.mask.expect("a mask");
+        assert_eq!(mask.shape, MaskShape::Circle);
+        assert!((mask.width - 0.4).abs() < 1e-9 && (mask.height - 0.4).abs() < 1e-9);
+        assert!((mask.feather - 0.2).abs() < 1e-9);
+        assert!((mask.x - 0.25).abs() < 1e-9 && mask.y == 0.0);
+        assert!(mask.invert);
+        assert_eq!(clip.video_effects, vec![AppliedFilter::new("concat.mono")]);
+        assert!((clip.value_at(KeyProperty::MaskY, 1.0) + 0.25).abs() < 1e-9);
+        // Done once: a second read finds nothing to do.
+        assert!(editor.upgrade_mask_effects().is_empty());
+    }
+
+    /// A rectangle's width and height were the frame's own fractions; on
+    /// a wide picture they become the shorter side's. The line was a
+    /// vertical edge keeping the left.
+    #[test]
+    fn an_old_rectangle_and_line_keep_their_shape_on_a_wide_picture() {
+        let mut link = AppliedFilter::new("concat.mask-rectangle");
+        link.params.insert("width".into(), 50.0);
+        link.params.insert("height".into(), 50.0);
+        let mut editor = with_link(link, (200, 100));
+        editor.upgrade_mask_effects();
+        let mask = editor.project.timelines[0].clips[0].mask.expect("a mask");
+        assert!((mask.width - 1.0).abs() < 1e-9, "half of 200 is 100");
+        assert!((mask.height - 0.5).abs() < 1e-9, "half of 100 is 50");
+
+        let mut editor = with_link(AppliedFilter::new("concat.mask-linear"), (200, 100));
+        editor.upgrade_mask_effects();
+        let mask = editor.project.timelines[0].clips[0].mask.expect("a mask");
+        assert_eq!(mask.shape, MaskShape::Linear);
+        assert_eq!(mask.rotation, -90.0);
+        assert_eq!(mask.x, 0.0);
+        assert!(
+            (mask.feather - 0.8).abs() < 1e-9,
+            "a fifth of 200 is 40, of 50"
+        );
+    }
+}

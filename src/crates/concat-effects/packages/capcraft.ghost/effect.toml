@@ -1,0 +1,21 @@
+# CapCraft's own audio effect. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.ghost"
+name = "Ghost"
+kind = "audio"
+category = "Voice"
+order = 91
+intensity = "haunt"
+description = "A thin, wavering voice trailing echoes behind it."
+
+[[param]]
+key = "haunt"
+label = "Haunt"
+min = 0
+max = 10
+default = 5
+step = 0.5
+
+[ffmpeg]
+chain = "highpass=f=300,vibrato=f=4:d={fixed(0.2 + haunt / 25, 2)},aecho=0.8:0.7:{fixed(120 + haunt * 20, 0)}:0.5,alimiter=limit=0.94"

@@ -1,0 +1,30 @@
+format = 2
+
+# CapCraft's curved text: a title bent onto an arc, set from the text
+# panel's Curve tab rather than the effects list. Written for CapCraft for
+# Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.text-curve"
+name = "Curved Text"
+version = 1
+kind = "effect"
+category = "Text"
+order = 68
+intensity = "bend"
+description = "Bends a title onto an arc, its ends down or, bent the other way, up."
+
+# How far the line bends: up in the middle when above zero, down when below.
+[[param]]
+key = "bend"
+label = "Bend"
+type = "int"
+min = -100
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

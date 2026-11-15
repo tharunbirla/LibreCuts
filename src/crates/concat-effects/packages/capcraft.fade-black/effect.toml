@@ -1,0 +1,27 @@
+format = 2
+
+# CapCraft's dip to black. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.fade-black"
+name = "Fade Black"
+version = 1
+kind = "transition"
+category = "Basic"
+order = 30
+description = "The outgoing shot fades to black and the incoming one fades up out of it."
+
+[[param]]
+key = "hold"
+label = "Hold"
+type = "int"
+min = 0
+max = 100
+default = 10
+step = 1
+unit = "%"
+
+[transition]
+entry = "effect.wgsl"
+xfade = "fadeblack"
+fallback = "cross-fade"

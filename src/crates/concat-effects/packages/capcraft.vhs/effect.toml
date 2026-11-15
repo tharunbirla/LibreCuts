@@ -1,0 +1,24 @@
+format = 2
+
+[effect]
+id = "capcraft.vhs"
+name = "VHS"
+version = 1
+kind = "effect"
+category = "Retro"
+order = 5
+intensity = "amount"
+description = "A home video tape: colours slipping off the picture, fine dark lines, and bands that jump sideways now and then."
+
+[[param]]
+key = "amount"
+label = "Amount"
+type = "int"
+min = 0
+max = 100
+default = 60
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"

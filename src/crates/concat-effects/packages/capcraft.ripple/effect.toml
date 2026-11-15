@@ -1,0 +1,27 @@
+format = 2
+
+# CapCraft's ripple. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.ripple"
+name = "Ripple"
+version = 1
+kind = "transition"
+category = "Distort"
+order = 37
+description = "Rings run out from the middle and bend both shots while one dissolves into the other."
+
+[[param]]
+key = "strength"
+label = "Strength"
+type = "int"
+min = 0
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[transition]
+entry = "effect.wgsl"
+xfade = "dissolve"
+fallback = "cross-fade"

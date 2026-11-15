@@ -1,0 +1,13 @@
+format = 2
+
+[effect]
+id = "concat.high-contrast-mono"
+name = "High-Contrast Mono"
+kind = "filter"
+category = "Black & White"
+order = 64
+description = "Black and white pushed hard: deep blacks, bright whites, nothing in between."
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

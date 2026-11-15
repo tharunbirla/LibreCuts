@@ -1,0 +1,21 @@
+# CapCraft's own audio effect. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.crisp"
+name = "Crisp"
+kind = "audio"
+category = "Tone"
+order = 84
+intensity = "amount"
+description = "Edges of the sound brought forward, so words cut through."
+
+[[param]]
+key = "amount"
+label = "Amount"
+min = 0
+max = 10
+default = 5
+step = 0.5
+
+[ffmpeg]
+chain = "crystalizer=i={fixed(amount / 2, 2)},alimiter=limit=0.94"

@@ -1,0 +1,25 @@
+format = 2
+
+# CapCraft's fade out. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.fade-out"
+name = "Fade Out"
+version = 1
+kind = "effect"
+category = "Intro & Outro"
+order = 96
+description = "The clip sinks into black over its last moments."
+
+# How long the outro takes, up to the last frame of the clip or layer it is on.
+[[param]]
+key = "span"
+label = "Duration"
+min = 0.2
+max = 3
+default = 0.8
+step = 0.1
+unit = "s"
+
+[wgsl]
+entry = "effect.wgsl"

@@ -1,0 +1,13 @@
+format = 2
+
+[effect]
+id = "concat.natural"
+name = "Natural"
+kind = "filter"
+category = "Portrait"
+order = 55
+description = "A gentle, true-to-life lift: barely-there warmth, skin left alone."
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

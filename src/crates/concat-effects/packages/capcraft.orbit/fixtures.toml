@@ -1,0 +1,13 @@
+[[case]]
+name = "default"
+chain = "afreqshift=shift=80,aecho=0.8:0.5:60:0.35,highpass=f=200,alimiter=limit=0.94"
+
+[[case]]
+name = "minimum"
+at = "min"
+chain = "afreqshift=shift=20,aecho=0.8:0.5:60:0.35,highpass=f=200,alimiter=limit=0.94"
+
+[[case]]
+name = "maximum"
+at = "max"
+chain = "afreqshift=shift=140,aecho=0.8:0.5:60:0.35,highpass=f=200,alimiter=limit=0.94"

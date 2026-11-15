@@ -1,0 +1,13 @@
+format = 2
+
+[effect]
+id = "concat.super-8"
+name = "Super 8"
+kind = "filter"
+category = "Film"
+order = 62
+description = "Faded, warm and grainy: an old home movie run through a projector."
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

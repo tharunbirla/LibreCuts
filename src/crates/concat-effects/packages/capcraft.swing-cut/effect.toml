@@ -1,0 +1,27 @@
+format = 2
+
+# CapCraft's swing. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.swing-cut"
+name = "Swing"
+version = 1
+kind = "transition"
+category = "Camera"
+order = 48
+description = "A fast pan to the left, smeared as it moves, landing on the incoming shot."
+
+[[param]]
+key = "blur"
+label = "Blur"
+type = "int"
+min = 0
+max = 100
+default = 60
+step = 1
+unit = "%"
+
+[transition]
+entry = "effect.wgsl"
+xfade = "slideleft"
+fallback = "cross-fade"

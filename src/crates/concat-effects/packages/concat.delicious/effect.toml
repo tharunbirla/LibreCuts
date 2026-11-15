@@ -1,0 +1,13 @@
+format = 2
+
+[effect]
+id = "concat.delicious"
+name = "Delicious"
+kind = "filter"
+category = "Food"
+order = 54
+description = "Warm and saturated, the appetising push every food shot wants."
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

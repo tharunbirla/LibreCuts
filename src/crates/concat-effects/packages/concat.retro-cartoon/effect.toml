@@ -1,0 +1,31 @@
+format = 2
+
+[effect]
+id = "concat.retro-cartoon"
+name = "Retro Cartoon"
+kind = "filter"
+category = "Stylised"
+order = 55
+intensity = "ink"
+description = "Flat bands of colour with inked edges, like a printed comic."
+
+[[param]]
+key = "levels"
+label = "Levels"
+min = 2
+max = 8
+default = 5
+step = 1
+
+[[param]]
+key = "ink"
+label = "Ink"
+min = 0
+max = 100
+default = 60
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

@@ -1,0 +1,13 @@
+[[case]]
+name = "default"
+chain = "aphaser=in_gain=0.6:out_gain=0.8:delay=3:decay=0.5:speed=0.80,alimiter=limit=0.94"
+
+[[case]]
+name = "minimum"
+at = "min"
+chain = "aphaser=in_gain=0.6:out_gain=0.8:delay=3:decay=0.5:speed=0.20,alimiter=limit=0.94"
+
+[[case]]
+name = "maximum"
+at = "max"
+chain = "aphaser=in_gain=0.6:out_gain=0.8:delay=3:decay=0.5:speed=1.70,alimiter=limit=0.94"

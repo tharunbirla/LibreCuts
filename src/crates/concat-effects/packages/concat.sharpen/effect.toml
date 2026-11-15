@@ -1,0 +1,24 @@
+format = 2
+
+[effect]
+id = "concat.sharpen"
+name = "Sharpen"
+version = 2
+kind = "effect"
+category = "Basic"
+order = 13
+intensity = "amount"
+aliases = ["sharpen"]
+description = "Crisper edges."
+
+[[param]]
+key = "amount"
+label = "Amount"
+min = 0.2
+max = 3
+default = 1
+step = 0.05
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

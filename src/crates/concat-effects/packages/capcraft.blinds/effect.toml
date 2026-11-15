@@ -1,0 +1,26 @@
+format = 2
+
+# CapCraft's blinds. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.blinds"
+name = "Blinds"
+version = 1
+kind = "transition"
+category = "Wipe"
+order = 33
+description = "Slats across the frame turn, each showing the incoming shot from its top down."
+
+[[param]]
+key = "count"
+label = "Slats"
+type = "int"
+min = 4
+max = 20
+default = 10
+step = 1
+
+[transition]
+entry = "effect.wgsl"
+xfade = "hlslice"
+fallback = "cross-fade"

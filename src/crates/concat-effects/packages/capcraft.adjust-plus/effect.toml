@@ -1,0 +1,302 @@
+format = 2
+
+# CapCraft's further adjustments, beside the engine's Adjust: brilliance,
+# clarity, grain, and hue, saturation and lightness for eight bands of
+# colour. Set from the Adjust tab, never listed. Written for CapCraft for
+# Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.adjust-plus"
+name = "More Adjustments"
+version = 1
+kind = "filter"
+category = "Adjust"
+order = 1
+intensity = "clarity"
+description = "Brilliance, clarity, grain and the colour bands of HSL, beside Adjust."
+
+# Brilliance lifts the shadows and low middles and eases the upper middles,
+# black and white staying where they are; below zero the other way.
+[[param]]
+key = "brilliance"
+label = "Brilliance"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+# Clarity: contrast between each part of the picture and what is around it,
+# strongest in the middle tones.
+[[param]]
+key = "clarity"
+label = "Clarity"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "grain"
+label = "Grain"
+min = 0
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "red_hue"
+group = "HSL"
+label = "Red hue"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "red_sat"
+group = "HSL"
+label = "Red saturation"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "red_light"
+group = "HSL"
+label = "Red lightness"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "orange_hue"
+group = "HSL"
+label = "Orange hue"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "orange_sat"
+group = "HSL"
+label = "Orange saturation"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "orange_light"
+group = "HSL"
+label = "Orange lightness"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "yellow_hue"
+group = "HSL"
+label = "Yellow hue"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "yellow_sat"
+group = "HSL"
+label = "Yellow saturation"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "yellow_light"
+group = "HSL"
+label = "Yellow lightness"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "green_hue"
+group = "HSL"
+label = "Green hue"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "green_sat"
+group = "HSL"
+label = "Green saturation"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "green_light"
+group = "HSL"
+label = "Green lightness"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "cyan_hue"
+group = "HSL"
+label = "Cyan hue"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "cyan_sat"
+group = "HSL"
+label = "Cyan saturation"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "cyan_light"
+group = "HSL"
+label = "Cyan lightness"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "blue_hue"
+group = "HSL"
+label = "Blue hue"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "blue_sat"
+group = "HSL"
+label = "Blue saturation"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "blue_light"
+group = "HSL"
+label = "Blue lightness"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "purple_hue"
+group = "HSL"
+label = "Purple hue"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "purple_sat"
+group = "HSL"
+label = "Purple saturation"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "purple_light"
+group = "HSL"
+label = "Purple lightness"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "magenta_hue"
+group = "HSL"
+label = "Magenta hue"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "magenta_sat"
+group = "HSL"
+label = "Magenta saturation"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "magenta_light"
+group = "HSL"
+label = "Magenta lightness"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"
+
+# The light blurred wide, across the rows then down the columns, for
+# clarity to measure each part against; drawn at a sliver when clarity is
+# off, as nothing reads it then.
+[[wgsl.pass]]
+target = "across"
+shrink = ["if(clarity * clarity < 1, 64, 4)", "1"]
+
+[[wgsl.pass]]
+target = "down"
+shrink = ["if(clarity * clarity < 1, 64, 4)", "if(clarity * clarity < 1, 64, 4)"]

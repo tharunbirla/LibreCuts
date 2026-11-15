@@ -1,0 +1,37 @@
+# Retouch only touches colours that look like skin. What these pin is that
+# everything else - a grey, light past white, a blue, a half-clear red that
+# is too vivid to be skin - comes through untouched at the default and at
+# either end of both sliders. The smoothing of a face is the card's to show.
+
+[[probe]]
+name = "default, a grey"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.18, 0.18, 0.18, 1]
+
+[[probe]]
+name = "default, a highlight past white"
+input = [4, 1, 0.05, 1]
+expect = [4, 1, 0.05, 1]
+
+[[probe]]
+name = "default, half transparent"
+input = [0.5, 0.05, 0.02, 0.5]
+expect = [0.5, 0.05, 0.02, 0.5]
+
+[[probe]]
+name = "minimum, a blue"
+at = "min"
+input = [0.05, 0.1, 0.6, 1]
+expect = [0.05, 0.1, 0.6, 1]
+
+[[probe]]
+name = "maximum, a grey"
+at = "max"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.18, 0.18, 0.18, 1]
+
+[[probe]]
+name = "maximum, a blue"
+at = "max"
+input = [0.05, 0.1, 0.6, 1]
+expect = [0.05, 0.1, 0.6, 1]

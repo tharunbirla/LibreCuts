@@ -1,0 +1,40 @@
+format = 2
+
+# CapCraft's feather edge: a cutout's edge softened inward, set from the
+# Chroma key panel rather than the effects list.
+# Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.feather-edge"
+name = "Feather Edge"
+version = 1
+kind = "effect"
+category = "Cutout"
+order = 59
+intensity = "amount"
+description = "Softens a cutout's edge inward, so it fades into what is beneath without a rim of the colour taken out."
+
+[[param]]
+key = "amount"
+label = "Feather"
+type = "int"
+min = 0
+max = 100
+default = 30
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"
+
+# The cutout's coverage blurred across the rows, then down the columns, at
+# fewer pixels the wider the feather: a wide Gaussian has nothing fine in it
+# to lose, and `effect` reads the last picture back bilinearly.
+[[wgsl.pass]]
+target = "across"
+shrink = ["1 + amount / 8", "1"]
+
+[[wgsl.pass]]
+target = "down"
+shrink = ["1 + amount / 8", "1 + amount / 8"]

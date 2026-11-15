@@ -1,0 +1,24 @@
+format = 2
+
+[effect]
+id = "capcraft.zoom-in"
+name = "Zoom In"
+version = 1
+kind = "effect"
+category = "Motion"
+order = 32
+intensity = "rate"
+description = "A slow push in from the clip's first frame, as a camera on a dolly would make."
+
+[[param]]
+key = "rate"
+label = "Speed"
+type = "int"
+min = 1
+max = 30
+default = 6
+step = 1
+unit = "%/s"
+
+[wgsl]
+entry = "effect.wgsl"

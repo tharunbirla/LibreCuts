@@ -1,0 +1,25 @@
+format = 2
+
+[effect]
+id = "concat.halftone"
+name = "Halftone"
+version = 2
+kind = "effect"
+category = "Retro"
+order = 76
+intensity = "size"
+description = "The picture reduced to a grid of black and white dots."
+
+[[param]]
+key = "size"
+label = "Dot size"
+type = "int"
+min = 4
+max = 40
+default = 6
+step = 1
+unit = "px"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

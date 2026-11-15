@@ -1,0 +1,25 @@
+format = 2
+
+[effect]
+id = "capcraft.invert"
+name = "Invert"
+version = 1
+kind = "effect"
+category = "Stylize"
+order = 35
+intensity = "amount"
+description = "A photographic negative: light for dark and every colour for its opposite."
+
+[[param]]
+key = "amount"
+label = "Amount"
+type = "int"
+min = 0
+max = 100
+default = 100
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

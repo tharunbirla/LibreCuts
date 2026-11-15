@@ -1,0 +1,85 @@
+[package]
+name = "concat-host"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "What the editor window needs that is not the edit itself: sessions, project folders, previews, playback, templates."
+
+[features]
+# The wgpu compositor for previews and exports, off by default for the same
+# reason as everywhere else in the engine; the window turns it on.
+gpu = ["concat-export/gpu", "concat-render/gpu"]
+
+[dependencies]
+concat-core.workspace = true
+concat-media.workspace = true
+concat-project.workspace = true
+concat-export.workspace = true
+# The effect cards: every picture package drawn by its own shader; see
+# cards.rs.
+concat-effects.workspace = true
+# Titles become pictures here; see titles.rs.
+concat-text.workspace = true
+# The cutout models and their masks; `infer` because the host is what
+# runs them, and ureq because the host is what fetches them.
+concat-vision = { workspace = true, features = ["infer"] }
+# An enhanced still is written as a PNG: lossless, since the point was
+# the detail.
+png = "0.17"
+# `socks-proxy` for a SOCKS proxy named by the environment or the system
+# (Clash, v2rayN and ssh -D all offer one); see route.rs. The `socks` crate
+# it pulls is already in the tree for ureq 3.
+ureq = { version = "2", features = ["socks-proxy"] }
+# The TLS ureq speaks, configured here to trust the system's roots beside
+# the shipped ones; see net.rs. The same rustls, ring and webpki-roots as
+# ureq's, so nothing is built twice.
+rustls = { version = "0.23", default-features = false, features = ["ring", "logging", "std", "tls12"] }
+webpki-roots = "0.26"
+rustls-native-certs = "0.8"
+# A finished download is checked against the digest its table carries
+# before anything is allowed to call it installed; see models.rs.
+sha2 = "0.10"
+# The log facade. The engine writes `log::warn!` and logs.rs is what puts
+# the line in a file; a phone puts it in logcat as well.
+log = { version = "0.4", features = ["std"] }
+# The CPU compositor draws the monitor's frame; the wgpu one is behind
+# `gpu`, so a headless host pays for no GPU tree.
+concat-render.workspace = true
+serde = { version = "1", features = ["derive"] }
+serde_json.workspace = true
+
+# Engine-owned audio playback: cpal talks to the output device, memmap2 keeps
+# decoded PCM disk-backed instead of resident.
+cpal = "0.16"
+memmap2 = "0.9"
+
+# The machine's memory, for sizing the caches to it; see memory.rs.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+  "Win32_Media",
+  "Win32_System_SystemInformation",
+  # crash.rs: the unhandled-exception filter and what it reads and writes.
+  "Win32_Foundation",
+  "Win32_Storage_FileSystem",
+  "Win32_System_Console",
+  "Win32_System_Diagnostics_Debug",
+  "Win32_System_IO",
+  "Win32_System_Kernel",
+  "Win32_System_LibraryLoader",
+  # machine.rs: the Windows version and the CPU's name.
+  "Win32_System_Registry",
+  # jobs.rs: whether the process that left a mark is still running.
+  "Win32_System_Threading",
+  # route.rs: the per-user proxy settings, and the proxy script they name.
+  "Win32_Networking_WinHttp",
+] }
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints]
+workspace = true

@@ -1,0 +1,26 @@
+# The probes read the middle pixel of an eight-pixel picture of one colour:
+# the centre of every shape at its defaults, kept as it came; inverted, it
+# is cleared.
+
+[[probe]]
+name = "default circle, the centre is kept"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.180054, 0.180054, 0.180054, 1]
+
+[[probe]]
+name = "inverted, the centre is cleared"
+params = { invert = 1 }
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.180054, 0.180054, 0.180054, 0]
+
+[[probe]]
+name = "minimum, a line through the corner keeps the centre"
+at = "min"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.180054, 0.180054, 0.180054, 1]
+
+[[probe]]
+name = "maximum, a star from the far corner, feathered and inverted"
+at = "max"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.180054, 0.180054, 0.180054, 0.323486]

@@ -1,0 +1,13 @@
+format = 2
+
+[effect]
+id = "concat.rosy"
+name = "Rosy"
+kind = "filter"
+category = "Portrait"
+order = 56
+description = "A soft pink lift into the highlights, flattering and warm."
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

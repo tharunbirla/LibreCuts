@@ -1,159 +1,41 @@
-# LibreCuts
+# NexusCut — base experimental CapCraft
 
-<div align="center">
-  <img src="src/images/featureGraphic.png" alt="LibreCuts Banner" width="100%"/>
-  <br/>
-  <br/>
+O NexusCut é um projeto experimental de editor de vídeo para Android. Esta branch, [`feature/capcraft-base`](https://github.com/F1N0ZENIX/NexusCut/tree/feature/capcraft-base), parte do [CapCraft para Android](https://github.com/artcraft-android/capcraft-android) e de seu motor [Concat](https://github.com/jub0t/concat), com alterações próprias. A migração e sua origem estão documentadas em [PROVENANCE.md](PROVENANCE.md); a `main` e as outras branches têm histórias diferentes. O projeto não é afiliado à ByteDance ou ao CapCut.
 
-  <a href="https://github.com/sponsors/tharunbirla">
-    <img src="https://img.shields.io/badge/Sponsor_LibreCuts-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white" height="35" alt="Sponsor tharunbirla" />
-  </a>
-  <a href="LICENSE">
-    <img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" height="35" alt="License" />
-  </a>
-  <br/>
-  <br/>
-  <a href="https://github.com/tharunbirla/LibreCuts/releases/latest">
-    <img src="src/images/badges/badge_github.png" alt="Get it on GitHub" height="96" />
-  </a>
-  <a href="https://f-droid.org/packages/com.tharunbirla.librecuts/">
-    <img src="src/images/badges/badge_fdroid.png" alt="Get it on F-Droid" height="96" />
-  </a>
-  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/tharunbirla/LibreCuts">
-    <img src="src/images/badges/badge_obtainium.png" height="96" alt="Get it on Obtainium" />
-  </a>
-  <a href="https://discord.gg/gwr3nE7YW">
-    <img src="src/images/badges/badge_discord.png" height="96" alt="Join Discord" />
-  </a>
-  <a href="https://hosted.weblate.org/engage/librecuts/">
-    <img src="https://hosted.weblate.org/widget/librecuts/librecuts/287x66-grey.png" height="96" alt="Translation status" />
-  </a>
-</div>
+## Estado e recursos
 
-<br/>
+- **Código herdado:** a base CapCraft inclui editor com linha do tempo, cortes e divisão de clipes, camadas, texto, efeitos e filtros, recursos de áudio, legendas e exportação. São recursos descritos pelo upstream, não uma garantia de que cada fluxo já foi validado nesta branch.
+- **Alterações nesta branch:** há identidade visual NexusCut em partes do app e opções para formatar legendas/letras novas em maiúsculas e remover pontuação selecionada. A formatação acontece após a segmentação; não equivale a testar reconhecimento, sincronização e exportação completos.
+- **Verificado no CI:** o [run do commit `75a5234`](https://github.com/F1N0ZENIX/NexusCut/actions/runs/43771357457) concluiu os testes de formatação de legendas e a build de APK debug arm64. Esse resultado se refere àquele commit, não comprova que todos os recursos funcionem ou que builds posteriores passem. Consulte [Actions](https://github.com/F1N0ZENIX/NexusCut/actions) para o resultado do commit desejado.
+- **Pendente de validação:** instalação e uso em aparelho, edição, modelos de reconhecimento, legendas na timeline, renderização, SRT e exportação ponta a ponta. O comportamento pode variar conforme aparelho, mídia e modelo.
 
-**LibreCuts** is a free, open-source video editor for Android that prioritizes simplicity, efficiency, and privacy. Built for seamless performance, it empowers creators to easily select, edit, and export watermark-free videos locally on their device.
+Não há promessa de abrir ou migrar projetos das versões antigas do NexusCut ou de outros editores. Faça cópias dos arquivos e projetos antes de testar.
 
----
+## Build debug arm64
 
-## ✊ Keep Android Open
+O [workflow](.github/workflows/nexuscut-ci.yml) usa Ubuntu 24.04, JDK 21, Rust fixado por `src/rust-toolchain.toml`, alvo `aarch64-linux-android`, `cargo-ndk` 4.1.2, Android SDK/NDK 29.0.14206865, CMake e libclang. O SDK e as ferramentas de compilação também precisam estar instalados; scripts de preparação baixam/compilam dependências. A receita abaixo reproduz o fluxo de CI em ambiente Linux com essas ferramentas e `ANDROID_HOME` configurado (em Windows, use WSL). É necessário espaço livre suficiente; o README upstream recomenda ao menos 10 GB.
 
-[![Keep Android Open](https://img.shields.io/badge/Keep-Android_Open-brightgreen?style=for-the-badge&logo=android)](https://keepandroidopen.org/)
+```bash
+# Na raiz do repositório; NDK instalado pelo sdkmanager do Android SDK
+export NDK_VERSION=29.0.14206865
+export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/$NDK_VERSION"
+export GGML_NATIVE=OFF
+(cd src && rustup toolchain install && rustup target add aarch64-linux-android)
+cargo install cargo-ndk --version 4.1.2 --locked
+src/scripts/ffmpeg-mobile.sh aarch64-linux-android
+src/scripts/sherpa-mobile.sh aarch64-linux-android
+cd src
+eval "$(scripts/mobile-env.sh aarch64-linux-android)"
+cd crates/capcraft-android/android
+./gradlew assembleDebug -Pcapcraft.abis=arm64-v8a --no-daemon
+```
 
-Google's mandatory developer verification policy goes into effect in **September 2026** (in just a few months). This mandate requires all independent developers to submit government ID and centrally register with Google, threatening user privacy, sideloading freedom, and the distribution of free and open-source software (FOSS) on Android. 
+O APK fica em `src/crates/capcraft-android/android/app/build/outputs/apk/debug/`. O CI publica o artefato `capcraft-debug-arm64` quando a build passa. A receita acompanha o workflow; esta alteração de documentação não executa uma nova build local.
 
-Help resist this gatekeeping and support the movement at [keepandroidopen.org](https://keepandroidopen.org/).
+## Cuidado ao instalar
 
----
+O ID base do app ainda é o do CapCraft, `io.github.artcraftandroid.capcraft`. Nesta configuração o **debug adiciona `.debug`**, ficando `io.github.artcraftandroid.capcraft.debug`; por isso, não é o mesmo ID da variante release normal. Outra instalação debug com esse ID pode entrar em conflito. Uma build sem esse sufixo pode disputar a instalação com o CapCraft de mesmo ID. Assinaturas debug podem variar entre máquinas/CI e diferir de releases: o Android pode recusar uma atualização mesmo com ID igual. Não desinstale uma instalação existente só para forçar o teste: isso pode apagar seus dados. Verifique ID, assinatura e backups antes de instalar.
 
-## 🚀 Features
+## Licença e créditos
 
-- **Trim** - Remove unwanted parts from the beginning or end of a video clip with a real-time timeline control.
-- **Overlays** - Place text, stickers, images, GIFs, and video overlays on top of video clips to create engaging content. Includes support for continuous media looping.
-- **Masking** - Apply various mask shapes to your overlays for creative effects.
-- **Chroma Key** - Remove backgrounds from any overlay using the green screen effect.
-- **Keyframes** - Animate overlays across the screen with keyframe support.
-- **Subtitles (Captions)** - Import custom `.srt` subtitle files with a dedicated toolbar slider for resizing and fully interactive touch-based positioning directly on the video preview.
-- **Layer Management** - Easily reorder overlay layers to control what renders on top.
-- **Audio** - Manage soundtracks effortlessly by importing custom music or audio tracks, recording voice overs, applying audio ducking and fades, amplifying volume up to 200%, and muting original audio.
-- **Audio Export** - Export your project's entire audio mix as a standalone MP3 file.
-- **Snapshots** - Capture and save high-quality frame grabs (snapshots) directly from the video editor.
-- **Crop** - Adjust the aspect ratio of a video with custom cropping support.
-- **Merge** - Combine multiple video segments into a continuous sequence with drag-to-rearrange functionality.
-- **Transition** - Apply transitions with animated visual previews in the toolbar.
-- **Speed** - Change the speed of a video clip using a custom speed slider for granular control.
-- **Adjust & Filters** - Modify video brightness, contrast, saturation, and apply color filters.
-- **Canvas Background** - Add a blurred background or a solid color for a cohesive look when your video aspect ratio does not match the project frame.
-- **Reverse** - Reverse video playback.
-- **Timeline Organization** - Enhanced editing with snapping functionality, overlay duplication, freeze frame actions, and improved UI visual styling.
-- **Project Save & Import** - Save non-destructive project state as a `.lcprj` file to save and reopen editable project files anytime.
-- **Freehand Drawing** - Draw directly on top of video clips with custom brush color and stroke controls.
-- **Custom Fonts** - Import `.ttf` or `.otf` font files to customize text overlay typography.
-- **Fullscreen Preview** - Switch to true fullscreen preview mode with expanded timeline view and overlay controls.
-- **Android 13+ Themed Icon** - Supports native monochrome adaptive icons for Android 13+ system themes.
-- **Hardware Acceleration** - Super-fast and reliable video exports using device hardware-accelerated `h264_mediacodec` encoding (with seamless automatic fallback to software encoding for maximum device compatibility) and accurate FFmpeg progress calculation.
-
-## 📱 Screenshots
-
-<div align="center">
-  <table>
-    <tr>
-      <td align="center"><img src="src/images/sc_1.png" width="100%" alt="Home Screen"/></td>
-      <td align="center"><img src="src/images/sc_2.png" width="100%" alt="Editor Screen"/></td>
-      <td align="center"><img src="src/images/sc_3.png" width="100%" alt="Audio Import"/></td>
-      <td align="center"><img src="src/images/sc_4.png" width="100%" alt="Timeline"/></td>
-    </tr>
-    <tr>
-      <td align="center"><b>Home Screen</b></td>
-      <td align="center"><b>Editor Screen</b></td>
-      <td align="center"><b>Audio Import</b></td>
-      <td align="center"><b>Timeline</b></td>
-    </tr>
-  </table>
-</div>
-
-## 💖 Support LibreCuts
-
-LibreCuts is built with passion and provided to the community for free. If this app has helped you create amazing videos, consider supporting its continued development! Your sponsorship helps keep the project alive and growing.
-
-<div align="center">
-  <br/>
-  <a href="https://github.com/sponsors/tharunbirla"><img src="https://img.shields.io/badge/sponsor-30363D?style=for-the-badge&logo=GitHub-Sponsors&logoColor=%23EA4AAA" alt="GitHub Sponsors" /></a>
-  &nbsp;&nbsp;
-  <a href="https://www.patreon.com/tharunbirla"><img src="https://img.shields.io/badge/Patreon-F96854?style=for-the-badge&logo=patreon&logoColor=white" alt="Patreon" /></a>
-  &nbsp;&nbsp;
-  <a href="https://ko-fi.com/tharunbirla"><img src="https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Ko-Fi" /></a>
-  <br/>
-  <br/>
-</div>
-
-## 🛠️ Getting Started
-
-### Prerequisites
-
-- Android Studio
-- Android SDK
-
-### Installation
-
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/tharunbirla/LibreCuts.git
-   ```
-2. **Open the project in Android Studio**:
-   - Launch Android Studio and select "Open an existing Android Studio project."
-   - Navigate to the cloned directory and select it.
-3. **Build the project**:
-   - Click on "Build" in the menu, then select "Make Project."
-4. **Run the app**:
-   - Connect an Android device or start an emulator.
-   - Click on the "Run" button in Android Studio.
-
-## 🔒 Permissions
-
-LibreCuts requires the following permissions to function properly:
-
-- **READ_EXTERNAL_STORAGE**: To read videos from the device.
-- **WRITE_EXTERNAL_STORAGE**: (For older Android versions) To save edited videos.
-- **POST_NOTIFICATIONS**: To show notifications related to video editing.
-- **READ_MEDIA_AUDIO/VIDEO/IMAGES**: For accessing media files on devices running Android 13 (API level 33) and above.
-
-## 🔧 Troubleshooting & Support
-
-If you encounter any export failures, codec errors, or unexpected crashes during your editing workflow:
-- Refer to our comprehensive [Error Codes & Troubleshooting Guide](https://github.com/tharunbirla/LibreCuts/wiki/Error-Codes-&-Troubleshooting) on the Wiki.
-- Join our [Discord Community](https://discord.gg/gwr3nE7YW) for real-time support, suggestions, and app updates.
-
-## 🤝 Contributing
-
-Contributions are welcome! If you have suggestions or improvements, feel free to create a pull request or open an issue.
-
-1. Fork the repository.
-2. Create a new branch for your feature or bug fix.
-3. Commit your changes.
-4. Push to the branch.
-5. Submit a pull request.
-
-## 📝 License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+Esta base é distribuída sob [GNU AGPL-3.0-or-later](LICENSE). CapCraft para Android é copyright da ArtCraft Team e contribuidores; Concat é copyright de Jareer Abdullah e contribuidores. Fontes: [CapCraft](https://github.com/artcraft-android/capcraft-android) e [Concat](https://github.com/jub0t/concat); o commit upstream usado na migração está em [PROVENANCE.md](PROVENANCE.md). Consulte também [NOTICE](NOTICE), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) e os avisos do app para autores, modelos, bibliotecas e licenças específicas. Nada aqui altera as licenças de terceiros.

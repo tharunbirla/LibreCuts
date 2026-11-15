@@ -1,0 +1,26 @@
+format = 2
+
+# CapCraft's own filter. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.summer-98"
+name = "Summer '98"
+version = 1
+kind = "filter"
+category = "Retro"
+order = 97
+intensity = "amount"
+description = "A holiday print from the late nineties: warm, saturated, faded at the ends."
+
+[[param]]
+key = "amount"
+label = "Amount"
+min = 0
+max = 100
+default = 70
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

@@ -1,0 +1,27 @@
+format = 2
+
+# CapCraft's soft mix. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.soft-mix"
+name = "Soft Mix"
+version = 1
+kind = "transition"
+category = "Dissolve"
+order = 46
+description = "A dissolve that lets the brightest parts through first, the shadows last."
+
+[[param]]
+key = "spread"
+label = "Spread"
+type = "int"
+min = 0
+max = 100
+default = 30
+step = 1
+unit = "%"
+
+[transition]
+entry = "effect.wgsl"
+xfade = "dissolve"
+fallback = "cross-fade"

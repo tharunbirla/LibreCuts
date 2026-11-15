@@ -1,0 +1,13 @@
+format = 2
+
+[effect]
+id = "concat.classic-chrome"
+name = "Classic Chrome"
+kind = "filter"
+category = "Film"
+order = 61
+description = "Muted highlights and deep, open shadows: the restrained look of a classic colour negative."
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

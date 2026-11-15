@@ -1,0 +1,219 @@
+format = 2
+
+[effect]
+id = "concat.adjust"
+name = "Adjust"
+kind = "filter"
+category = "Adjust"
+order = 0
+intensity = "exposure"
+description = "The manual colour panel every picture clip carries: exposure, tone, balance, sharpness and edge."
+
+# Three groups, in the order the panel lists them. Colour: temperature in
+# kelvin with 6500 the picture as shot, tint green to magenta, saturation
+# as a signed percent. Lightness: exposure in stops of light, then
+# brightness, contrast, highlights, shadows, whites and blacks as signed
+# percents; the last four lift or crush their end of the curve, highlights
+# and shadows the broad upper and lower halves, whites and blacks the
+# narrow extremes. Effects: sharpen, fade and vignette add from zero.
+# Wheels: lift, gamma and gain, each a hue to push towards and a master.
+# Curves: luma, then red, green and blue.
+#
+# 2: drawn in light. Exposure is in true stops of light, where it scaled
+# the display encoding, some 2.4 stops an EV; the rest reads as it did at
+# a moderate setting, without clipping.
+version = 2
+
+[[param]]
+key = "temperature"
+group = "Color"
+label = "Temperature"
+min = 2000
+max = 11000
+default = 6500
+step = 50
+unit = "K"
+
+[[param]]
+key = "tint"
+group = "Color"
+label = "Tint"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "saturation"
+group = "Color"
+label = "Saturation"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "exposure"
+group = "Lightness"
+label = "Exposure"
+min = -3
+max = 3
+default = 0
+step = 0.05
+unit = "EV"
+
+[[param]]
+key = "brightness"
+group = "Lightness"
+label = "Brightness"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "contrast"
+group = "Lightness"
+label = "Contrast"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "highlights"
+group = "Lightness"
+label = "Highlights"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "shadows"
+group = "Lightness"
+label = "Shadows"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "whites"
+group = "Lightness"
+label = "Whites"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "blacks"
+group = "Lightness"
+label = "Blacks"
+min = -100
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "sharpen"
+group = "Effects"
+label = "Sharpen"
+min = 0
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "fade"
+group = "Effects"
+label = "Fade"
+min = 0
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "vignette"
+group = "Effects"
+label = "Vignette"
+min = 0
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "lift"
+group = "Wheels"
+label = "Lift"
+type = "wheel"
+min = -1
+max = 1
+default = 0
+step = 0.01
+animate = true
+
+[[param]]
+key = "gamma"
+group = "Wheels"
+label = "Gamma"
+type = "wheel"
+min = -1
+max = 1
+default = 0
+step = 0.01
+animate = true
+
+[[param]]
+key = "gain"
+group = "Wheels"
+label = "Gain"
+type = "wheel"
+min = -1
+max = 1
+default = 0
+step = 0.01
+animate = true
+
+[[param]]
+key = "luma"
+group = "Curves"
+label = "Luma"
+type = "curve"
+
+[[param]]
+key = "red"
+group = "Curves"
+label = "Red"
+type = "curve"
+
+[[param]]
+key = "green"
+group = "Curves"
+label = "Green"
+type = "curve"
+
+[[param]]
+key = "blue"
+group = "Curves"
+label = "Blue"
+type = "curve"
+
+[wgsl]
+entry = "effect.wgsl"
+
+# At its defaults the panel changes nothing; the card shows it at work.
+[card]
+params = { contrast = 30, saturation = 30 }

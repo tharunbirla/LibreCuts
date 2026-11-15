@@ -1,0 +1,13 @@
+format = 2
+
+[effect]
+id = "concat.vaporwave"
+name = "Vaporwave"
+kind = "filter"
+category = "Vibe"
+order = 67
+description = "Magenta and cyan pushed hard, a saturated retro-synth cast."
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

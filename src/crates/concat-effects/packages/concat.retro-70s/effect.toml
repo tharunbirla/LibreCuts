@@ -1,0 +1,13 @@
+format = 2
+
+[effect]
+id = "concat.retro-70s"
+name = "Retro 70s"
+kind = "filter"
+category = "Film"
+order = 63
+description = "A heavy warm fade with a yellowed, sun-bleached cast."
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

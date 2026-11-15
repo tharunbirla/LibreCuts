@@ -1,0 +1,13 @@
+format = 2
+
+[effect]
+id = "capcraft.mirror"
+name = "Mirror"
+version = 1
+kind = "effect"
+category = "Split"
+order = 9
+description = "The left half of the picture, and its reflection on the right."
+
+[wgsl]
+entry = "effect.wgsl"

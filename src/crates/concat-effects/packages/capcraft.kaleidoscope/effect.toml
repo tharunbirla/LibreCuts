@@ -1,0 +1,30 @@
+format = 2
+
+[effect]
+id = "capcraft.kaleidoscope"
+name = "Kaleidoscope"
+version = 1
+kind = "effect"
+category = "Split"
+order = 33
+description = "Wedges of the picture turned and reflected about its middle, slowly revolving."
+
+[[param]]
+key = "segments"
+label = "Segments"
+type = "int"
+min = 3
+max = 12
+default = 6
+step = 1
+
+[[param]]
+key = "speed"
+label = "Turn"
+min = 0
+max = 2
+default = 0.3
+step = 0.1
+
+[wgsl]
+entry = "effect.wgsl"

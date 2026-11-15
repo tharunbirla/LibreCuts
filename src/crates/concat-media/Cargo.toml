@@ -1,0 +1,35 @@
+[package]
+name = "concat-media"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Getting pixels and samples in and out of media files. The only crate that knows FFmpeg exists."
+
+[dependencies]
+concat-core.workspace = true
+# Linked FFmpeg: the safe wrapper over libavformat, libavcodec, libavfilter,
+# libswscale and libswresample. Built against the FFmpeg development
+# libraries on the machine - pkg-config where there is one, FFMPEG_DIR
+# pointing at an unpacked shared build otherwise. FFmpeg 7 or newer: the
+# display-rotation side data is read from where 7.0 moved it.
+# Without libavdevice, its default "device" feature: nothing here records
+# from a camera or a screen through FFmpeg, and on macOS the library's
+# AVFoundation input names AVCaptureDeviceTypeContinuityCamera, a macOS 13
+# symbol, so dyld refused to start Concat on macOS 12 (#342).
+ffmpeg-the-third = { version = "6", default-features = false, features = [
+    "codec",
+    "filter",
+    "format",
+    "software-resampling",
+    "software-scaling",
+] }
+libc = "0.2"
+log = "0.4"
+# SVG, drawn into a PNG FFmpeg can read; see svg.rs. The version Slint
+# already brings in, so nothing new is built.
+resvg = "0.48"
+thiserror.workspace = true
+
+[lints]
+workspace = true

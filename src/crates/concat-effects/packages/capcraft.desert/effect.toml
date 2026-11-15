@@ -1,0 +1,26 @@
+format = 2
+
+# CapCraft's own filter. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.desert"
+name = "Desert"
+version = 1
+kind = "filter"
+category = "Cinematic"
+order = 99
+intensity = "amount"
+description = "Dry heat: sandy, sun-bleached highlights and the blues drained out."
+
+[[param]]
+key = "amount"
+label = "Amount"
+min = 0
+max = 100
+default = 70
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

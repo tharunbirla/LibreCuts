@@ -1,0 +1,13 @@
+[[case]]
+name = "default"
+chain = "lowshelf=f=250:g=2.50,highshelf=f=6000:g=-1.67,alimiter=limit=0.94"
+
+[[case]]
+name = "minimum"
+at = "min"
+chain = "lowshelf=f=250:g=0.00,highshelf=f=6000:g=0.00,alimiter=limit=0.94"
+
+[[case]]
+name = "maximum"
+at = "max"
+chain = "lowshelf=f=250:g=5.00,highshelf=f=6000:g=-3.33,alimiter=limit=0.94"

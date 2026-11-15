@@ -1,0 +1,13 @@
+format = 2
+
+[effect]
+id = "concat.noir"
+name = "Noir"
+kind = "filter"
+category = "Cinematic"
+order = 50
+description = "Desaturated and heavy, with a cold cast into the shadows and the corners dimmed."
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

@@ -1,0 +1,79 @@
+format = 2
+
+# CapCraft's relight: the picture lit again by a key light of one colour
+# from a chosen side and a fill of another from the far side, with a soft
+# round of light where a face would be. Set from the Relight panel's looks
+# rather than the effects list. Written for CapCraft for Android
+# (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.relight"
+name = "Relight"
+version = 1
+kind = "effect"
+category = "Color"
+order = 68
+intensity = "strength"
+description = "Lights the picture again: a key light from one side, a fill from the other and a soft round of light in the middle."
+
+# A warm white, fully opaque.
+[[param]]
+key = "key"
+label = "Key light"
+type = "color"
+min = 0
+max = 4294967295
+default = 4293445887
+
+# A dim, cool grey, fully opaque.
+[[param]]
+key = "fill"
+label = "Fill light"
+type = "color"
+min = 0
+max = 4294967295
+default = 2325459199
+
+# Where the key light comes from: round from the left, clockwise.
+[[param]]
+key = "angle"
+label = "Direction"
+type = "int"
+min = -180
+max = 180
+default = -45
+step = 1
+
+[[param]]
+key = "strength"
+label = "Strength"
+type = "int"
+min = 0
+max = 100
+default = 60
+step = 1
+unit = "%"
+
+[[param]]
+key = "softness"
+label = "Softness"
+type = "int"
+min = 0
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[[param]]
+key = "spot"
+label = "Spot"
+type = "int"
+min = 0
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

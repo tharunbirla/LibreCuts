@@ -1,0 +1,13 @@
+format = 2
+
+[effect]
+id = "concat.sci-fi"
+name = "Sci-Fi"
+kind = "filter"
+category = "Cinematic"
+order = 53
+description = "A cool, sterile steel-and-teal grade, saturation held back."
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

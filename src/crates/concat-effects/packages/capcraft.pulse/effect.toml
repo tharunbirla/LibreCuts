@@ -1,0 +1,32 @@
+format = 2
+
+[effect]
+id = "capcraft.pulse"
+name = "Pulse"
+version = 1
+kind = "effect"
+category = "Motion"
+order = 3
+intensity = "amount"
+description = "The picture leaping towards the viewer on every beat and settling back, like a heartbeat."
+
+[[param]]
+key = "amount"
+label = "Amount"
+type = "int"
+min = 0
+max = 50
+default = 15
+step = 1
+unit = "%"
+
+[[param]]
+key = "speed"
+label = "Beats a second"
+min = 0.25
+max = 4
+default = 1
+step = 0.25
+
+[wgsl]
+entry = "effect.wgsl"

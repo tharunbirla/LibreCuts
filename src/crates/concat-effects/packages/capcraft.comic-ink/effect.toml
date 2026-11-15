@@ -1,0 +1,37 @@
+format = 2
+
+# CapCraft's comic ink: the picture as a comic panel. Written for CapCraft
+# for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.comic-ink"
+name = "Comic Ink"
+version = 1
+kind = "effect"
+category = "Comics"
+order = 72
+intensity = "amount"
+description = "A comic panel: the colours flattened to a few bold steps and the edges inked in black."
+
+[[param]]
+key = "amount"
+label = "Amount"
+type = "int"
+min = 0
+max = 100
+default = 70
+step = 1
+unit = "%"
+
+[[param]]
+key = "levels"
+label = "Steps"
+type = "int"
+min = 3
+max = 8
+default = 5
+step = 1
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

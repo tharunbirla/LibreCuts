@@ -1,5 +1,0 @@
-Beta Release:
-- Non-destructive sequence timeline synchronization.
-- Multi-track audio mixing and volume control.
-- Text and image overlay support.
-- Local video rendering and export.

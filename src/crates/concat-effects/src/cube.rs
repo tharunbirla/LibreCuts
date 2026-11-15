@@ -1,0 +1,207 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Jareer Abdullah and Concat contributors
+
+//! The `.cube` file: the look-up table format every grading tool writes.
+//!
+//! A header of `LUT_3D_SIZE n`, optionally a `TITLE` and a `DOMAIN_MIN` /
+//! `DOMAIN_MAX` (or DaVinci Resolve's `LUT_3D_INPUT_RANGE`), then `n³` rows
+//! of three numbers, red changing fastest. Read with the same tolerance as
+//! a manifest: a byte-order mark, comments, blank lines and keywords the
+//! table does not need are skipped, a domain other than 0..1 is rescaled,
+//! and anything the rows do not add up to is an error naming the line.
+
+use concat_core::Lut;
+
+/// Texels a side the largest table may have: 65 is the largest anyone
+/// ships, and a 3D texture past it is memory a look does not need.
+pub const LARGEST_TABLE: u32 = 65;
+
+/// Parses the text of a `.cube` file into a table.
+pub fn parse(text: &str) -> Result<Lut, String> {
+    let text = text.strip_prefix('\u{feff}').unwrap_or(text);
+    let mut size: Option<u32> = None;
+    let mut domain_min = [0.0f32; 3];
+    let mut domain_max = [1.0f32; 3];
+    let mut rgb: Vec<f32> = Vec::new();
+    for (number, raw) in text.lines().enumerate() {
+        let line = raw.split('#').next().unwrap_or("").trim();
+        if line.is_empty() {
+            continue;
+        }
+        let mut words = line.split_whitespace();
+        let head = words.next().unwrap_or("");
+        let at = number + 1;
+        match head {
+            "TITLE" => {}
+            "LUT_1D_SIZE" => return Err(format!("line {at}: a 1D table; only 3D tables are read")),
+            "LUT_3D_SIZE" => {
+                let n: u32 = words
+                    .next()
+                    .and_then(|w| w.parse().ok())
+                    .ok_or_else(|| format!("line {at}: LUT_3D_SIZE needs a number"))?;
+                if !(2..=129).contains(&n) {
+                    return Err(format!("line {at}: a table {n} a side is out of range"));
+                }
+                size = Some(n);
+                rgb.reserve((n as usize).pow(3) * 3);
+            }
+            "DOMAIN_MIN" | "DOMAIN_MAX" => {
+                let mut triple = [0.0f32; 3];
+                for slot in &mut triple {
+                    *slot = words
+                        .next()
+                        .and_then(|w| w.parse().ok())
+                        .ok_or_else(|| format!("line {at}: {head} needs three numbers"))?;
+                }
+                if head == "DOMAIN_MIN" {
+                    domain_min = triple;
+                } else {
+                    domain_max = triple;
+                }
+            }
+            "LUT_3D_INPUT_RANGE" => {
+                let mut pair = [0.0f32; 2];
+                for slot in &mut pair {
+                    *slot = words
+                        .next()
+                        .and_then(|w| w.parse().ok())
+                        .ok_or_else(|| format!("line {at}: {head} needs two numbers"))?;
+                }
+                domain_min = [pair[0]; 3];
+                domain_max = [pair[1]; 3];
+            }
+            // Another tool's keyword, such as Resolve's `LUT_IN_VIDEO_RANGE`:
+            // nothing the table's rows depend on.
+            _ if head.starts_with(|c: char| c.is_ascii_alphabetic())
+                && head.parse::<f32>().is_err() => {}
+            _ => {
+                let mut triple = [0.0f32; 3];
+                let mut rest = line.split_whitespace();
+                for slot in &mut triple {
+                    *slot = rest
+                        .next()
+                        .and_then(|w| w.parse().ok())
+                        .ok_or_else(|| format!("line {at}: expected three numbers"))?;
+                }
+                rgb.extend_from_slice(&triple);
+            }
+        }
+    }
+    let size = size.ok_or_else(|| "no LUT_3D_SIZE".to_owned())?;
+    let expected = (size as usize).pow(3) * 3;
+    if rgb.len() != expected {
+        return Err(format!(
+            "{} rows for a table {size} a side, which wants {}",
+            rgb.len() / 3,
+            expected / 3
+        ));
+    }
+    for (i, value) in rgb.iter_mut().enumerate() {
+        let channel = i % 3;
+        let span = domain_max[channel] - domain_min[channel];
+        if span.abs() > f32::EPSILON {
+            *value = (*value - domain_min[channel]) / span;
+        }
+    }
+    if size > LARGEST_TABLE {
+        return Err(format!(
+            "a table {size} a side is larger than the {LARGEST_TABLE} the renderer uploads"
+        ));
+    }
+    Lut::from_rgb(size, &rgb).ok_or_else(|| "the table did not fit".to_owned())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A table larger than the renderer uploads is refused at load, with
+    /// its size in the message, rather than becoming a texture the
+    /// device may not have room for.
+    #[test]
+    fn a_table_past_the_budget_is_refused() {
+        let size = LARGEST_TABLE + 1;
+        let mut text = format!("LUT_3D_SIZE {size}\n");
+        for _ in 0..size * size * size {
+            text.push_str("0 0 0\n");
+        }
+        let error = parse(&text).expect_err("too large");
+        assert!(error.contains(&size.to_string()), "{error}");
+        assert!(parse(&identity(2)).is_ok());
+    }
+
+    fn identity(n: u32) -> String {
+        let mut text = format!("TITLE \"id\"\nLUT_3D_SIZE {n}\n# rows\n");
+        for b in 0..n {
+            for g in 0..n {
+                for r in 0..n {
+                    let s = 1.0 / (n - 1) as f32;
+                    text.push_str(&format!(
+                        "{} {} {}\n",
+                        r as f32 * s,
+                        g as f32 * s,
+                        b as f32 * s
+                    ));
+                }
+            }
+        }
+        text
+    }
+
+    #[test]
+    fn an_identity_cube_reads_as_the_identity() {
+        let lut = parse(&identity(9)).expect("parses");
+        assert_eq!(lut.size, 9);
+        let out = lut.sample([0.3, 0.6, 0.9]);
+        assert!(
+            (out[0] - 0.3).abs() < 0.01
+                && (out[1] - 0.6).abs() < 0.01
+                && (out[2] - 0.9).abs() < 0.01
+        );
+    }
+
+    /// A table saved with a byte-order mark reads like one without.
+    #[test]
+    fn a_byte_order_mark_is_skipped() {
+        let lut = parse(&format!("\u{feff}{}", identity(3))).expect("parses");
+        assert_eq!(lut.size, 3);
+    }
+
+    /// DaVinci Resolve writes its domain as `LUT_3D_INPUT_RANGE`, and other
+    /// tools add keywords of their own; neither stops a table reading.
+    #[test]
+    fn resolve_input_range_and_unknown_keywords_are_read() {
+        let mut text = String::from(
+            "# Created by: DaVinci Resolve\nLUT_3D_SIZE 2\nLUT_3D_INPUT_RANGE 0.0 2.0\n\
+             LUT_IN_VIDEO_RANGE\n",
+        );
+        for b in 0..2 {
+            for g in 0..2 {
+                for r in 0..2 {
+                    text.push_str(&format!("{} {} {}\n", r * 2, g * 2, b * 2));
+                }
+            }
+        }
+        let lut = parse(&text).expect("parses");
+        let out = lut.sample([0.5, 0.25, 1.0]);
+        assert!(
+            (out[0] - 0.5).abs() < 0.01
+                && (out[1] - 0.25).abs() < 0.01
+                && (out[2] - 1.0).abs() < 0.01,
+            "{out:?}"
+        );
+        assert!(
+            parse("LUT_3D_SIZE 2\nLUT_3D_INPUT_RANGE 0.0\n")
+                .unwrap_err()
+                .contains("line 2")
+        );
+    }
+
+    #[test]
+    fn a_short_table_names_the_shortfall() {
+        let mut text = identity(3);
+        text.push_str("0 0 0\n");
+        assert!(parse(&text).unwrap_err().contains("28 rows"));
+        assert!(parse("LUT_1D_SIZE 4\n").unwrap_err().contains("1D"));
+    }
+}

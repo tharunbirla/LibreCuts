@@ -1,0 +1,27 @@
+format = 2
+
+# CapCraft's wave. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.wave-cut"
+name = "Wave"
+version = 1
+kind = "transition"
+category = "Distort"
+order = 47
+description = "Both shots ripple sideways in rolling waves while one melts into the other."
+
+[[param]]
+key = "strength"
+label = "Strength"
+type = "int"
+min = 0
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[transition]
+entry = "effect.wgsl"
+xfade = "fade"
+fallback = "cross-fade"

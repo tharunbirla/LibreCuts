@@ -1,0 +1,27 @@
+format = 2
+
+# CapCraft's doors. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.doors"
+name = "Doors"
+version = 1
+kind = "transition"
+category = "Wipe"
+order = 34
+description = "The outgoing shot splits down the middle and slides apart like doors."
+
+[[param]]
+key = "shadow"
+label = "Shadow"
+type = "int"
+min = 0
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[transition]
+entry = "effect.wgsl"
+xfade = "vertopen"
+fallback = "cross-fade"

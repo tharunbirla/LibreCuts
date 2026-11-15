@@ -1,0 +1,45 @@
+format = 2
+
+[effect]
+id = "concat.gaussian-blur"
+name = "Gaussian Blur"
+kind = "effect"
+category = "Blur"
+order = 20
+version = 2
+intensity = "radius"
+aliases = ["gaussian-blur"]
+description = "A soft, even blur."
+
+[[param]]
+key = "radius"
+label = "Radius"
+min = 1
+max = 50
+default = 10
+step = 1
+unit = "px"
+
+[wgsl]
+entry = "effect.wgsl"
+
+# Across the layer, then down what that drew, then `effect` spreads it back
+# over the layer. From a radius of six the first two are drawn at a power of
+# two fewer pixels, as many as keep the Gaussian three of them wide: it has
+# nothing finer in it for them to lose. Below six `effect` blurs down
+# `across` itself, and `down` is drawn at a sliver of the layer and unread.
+[[wgsl.pass]]
+target = "across"
+shrink = ["radius / 3", "1"]
+
+[[wgsl.pass]]
+target = "down"
+shrink = ["if(radius < 6, 64, radius / 3)", "if(radius < 6, 64, radius / 3)"]
+
+# The box blur this stands in for: FFmpeg's boxblur of `radius`, once, is a
+# box `2 radius + 1` wide, whose spread a Gaussian of sigma
+# sqrt(radius (radius + 1) / 3) matches.
+[[replaces]]
+id = "concat.box-blur"
+defaults = { radius = 6 }
+knobs = { radius = "sqrt(radius * (radius + 1) / 3)" }

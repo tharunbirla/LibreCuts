@@ -1,0 +1,24 @@
+format = 2
+
+[effect]
+id = "capcraft.letterbox"
+name = "Letterbox"
+version = 1
+kind = "effect"
+category = "Stylize"
+order = 36
+intensity = "size"
+description = "Black bars across the top and bottom, for the wide look of a cinema screen."
+
+[[param]]
+key = "size"
+label = "Bars"
+type = "int"
+min = 0
+max = 25
+default = 12
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"

@@ -1,0 +1,5 @@
+# UniFFI bindings of the `capcraft_android` library.
+
+[bindings.kotlin]
+package_name = "io.github.artcraftandroid.capcraft.core"
+cdylib_name = "capcraft_android"

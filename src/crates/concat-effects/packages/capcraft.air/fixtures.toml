@@ -1,0 +1,13 @@
+[[case]]
+name = "default"
+chain = "aexciter=amount=2.5:drive=8.5:freq=7500,alimiter=limit=0.94"
+
+[[case]]
+name = "minimum"
+at = "min"
+chain = "aexciter=amount=1.0:drive=8.5:freq=7500,alimiter=limit=0.94"
+
+[[case]]
+name = "maximum"
+at = "max"
+chain = "aexciter=amount=4.0:drive=8.5:freq=7500,alimiter=limit=0.94"
