@@ -8,7 +8,6 @@ O NexusCut é um projeto experimental de editor de vídeo para Android. Esta bra
 - **Alterações nesta branch:** há identidade visual NexusCut em partes do app e opções para formatar legendas/letras novas em maiúsculas e remover pontuação selecionada. A formatação acontece após a segmentação; não equivale a testar reconhecimento, sincronização e exportação completos.
 - **Verificado no CI:** o [run do commit `75a5234`](https://github.com/F1N0ZENIX/NexusCut/actions/runs/43771357457) concluiu os testes de formatação de legendas e a build de APK debug arm64. Esse resultado se refere àquele commit, não comprova que todos os recursos funcionem ou que builds posteriores passem. Consulte [Actions](https://github.com/F1N0ZENIX/NexusCut/actions) para o resultado do commit desejado.
 - **Pendente de validação:** instalação e uso em aparelho, edição, modelos de reconhecimento, legendas na timeline, renderização, SRT e exportação ponta a ponta. O comportamento pode variar conforme aparelho, mídia e modelo.
-- **NVIDIA BNR:** não está integrada nesta branch. Existe um [protótipo isolado em outra branch](https://github.com/F1N0ZENIX/NexusCut/blob/feature/nvidia-bnr-prototype/docs/nvidia-bnr-prototype.md), baseado em outra árvore, que não integra o áudio ao editor. Uma possível integração é apenas proposta em [docs/PLANO-INTEGRACAO.md](docs/PLANO-INTEGRACAO.md).
 
 Não há promessa de abrir ou migrar projetos das versões antigas do NexusCut ou de outros editores. Faça cópias dos arquivos e projetos antes de testar.
 
