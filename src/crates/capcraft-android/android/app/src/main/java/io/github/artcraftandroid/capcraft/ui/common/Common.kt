@@ -134,7 +134,7 @@ fun ConfirmDialog(
                     Text("Cancel", style = Type.Body.copy(color = Palette.TextSecondary))
                 }
                 Box(Modifier.weight(1f).fillMaxSize().clickable(onClick = onConfirm), contentAlignment = Alignment.Center) {
-                    Text(confirm, style = Type.BodyStrong.copy(color = if (destructive) Palette.Danger else Palette.Accent))
+                    Text(confirm, style = Type.BodyStrong.copy(color = if (destructive) Palette.Danger else Palette.AccentText))
                 }
             }
         }

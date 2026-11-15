@@ -20,6 +20,8 @@ object Palette {
     val CardPressed = Color(0xFF34303F)
     val Divider = Color(0xFF35303F)
     val Accent = Color(0xFF6F36DD)
+ /** Higher contrast violet for text on dark surfaces. */
+ val AccentText = Color(0xFFAF7BFF)
     /** White ink on the violet accent. */
     val OnAccent = Color(0xFFFFFFFF)
     /** The editor's top part: top bar, preview surround and play bar. */
