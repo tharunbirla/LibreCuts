@@ -51,6 +51,9 @@ import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
+import io.github.artcraftandroid.capcraft.R
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -214,7 +217,10 @@ private fun TopBar(vm: EditorViewModel, onClose: () -> Unit, onExport: () -> Uni
         Box(Modifier.size(44.dp, 50.dp).clickable { vm.stop(); vm.toolSearch = true }, contentAlignment = Alignment.Center) {
             Glyph(LucideIcons.Search, Palette.DockText, size = 24.dp, description = "Find a tool")
         }
-        Spacer(Modifier.weight(1f))
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+            Image(painterResource(R.drawable.ic_launcher_foreground), contentDescription = null, modifier = Modifier.size(30.dp))
+            Text("NexusCut", style = Type.BodyStrong, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
         val t = vm.timeline
         val short = t?.let { min(it.width.toInt(), it.height.toInt()) } ?: 1080
         Row(
@@ -237,7 +243,7 @@ private fun TopBar(vm: EditorViewModel, onClose: () -> Unit, onExport: () -> Uni
             Modifier
                 .height(32.dp)
                 .width(65.dp)
-                .clip(RoundedCornerShape(6.dp))
+                .clip(RoundedCornerShape(9.dp))
                 .background(Palette.Accent)
                 .clickable(onClick = onExport),
             contentAlignment = Alignment.Center,
