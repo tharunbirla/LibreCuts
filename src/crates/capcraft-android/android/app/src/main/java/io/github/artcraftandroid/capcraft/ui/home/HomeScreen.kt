@@ -13,7 +13,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -65,6 +64,8 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import io.github.artcraftandroid.capcraft.R
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -157,12 +158,12 @@ private val DarkHome = HomeColors(
     Grabber = Palette.DockBack,
     Ring = Color(0xFF5C5C60),
     More = Palette.CardPressed,
-    Wash = listOf(Color(0xFF15293A), Color(0xFF0B0B0D)),
+    Wash = listOf(Color(0xFF281846), Color(0xFF0B0B0D)),
     Round = Color(0xFF262A30),
 )
 
 private val Home: HomeColors
-    @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) DarkHome else LightHome
+    @Composable @ReadOnlyComposable get() = DarkHome
 
 @Composable
 @ReadOnlyComposable
@@ -545,6 +546,8 @@ private fun EditTab(
             HeroArt(Modifier.matchParentSize())
             Column(Modifier.fillMaxWidth().statusBarsPadding()) {
                 Row(Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Image(painterResource(R.drawable.ic_launcher_foreground), contentDescription = null, modifier = Modifier.size(38.dp))
+                    Text("NexusCut", style = ink(18f, FontWeight.Bold, Color.White))
                     Spacer(Modifier.weight(1f))
                     Box(Modifier.size(44.dp).clip(RoundedCornerShape(22.dp)).clickable(onClick = onSearch), contentAlignment = Alignment.Center) {
                         Glyph(LucideIcons.Search, Color.White, size = 24.dp, description = "Search projects")
@@ -673,7 +676,7 @@ private fun HeroArt(modifier: Modifier) {
     Canvas(modifier) {
         val w = size.width
         val h = size.height
-        drawRect(Brush.linearGradient(listOf(Color(0xFF27B9D9), Color(0xFF5C9CF0), Color(0xFF8B7CF2)), Offset.Zero, Offset(w, h * 0.8f)))
+        drawRect(Brush.linearGradient(listOf(Color(0xFF211238), Color(0xFF4E268A), Color(0xFF14121D)), Offset.Zero, Offset(w, h * 0.8f)))
         drawCircle(Brush.radialGradient(listOf(Color(0x66FFFFFF), Color.Transparent), Offset(w * 0.85f, h * 0.12f), w * 0.5f), w * 0.5f, Offset(w * 0.85f, h * 0.12f))
         drawCircle(Brush.radialGradient(listOf(Color(0x40FFE4F2), Color.Transparent), Offset(w * 0.1f, h * 0.45f), w * 0.45f), w * 0.45f, Offset(w * 0.1f, h * 0.45f))
         // a strip of frames running up the picture
@@ -1042,7 +1045,7 @@ private fun MeTab(onLicences: () -> Unit, onAbout: () -> Unit, onCleared: (Strin
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
             SettingRow("Clear cache", cache?.let(::size) ?: "") { clearing = true }
             SettingRow("Licences", null, onLicences)
-            SettingRow("About CapCraft", null, onAbout)
+            SettingRow("About NexusCut", null, onAbout)
             SettingRow("Version", version, null)
         }
     }
@@ -1094,22 +1097,22 @@ private fun Page(title: String, onBack: () -> Unit, content: @Composable () -> U
 }
 
 /** Where the app's source lives. */
-private const val SOURCE_URL = "https://github.com/artcraft-android/capcraft-android"
+private const val SOURCE_URL = "https://github.com/F1N0ZENIX/NexusCut/tree/feature/capcraft-base"
 
 /** What CapCraft is, who made the engine under it, and that it is nobody else's app. */
 @Composable
 private fun AboutScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val version = remember { appVersion(context) }
-    Page("About CapCraft", onBack) {
+    Page("About NexusCut", onBack) {
         Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(Modifier.height(24.dp))
-            Text("CapCraft", style = ink(26f, FontWeight.Bold))
+            Text("NexusCut", style = ink(26f, FontWeight.Bold))
             Spacer(Modifier.height(6.dp))
             Text("Version $version", style = ink(13f, color = Home.Muted))
             Spacer(Modifier.height(28.dp))
             Text(
-                "A free video editor that keeps your work on your phone. Built on Concat's engine; free " +
+                "A free video editor that keeps your work on your phone. Based on CapCraft and Concat's engine; free " +
                     "software under the GNU Affero General Public License, version 3 or later.",
                 style = ink(13f, color = Home.Muted).copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center),
             )
