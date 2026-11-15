@@ -8,24 +8,24 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-/** CapCraft's palette: a black editor with one cyan accent. */
+/** NexusCut graphite surfaces and violet accent. */
 object Palette {
-    val Black = Color(0xFF000000)
+    val Black = Color(0xFF0D0C12)
     /** The editor's chrome: top bar, timeline and dock. */
-    val Chrome = Color(0xFF0D0D0D)
+    val Chrome = Color(0xFF111016)
     /** Panels and sheets over the editor. */
-    val Panel = Color(0xFF1A1A1A)
+    val Panel = Color(0xFF1C1A23)
     /** Cards and raised rows. */
-    val Card = Color(0xFF242424)
-    val CardPressed = Color(0xFF2E2E2E)
-    val Divider = Color(0xFF2A2A2A)
-    val Accent = Color(0xFF00CAE0)
-    /** Words on the accent: the Export button's dark ink. */
-    val OnAccent = Color(0xFF1E2129)
+    val Card = Color(0xFF292631)
+    val CardPressed = Color(0xFF34303F)
+    val Divider = Color(0xFF35303F)
+    val Accent = Color(0xFF6F36DD)
+    /** White ink on the violet accent. */
+    val OnAccent = Color(0xFFFFFFFF)
     /** The editor's top part: top bar, preview surround and play bar. */
-    val EditorTop = Color(0xFF141414)
+    val EditorTop = Color(0xFF15141B)
     /** The timeline and the bottom bar under it. */
-    val Timeline = Color(0xFF1C1C1C)
+    val Timeline = Color(0xFF17161D)
     /** The bottom bar while a clip is selected, and the panels. */
     val DockSelected = Color(0xFF262626)
     /** The back button of a bottom bar level. */
@@ -43,15 +43,15 @@ object Palette {
     val Disabled = Color(0xFF4D4D4D)
     /** Timeline clip colours by row. */
     val TextClip = Color(0xFFE67300)
-    /** Captions, a lighter amber than titles. */
-    val CaptionClip = Color(0xFFDA9208)
+    /** Captions in violet, distinct from titles. */
+    val CaptionClip = Color(0xFF5830A0)
     val EffectClip = Color(0xFF7E61EE)
     val FilterClip = Color(0xFFE36BBF)
     val StickerClip = Color(0xFFDCB108)
-    val AudioClip = Color(0xFF2A5256)
+    val AudioClip = Color(0xFF382362)
     /** Beat marks on sound clips. */
     val Beat = Color(0xFFFFD60A)
-    val AudioWave = Color(0xFF00B2C2)
+    val AudioWave = Color(0xFFAF7BFF)
     val OverlayClip = Color(0xFF2B2B2B)
     val Danger = Color(0xFFFF4D4F)
 }
