@@ -10,7 +10,7 @@
 use std::sync::{Arc, OnceLock};
 
 use concat_project::Command;
-use concat_project::model::{ClipKind, TextStyle};
+use concat_project::model::{ClipKind, TextAlign, TextStyle};
 use concat_speech::transcribe::TranscribeRequest;
 use concat_speech::tts::SpeakRequest;
 use concat_speech::{DownloadProgress, JobStage, Speech, Transcriber};
@@ -248,18 +248,56 @@ fn stage_of(stage: JobStage) -> (f32, String) {
     }
 }
 
-/// The look of a caption: white words with a dark outline, low on the frame.
+/// A simple, legible caption look, inspired by common mobile-editor captions.
+/// The key visual choices are explicit, independent of general title defaults.
 fn caption_style(text: &str) -> TextStyle {
     TextStyle {
         content: text.to_owned(),
         font_family: "Inter".to_owned(),
         font_size: 0.034,
         font_weight: 700.0,
+        color: "#ffffff".to_owned(),
+        align: TextAlign::Center,
         stroke_width: 0.004,
         stroke_color: "#000000".to_owned(),
         shadow: false,
         max_width: 0.8,
         ..TextStyle::default()
+    }
+}
+
+/// Positive moves down from the centre, in fractions of frame height.
+const CAPTION_OFFSET_Y: f64 = 0.32;
+
+#[cfg(test)]
+mod caption_style_tests {
+    use super::{caption_style, CAPTION_OFFSET_Y};
+    use concat_project::model::{TextAlign, TextStyle};
+
+    #[test]
+    fn caption_preset_is_legible_and_keeps_the_words() {
+        let style = caption_style("Olá, mundo!\nAção");
+        assert_eq!(style.content, "Olá, mundo!\nAção");
+        assert_eq!(style.font_family, "Inter");
+        assert_eq!(style.font_size, 0.034);
+        assert_eq!(style.font_weight, 700.0);
+        assert_eq!(style.color, "#ffffff");
+        assert_eq!(style.align, TextAlign::Center);
+        assert_eq!(style.stroke_color, "#000000");
+        assert_eq!(style.stroke_width, 0.004);
+        assert!(!style.shadow);
+        assert_eq!(style.max_width, 0.8);
+        assert!(style.background.is_empty());
+        assert_eq!(style.clone().tidy(), style);
+        assert_eq!(CAPTION_OFFSET_Y, 0.32);
+    }
+
+    #[test]
+    fn caption_style_survives_project_serialization() {
+        let style = caption_style("Olá, mundo!\nAção");
+        let json = serde_json::to_string(&style).expect("serializes");
+        let restored: TextStyle = serde_json::from_str(&json).expect("deserializes");
+        assert_eq!(restored, style);
     }
 }
 
@@ -595,7 +633,7 @@ impl MobileSession {
                         start: *from,
                         style: Some(caption_style(text)),
                         duration: Some((to - from).max(0.1)),
-                        offset_y: Some(0.32),
+                        offset_y: Some(CAPTION_OFFSET_Y),
                     }),
             );
             commands
