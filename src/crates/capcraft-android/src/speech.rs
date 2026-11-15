@@ -248,40 +248,6 @@ fn stage_of(stage: JobStage) -> (f32, String) {
     }
 }
 
-/// The most words one caption shows: phrases short enough to read at a
-/// glance, as phone editors' captions are.
-const WORDS_PER_CAPTION: usize = 6;
-
-/// A recognised phrase cut into captions of a few words each, the time
-/// shared out by how many letters each holds.
-fn chunks(from: f64, to: f64, text: &str) -> Vec<(f64, f64, String)> {
-    let words: Vec<&str> = text.split_whitespace().collect();
-    if words.len() <= WORDS_PER_CAPTION {
-        return vec![(from, to, words.join(" "))];
-    }
-    let pieces: Vec<String> = words
-        .chunks(
-            WORDS_PER_CAPTION.min(
-                words
-                    .len()
-                    .div_ceil(words.len().div_ceil(WORDS_PER_CAPTION)),
-            ),
-        )
-        .map(|chunk| chunk.join(" "))
-        .collect();
-    let letters: usize = pieces.iter().map(|piece| piece.len()).sum::<usize>().max(1);
-    let mut at = from;
-    pieces
-        .into_iter()
-        .map(|piece| {
-            let length = (to - from) * piece.len() as f64 / letters as f64;
-            let caption = (at, at + length, piece);
-            at += length;
-            caption
-        })
-        .collect()
-}
-
 /// The look of a caption: white words with a dark outline, low on the frame.
 fn caption_style(text: &str) -> TextStyle {
     TextStyle {
@@ -393,16 +359,12 @@ impl MobileSession {
                     match result {
                         Ok(segments) => {
                             for segment in segments {
-                                let text = crate::caption_text::format_caption(
-                                    segment.text.trim(), uppercase, remove_punctuation,
-                                );
-                                if text.trim().is_empty() {
-                                    continue;
-                                }
                                 let from = start + segment.start / speed.max(1e-6);
                                 let to = start + segment.end / speed.max(1e-6);
                                 if to - from > 0.05 {
-                                    captions.extend(chunks(from, to, &text));
+                                    captions.extend(crate::caption_text::caption_chunks(
+                                        from, to, segment.text.trim(), uppercase, remove_punctuation,
+                                    ));
                                 }
                             }
                         }
