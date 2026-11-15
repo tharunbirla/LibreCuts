@@ -312,7 +312,7 @@ private fun MediaPickerPage(req: MediaRequest, onClose: () -> Unit, onDone: (Lis
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "CapCraft can see only the photos and videos you chose",
+                    "NexusCut can see only the photos and videos you chose",
                     style = Type.Small.copy(color = Palette.TextSecondary),
                     modifier = Modifier.weight(1f),
                 )
