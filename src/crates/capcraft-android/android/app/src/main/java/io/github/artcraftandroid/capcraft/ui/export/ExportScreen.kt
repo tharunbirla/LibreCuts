@@ -265,7 +265,7 @@ fun ExportScreen(vm: EditorViewModel, onClose: () -> Unit, onHome: () -> Unit) {
                         Box(Modifier.weight(1f).height(1.dp).background(Color(0x33FFFFFF)))
                         Glyph(LucideIcons.Lightbulb, Palette.TextSecondary, size = 16.dp, modifier = Modifier.padding(horizontal = 8.dp))
                         Text(
-                            "You can leave CapCraft while the video saves",
+                            "You can leave NexusCut while the video saves",
                             style = Type.Small.copy(textAlign = TextAlign.Center),
                             modifier = Modifier.width(240.dp),
                         )
