@@ -1,7 +1,6 @@
 name: One-time CapCraft migration and build
 on:
-  push:
-    branches: [feature/capcraft-base]
+  workflow_dispatch:
 permissions:
   contents: write
 jobs:
