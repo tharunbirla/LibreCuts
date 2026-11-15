@@ -93,7 +93,7 @@ fun ActionSheet(
                 Box(
                     Modifier.fillMaxWidth().clickable(onClick = onDismiss).padding(vertical = 15.dp),
                     contentAlignment = Alignment.Center,
-                ) { Text("Cancel", style = Type.Body) }
+                ) { Text("Cancelar", style = Type.Body) }
             }
         }
     }
@@ -131,7 +131,7 @@ fun ConfirmDialog(
             Divider()
             Row(Modifier.fillMaxWidth().height(48.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                 Box(Modifier.weight(1f).fillMaxSize().clickable(onClick = onDismiss), contentAlignment = Alignment.Center) {
-                    Text("Cancel", style = Type.Body.copy(color = Palette.TextSecondary))
+                    Text("Cancelar", style = Type.Body.copy(color = Palette.TextSecondary))
                 }
                 Box(Modifier.weight(1f).fillMaxSize().clickable(onClick = onConfirm), contentAlignment = Alignment.Center) {
                     Text(confirm, style = Type.BodyStrong.copy(color = if (destructive) Palette.Danger else Palette.AccentText))
