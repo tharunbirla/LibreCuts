@@ -1,0 +1,13 @@
+[[case]]
+name = "default"
+chain = "highpass=f=300,vibrato=f=4:d=0.40,aecho=0.8:0.7:220:0.5,alimiter=limit=0.94"
+
+[[case]]
+name = "minimum"
+at = "min"
+chain = "highpass=f=300,vibrato=f=4:d=0.20,aecho=0.8:0.7:120:0.5,alimiter=limit=0.94"
+
+[[case]]
+name = "maximum"
+at = "max"
+chain = "highpass=f=300,vibrato=f=4:d=0.60,aecho=0.8:0.7:320:0.5,alimiter=limit=0.94"

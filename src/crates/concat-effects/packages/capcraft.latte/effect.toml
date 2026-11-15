@@ -1,0 +1,26 @@
+format = 2
+
+# CapCraft's own filter. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.latte"
+name = "Latte"
+version = 1
+kind = "filter"
+category = "Food"
+order = 93
+intensity = "amount"
+description = "Soft and creamy: warm, lifted blacks and gentle colour, for cafe tables."
+
+[[param]]
+key = "amount"
+label = "Amount"
+min = 0
+max = 100
+default = 70
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

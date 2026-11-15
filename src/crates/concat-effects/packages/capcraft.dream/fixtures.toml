@@ -1,0 +1,13 @@
+[[case]]
+name = "default"
+chain = "lowpass=f=6000,chorus=0.6:0.8:40|55:0.3|0.25:0.2|0.3:1.5|1.1,aecho=0.8:0.6:500:0.40,alimiter=limit=0.94"
+
+[[case]]
+name = "minimum"
+at = "min"
+chain = "lowpass=f=6000,chorus=0.6:0.8:40|55:0.3|0.25:0.2|0.3:1.5|1.1,aecho=0.8:0.6:300:0.20,alimiter=limit=0.94"
+
+[[case]]
+name = "maximum"
+at = "max"
+chain = "lowpass=f=6000,chorus=0.6:0.8:40|55:0.3|0.25:0.2|0.3:1.5|1.1,aecho=0.8:0.6:700:0.60,alimiter=limit=0.94"

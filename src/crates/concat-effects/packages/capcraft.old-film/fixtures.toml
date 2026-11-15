@@ -1,0 +1,55 @@
+# The probe pixel of the first frame: its grey tinted by the tone, the grain
+# the hash throws there, no flicker yet, no corner shade so near the middle,
+# and whatever the first throw's scratch does there, all worked out from the
+# prelude's own maths.
+
+[[probe]]
+name = "default, a grey"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.205263, 0.138389, 0.0734278, 1]
+
+[[probe]]
+name = "default, a highlight past white"
+input = [4, 1, 0.05, 1]
+expect = [1.93184, 0.954953, 0.301177, 1]
+
+[[probe]]
+name = "default, half transparent"
+input = [0.5, 0.2, 0.1, 0.5]
+expect = [0.321887, 0.178363, 0.0788273, 0.5]
+
+[[probe]]
+name = "min, a grey"
+at = "min"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.18, 0.18, 0.18, 1]
+
+[[probe]]
+name = "min, a highlight past white"
+at = "min"
+input = [4, 1, 0.05, 1]
+expect = [4, 1, 0.05, 1]
+
+[[probe]]
+name = "min, half transparent"
+at = "min"
+input = [0.5, 0.2, 0.1, 0.5]
+expect = [0.5, 0.2, 0.1, 0.5]
+
+[[probe]]
+name = "max, a grey"
+at = "max"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.206012, 0.124584, 0.0523718, 1]
+
+[[probe]]
+name = "max, a highlight past white"
+at = "max"
+input = [4, 1, 0.05, 1]
+expect = [1.52756, 0.929793, 0.396709, 1]
+
+[[probe]]
+name = "max, half transparent"
+at = "max"
+input = [0.5, 0.2, 0.1, 0.5]
+expect = [0.277372, 0.167963, 0.0708244, 0.5]

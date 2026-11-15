@@ -1,0 +1,13 @@
+format = 2
+
+[effect]
+id = "concat.autumn"
+name = "Autumn"
+kind = "filter"
+category = "Scenery"
+order = 58
+description = "Greens pulled toward amber, the picture dipped in fall light."
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

@@ -1,0 +1,25 @@
+format = 2
+
+[effect]
+id = "concat.film-grain"
+name = "Film Grain"
+version = 2
+kind = "effect"
+category = "Stylize"
+shelves = ["Retro & Film"]
+order = 41
+intensity = "amount"
+aliases = ["film-grain"]
+description = "Dancing grain, the texture of film stock."
+
+[[param]]
+key = "amount"
+label = "Amount"
+type = "int"
+min = 2
+max = 40
+default = 12
+step = 1
+
+[wgsl]
+entry = "effect.wgsl"

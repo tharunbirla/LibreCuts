@@ -1,0 +1,26 @@
+format = 2
+
+# CapCraft's own filter. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.soft-day"
+name = "Soft Day"
+version = 1
+kind = "filter"
+category = "Everyday"
+order = 114
+intensity = "amount"
+description = "An overcast day made kind: brighter, the colour gentle, nothing harsh."
+
+[[param]]
+key = "amount"
+label = "Amount"
+min = 0
+max = 100
+default = 60
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

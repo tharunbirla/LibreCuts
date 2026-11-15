@@ -1,0 +1,27 @@
+format = 2
+
+# CapCraft's squeeze. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.squeeze"
+name = "Squeeze"
+version = 1
+kind = "transition"
+category = "Slide"
+order = 35
+description = "The outgoing shot is pressed from both sides into a line and gone."
+
+[[param]]
+key = "depth"
+label = "Shadow"
+type = "int"
+min = 0
+max = 100
+default = 40
+step = 1
+unit = "%"
+
+[transition]
+entry = "effect.wgsl"
+xfade = "squeezeh"
+fallback = "cross-fade"

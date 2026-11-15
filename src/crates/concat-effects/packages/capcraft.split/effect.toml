@@ -1,0 +1,27 @@
+format = 2
+
+# CapCraft's split. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.split"
+name = "Split"
+version = 1
+kind = "transition"
+category = "Slide"
+order = 49
+description = "The outgoing shot splits across the middle, its halves sliding up and down off the frame."
+
+[[param]]
+key = "shade"
+label = "Shade"
+type = "int"
+min = 0
+max = 100
+default = 30
+step = 1
+unit = "%"
+
+[transition]
+entry = "effect.wgsl"
+xfade = "horzopen"
+fallback = "cross-fade"

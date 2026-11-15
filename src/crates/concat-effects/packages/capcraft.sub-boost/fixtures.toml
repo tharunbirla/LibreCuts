@@ -1,0 +1,13 @@
+[[case]]
+name = "default"
+chain = "asubboost=dry=1:wet=0.50:decay=0.6:feedback=0.5:cutoff=100,alimiter=limit=0.92"
+
+[[case]]
+name = "minimum"
+at = "min"
+chain = "asubboost=dry=1:wet=0.20:decay=0.6:feedback=0.5:cutoff=100,alimiter=limit=0.92"
+
+[[case]]
+name = "maximum"
+at = "max"
+chain = "asubboost=dry=1:wet=0.80:decay=0.6:feedback=0.5:cutoff=100,alimiter=limit=0.92"

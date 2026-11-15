@@ -1,0 +1,25 @@
+# Colours in the working space: linear light, 1.0 the white of an SDR
+# picture. Pinned from the shader as first written, so the look stays
+# what it was.
+
+[[probe]]
+name = "default, skin"
+input = [0.6, 0.35, 0.25, 1]
+expect = [0.59863, 0.34302, 0.24243, 1.0]
+
+[[probe]]
+name = "default, a sky"
+input = [0.1, 0.25, 0.6, 1]
+expect = [0.14075, 0.23865, 0.42188, 1.0]
+
+[[probe]]
+name = "minimum, as shot"
+at = "min"
+input = [0.45, 0.4, 0.35, 1]
+expect = [0.45, 0.4, 0.35, 1]
+
+[[probe]]
+name = "maximum, foliage"
+at = "max"
+input = [0.12, 0.3, 0.08, 1]
+expect = [0.18127, 0.26611, 0.10748, 1.0]

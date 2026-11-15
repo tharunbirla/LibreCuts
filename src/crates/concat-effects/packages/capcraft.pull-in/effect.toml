@@ -1,0 +1,27 @@
+format = 2
+
+# CapCraft's pull in. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.pull-in"
+name = "Pull In"
+version = 1
+kind = "transition"
+category = "Zoom"
+order = 44
+description = "The incoming shot grows from the middle over the outgoing one, which darkens behind it."
+
+[[param]]
+key = "dim"
+label = "Dim behind"
+type = "int"
+min = 0
+max = 100
+default = 40
+step = 1
+unit = "%"
+
+[transition]
+entry = "effect.wgsl"
+xfade = "circlecrop"
+fallback = "cross-fade"

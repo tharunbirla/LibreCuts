@@ -1,0 +1,32 @@
+format = 2
+
+[effect]
+id = "concat.soft-light"
+name = "Soft Light"
+kind = "filter"
+category = "Everyday"
+order = 13
+intensity = "lift"
+description = "A matte: blacks lifted, whites eased down, contrast low, and a soft bloom in the light with cream in it. Airy and flattering."
+
+[[param]]
+key = "lift"
+label = "Lift"
+min = 0
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[[param]]
+key = "warmth"
+label = "Warmth"
+min = 0
+max = 100
+default = 40
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

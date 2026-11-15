@@ -1,0 +1,13 @@
+[[case]]
+name = "default"
+chain = "chorus=0.6:0.9:50|60:0.40|0.32:0.25|0.4:2|1.3,alimiter=limit=0.94"
+
+[[case]]
+name = "minimum"
+at = "min"
+chain = "chorus=0.6:0.9:50|60:0.20|0.15:0.25|0.4:2|1.3,alimiter=limit=0.94"
+
+[[case]]
+name = "maximum"
+at = "max"
+chain = "chorus=0.6:0.9:50|60:0.60|0.48:0.25|0.4:2|1.3,alimiter=limit=0.94"

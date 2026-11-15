@@ -1,0 +1,13 @@
+format = 2
+
+[effect]
+id = "concat.landscape-pop"
+name = "Vivid Landscape"
+kind = "filter"
+category = "Scenery"
+order = 57
+description = "Greens and blues pushed richer, the punch a travel shot wants."
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

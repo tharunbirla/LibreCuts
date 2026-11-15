@@ -1,0 +1,37 @@
+format = 2
+
+# CapCraft's neon edges. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.neon-edges"
+name = "Neon Edges"
+version = 1
+kind = "effect"
+category = "Neon"
+order = 80
+intensity = "amount"
+description = "Edges traced in glowing neon that slides round the rainbow, the rest of the picture darkened."
+
+[[param]]
+key = "amount"
+label = "Amount"
+type = "int"
+min = 0
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[[param]]
+key = "speed"
+label = "Speed"
+type = "int"
+min = 0
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

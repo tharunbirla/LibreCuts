@@ -1,0 +1,26 @@
+format = 2
+
+# CapCraft's own filter. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.velvet"
+name = "Velvet"
+version = 1
+kind = "filter"
+category = "Portrait"
+order = 95
+intensity = "amount"
+description = "Warm, soft portrait light, skin kept true and the contrast rounded."
+
+[[param]]
+key = "amount"
+label = "Amount"
+min = 0
+max = 100
+default = 65
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

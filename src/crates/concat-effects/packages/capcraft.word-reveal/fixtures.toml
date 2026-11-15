@@ -1,0 +1,28 @@
+# Off a title the reading order is 0 everywhere, so every pixel is reached
+# from the first frame: with the words appearing one by one, a picture of
+# one colour is as it was at the default and at the lowest settings; with
+# them lit in white, as karaoke at the highest, a grey keeps its lightness
+# and so is the grey it was. The words themselves are the text panel's to
+# show.
+
+[[probe]]
+name = "default, a grey"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.18, 0.18, 0.18, 1]
+
+[[probe]]
+name = "default, half transparent"
+input = [0.5, 0.2, 0.1, 0.5]
+expect = [0.5, 0.2, 0.1, 0.5]
+
+[[probe]]
+name = "minimum, a highlight past white"
+at = "min"
+input = [4, 1, 0.05, 1]
+expect = [4, 1, 0.05, 1]
+
+[[probe]]
+name = "maximum, karaoke in white keeps a grey"
+at = "max"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.18, 0.18, 0.18, 1]

@@ -1,0 +1,26 @@
+format = 2
+
+# CapCraft's straightening, set by the crop page's ruler: the picture turned
+# inside its own frame and grown just enough to still fill it. Written for
+# CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.straighten"
+name = "Straighten"
+version = 1
+kind = "effect"
+category = "Cutout"
+order = 62
+description = "Turns the picture inside its frame, grown just enough that no corner shows."
+
+[[param]]
+key = "angle"
+label = "Angle"
+min = -45
+max = 45
+default = 0
+step = 1
+unit = "°"
+
+[wgsl]
+entry = "effect.wgsl"

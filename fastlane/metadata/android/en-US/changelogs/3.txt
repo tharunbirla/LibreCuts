@@ -1,8 +1,0 @@
-- Added SRT subtitles support with interactive resizing and positioning.
-- Added layer reordering (move text/image overlays up or down).
-- Added direct video sharing support to open videos instantly in LibreCuts.
-- Redesigned time ruler and playhead controls for enhanced precision.
-- Switched to hardware-accelerated video encoding and boosted max audio gain to 200%.
-- Added transition effects between merged video segments with visual preview animations.
-- Added one-time onboarding welcome dialog with community links and wiki support.
-- Refined editing toolbars, added cancel actions, and general minor fixes.

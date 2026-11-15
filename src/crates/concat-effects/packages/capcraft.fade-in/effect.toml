@@ -1,0 +1,25 @@
+format = 2
+
+# CapCraft's fade in. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.fade-in"
+name = "Fade In"
+version = 1
+kind = "effect"
+category = "Intro & Outro"
+order = 90
+description = "The clip rises out of black over its first moments."
+
+# How long the intro takes, from the first frame of the clip or layer it is on.
+[[param]]
+key = "span"
+label = "Duration"
+min = 0.2
+max = 3
+default = 0.8
+step = 0.1
+unit = "s"
+
+[wgsl]
+entry = "effect.wgsl"

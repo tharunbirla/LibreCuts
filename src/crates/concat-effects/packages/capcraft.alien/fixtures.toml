@@ -1,0 +1,13 @@
+[[case]]
+name = "default"
+chain = "afreqshift=shift=-300,flanger=delay=3:depth=3:speed=0.5,alimiter=limit=0.94"
+
+[[case]]
+name = "minimum"
+at = "min"
+chain = "afreqshift=shift=-100,flanger=delay=3:depth=3:speed=0.5,alimiter=limit=0.94"
+
+[[case]]
+name = "maximum"
+at = "max"
+chain = "afreqshift=shift=-500,flanger=delay=3:depth=3:speed=0.5,alimiter=limit=0.94"

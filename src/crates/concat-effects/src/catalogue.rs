@@ -1,0 +1,1451 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Jareer Abdullah and Concat contributors
+
+//! Packages, and the catalogue that holds them.
+//!
+//! A [`Package`] is a manifest compiled for use: its templates parsed, its
+//! `let` bindings checked, its fixtures loaded. A [`Catalogue`] is every
+//! package the app knows, findable by id or alias, and it is what turns a
+//! clip's applied effects into one FFmpeg chain.
+
+use std::collections::{BTreeMap, HashMap};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, RwLock};
+
+use concat_project::model::{AppliedFilter, ParamKey};
+use serde::Deserialize;
+
+use crate::Error;
+use crate::expr::{Expr, Value};
+use concat_core::{Lut, RevealMap, ShaderPass, TransitionPass};
+
+use crate::manifest::{Kind, Manifest, ParamType};
+use crate::shader::{Shader, TransitionShader};
+use crate::template::Template;
+
+/// The author every built-in package is under, and no other package may
+/// be: the front of an id, before the dot.
+pub const BUILTIN_AUTHOR: &str = "concat";
+
+/// A compiled FFmpeg backend.
+#[derive(Clone, Debug)]
+struct Chain {
+    lets: Vec<(String, Expr)>,
+    template: Template,
+}
+
+/// The key every filter answers to without declaring it: how much of the
+/// look is applied, as a percent. Absent means all of it.
+pub const INTENSITY: &str = "intensity";
+
+/// One effect, ready to use.
+#[derive(Clone, Debug)]
+pub struct Package {
+    /// What the package declares.
+    pub manifest: Manifest,
+    chain: Option<Chain>,
+    /// The shader, when the package has one: the GPU renders it, and the
+    /// chain - if the package has that too - is the CPU's fallback.
+    shader: Option<Shader>,
+    /// The two-input shader, when the package is a transition: the GPU
+    /// combines the outgoing and incoming pictures with it.
+    transition: Option<TransitionShader>,
+    /// The pinned outputs shipped with the package.
+    pub fixtures: Vec<Fixture>,
+    /// The pinned colours shipped with the package: what its shader makes
+    /// of a picture, checked on a GPU.
+    pub probes: Vec<Probe>,
+    /// The folder the package was loaded from; None for a built-in.
+    pub folder: Option<std::path::PathBuf>,
+    /// The table the manifest's `[lut]` names, read at load.
+    lut: Option<Arc<Lut>>,
+}
+
+/// Where a fixture's parameters start from.
+#[derive(Deserialize, Clone, Copy, PartialEq, Eq, Debug, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum At {
+    /// Every parameter at its default.
+    #[default]
+    Default,
+    /// Every parameter at its minimum.
+    Min,
+    /// Every parameter at its maximum.
+    Max,
+}
+
+/// One pinned case from `fixtures.toml`: these parameters produce exactly
+/// this chain.
+#[derive(Deserialize, Clone, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct Fixture {
+    /// A name for the failure message.
+    #[serde(default)]
+    pub name: String,
+    /// The starting point every parameter takes.
+    #[serde(default)]
+    pub at: At,
+    /// Parameters set on top of `at`.
+    #[serde(default)]
+    pub params: BTreeMap<String, f64>,
+    /// The emitted position the fragment is rendered at.
+    #[serde(default)]
+    pub index: usize,
+    /// The expected chain.
+    pub chain: String,
+}
+
+/// One pinned colour from `fixtures.toml`'s `[[probe]]`s: a picture of one
+/// colour through the package's shader at these parameters comes out as
+/// this colour - or, for a transition, a cut from a picture of one colour
+/// to a picture of another, at one point of it. Every colour is in the
+/// compositor's working space - linear light, 1.0 the white of an SDR
+/// picture - and the check is made on a GPU, where the shader runs:
+/// concat-render's suite for the built-ins, `concat-cli check` for
+/// anyone's.
+#[derive(Deserialize, Clone, PartialEq, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct Probe {
+    /// A name for the failure message.
+    #[serde(default)]
+    pub name: String,
+    /// The starting point every parameter takes.
+    #[serde(default)]
+    pub at: At,
+    /// Parameters set on top of `at`, a filter's `intensity` among them.
+    #[serde(default)]
+    pub params: BTreeMap<String, f64>,
+    /// The colour of every pixel going in, straight RGBA: a transition's
+    /// outgoing picture.
+    pub input: [f32; 4],
+    /// A transition's incoming picture, and nothing else's.
+    #[serde(default)]
+    pub to: Option<[f32; 4]>,
+    /// How far through a transition's cut, `0..=1`, and nothing else's.
+    #[serde(default)]
+    pub progress: Option<f32>,
+    /// The colour the middle pixel must come out as.
+    pub expect: [f32; 4],
+    /// How far a channel may land from `expect`, as a fraction of the
+    /// expected value (of 0.01, for a value nearer zero than that). Half
+    /// floats keep about three significant digits; the default allows a
+    /// few steps of them.
+    #[serde(default = "Probe::default_tolerance")]
+    pub tolerance: f32,
+}
+
+impl Probe {
+    fn default_tolerance() -> f32 {
+        0.004
+    }
+
+    /// What a failure message calls the probe, the `n`th in its file.
+    pub fn label(&self, n: usize) -> String {
+        case_label(&self.name, n)
+    }
+
+    /// Whether `got` is the colour the probe expects, to its tolerance; the
+    /// failure shows both.
+    pub fn check(&self, got: [f32; 4]) -> Result<(), String> {
+        let close = self.expect.iter().zip(got).all(|(want, got)| {
+            let allowed = self.tolerance * want.abs().max(0.01);
+            (got - want).abs() <= allowed
+        });
+        if close {
+            Ok(())
+        } else {
+            Err(format!("expected {:?}\n  rendered {got:?}", self.expect))
+        }
+    }
+}
+
+/// What a failure message calls the `n`th case of a fixtures file.
+fn case_label(name: &str, n: usize) -> String {
+    if name.is_empty() {
+        format!("case {}", n + 1)
+    } else {
+        name.to_owned()
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct FixtureFile {
+    #[serde(default, rename = "case")]
+    cases: Vec<Fixture>,
+    #[serde(default, rename = "probe")]
+    probes: Vec<Probe>,
+}
+
+impl Package {
+    /// Compiles a package from the text of its manifest and, if it ships
+    /// them, its fixtures file and its shader.
+    pub fn from_sources(
+        manifest: &str,
+        fixtures: Option<&str>,
+        shader: Option<&str>,
+    ) -> Result<Package, Error> {
+        Package::from_manifest(Manifest::parse(manifest)?, fixtures, shader, None)
+    }
+
+    /// `from_sources` with the manifest already parsed, and the table its
+    /// `[lut]` names read from `folder`, when it has one.
+    fn from_manifest(
+        manifest: Manifest,
+        fixtures: Option<&str>,
+        shader: Option<&str>,
+        table: Option<(std::path::PathBuf, Arc<Lut>)>,
+    ) -> Result<Package, Error> {
+        let invalid = |message: String| Error::Invalid {
+            id: manifest.effect.id.clone(),
+            message,
+        };
+        // A picture is drawn by its shader on the GPU, in light: a picture
+        // package written for format 1, or one that is an FFmpeg chain, is
+        // one this Concat no longer draws. Sound is still FFmpeg's.
+        if manifest.effect.kind.is_visual() {
+            if !manifest.scene_linear() {
+                return Err(invalid(
+                    "a picture package written for format 1, which this Concat no longer \
+                     draws: it needs `format = 2` and a shader (see the package guide)"
+                        .to_owned(),
+                ));
+            }
+            if manifest.ffmpeg.is_some() {
+                return Err(invalid(
+                    "a picture package is drawn by its shader: it carries no [ffmpeg] chain"
+                        .to_owned(),
+                ));
+            }
+        }
+
+        // The shader file beside the manifest, if any: a `[wgsl]` effect's
+        // body, or a `[transition]`'s two-input body.
+        let body = shader;
+        // A `[wgsl]` table without the file, or the file without the table,
+        // is a package that does not know what it is.
+        let shader = match (&manifest.wgsl, body) {
+            (Some(_), Some(body)) => Some(
+                Shader::compile(&manifest, body)
+                    .map_err(|message| invalid(format!("shader: {message}")))?,
+            ),
+            (Some(wgsl), None) => {
+                return Err(invalid(format!(
+                    "[wgsl] names `{}` but no shader was given",
+                    wgsl.entry
+                )));
+            }
+            // A transition's `effect.wgsl` is its two-input shader, compiled
+            // just below, not a stray effect shader.
+            (None, Some(_)) if manifest.transition.is_some() => None,
+            (None, Some(_)) => {
+                return Err(invalid(
+                    "a shader was given but the manifest has no [wgsl] table".to_owned(),
+                ));
+            }
+            (None, None) => None,
+        };
+        let transition = match (&manifest.transition, body) {
+            (Some(_), Some(body)) => Some(
+                TransitionShader::compile(&manifest, body)
+                    .map_err(|message| invalid(format!("transition shader: {message}")))?,
+            ),
+            (Some(table), None) => {
+                return Err(invalid(format!(
+                    "[transition] names `{}` but no shader was given",
+                    table.entry
+                )));
+            }
+            (None, _) => None,
+        };
+        if shader.is_none()
+            && transition.is_none()
+            && manifest.ffmpeg.is_none()
+            && manifest.effect.kind != Kind::Audio
+        {
+            return Err(invalid(
+                "the package has neither a shader nor a chain".to_owned(),
+            ));
+        }
+
+        let chain = match &manifest.ffmpeg {
+            None => None,
+            Some(ffmpeg) => {
+                let mut known: Vec<String> =
+                    manifest.params.iter().map(|p| p.key.clone()).collect();
+                known.push("index".to_owned());
+                if manifest.lut.is_some() {
+                    known.push("lut".to_owned());
+                }
+                let mut lets = Vec::new();
+                for binding in &ffmpeg.lets {
+                    let Some((name, source)) = binding.split_once('=') else {
+                        return Err(invalid(format!(
+                            "let `{binding}` is not `name = expression`"
+                        )));
+                    };
+                    let name = name.trim();
+                    if known.iter().any(|k| k == name) {
+                        return Err(invalid(format!(
+                            "let `{name}` shadows a name already defined"
+                        )));
+                    }
+                    let expr = Expr::parse(source.trim())
+                        .map_err(|error| invalid(format!("let `{name}`: {error}")))?;
+                    check_names(&expr, &known).map_err(invalid)?;
+                    known.push(name.to_owned());
+                    lets.push((name.to_owned(), expr));
+                }
+                // A filter that reads a file reads it with the host's
+                // rights: the only file a chain may name is the package's
+                // own look-up table, and only through `{lut}`.
+                if let Some(option) = names_a_file(&ffmpeg.chain) {
+                    return Err(invalid(format!(
+                        "chain names a file through `{option}`: a package's chain may read \
+                         its own look-up table as `{{lut}}` and no other file"
+                    )));
+                }
+                let template = Template::parse(&ffmpeg.chain)
+                    .map_err(|error| invalid(format!("chain: {error}")))?;
+                let mut names = Vec::new();
+                template.names(&mut names);
+                for name in names {
+                    if !known.contains(&name) {
+                        return Err(invalid(format!(
+                            "chain reads `{name}`, which is not declared"
+                        )));
+                    }
+                }
+                // A package is a folder anyone can share; its chain may
+                // touch the frame and nothing else. See `filters`.
+                for filter in template
+                    .filters()
+                    .map_err(|error| invalid(format!("chain: {error}")))?
+                {
+                    if !crate::filters::allowed(&filter) {
+                        return Err(invalid(format!(
+                            "chain uses `{filter}`, which is not a filter a package may use: \
+                             a package's chain reads the frame and writes the frame, and \
+                             nothing else"
+                        )));
+                    }
+                }
+                Some(Chain { lets, template })
+            }
+        };
+
+        let (fixtures, probes) = match fixtures {
+            None => (Vec::new(), Vec::new()),
+            Some(source) => {
+                let file: FixtureFile = toml::from_str(source)
+                    .map_err(|error| invalid(format!("fixtures: {error}")))?;
+                (file.cases, file.probes)
+            }
+        };
+        if !probes.is_empty() && shader.is_none() && transition.is_none() {
+            return Err(invalid(
+                "fixtures: a [[probe]] pins what a shader draws, and the package has none"
+                    .to_owned(),
+            ));
+        }
+        for (n, probe) in probes.iter().enumerate() {
+            let cut = probe.to.is_some() || probe.progress.is_some();
+            if transition.is_some() && (probe.to.is_none() || probe.progress.is_none()) {
+                return Err(invalid(format!(
+                    "fixtures: probe `{}` of a transition needs `to` and `progress`",
+                    probe.label(n)
+                )));
+            }
+            if transition.is_none() && cut {
+                return Err(invalid(format!(
+                    "fixtures: probe `{}` sets `to` or `progress`, which only a transition has",
+                    probe.label(n)
+                )));
+            }
+            let filter = manifest.effect.kind == Kind::Filter;
+            if let Some(key) = probe
+                .params
+                .keys()
+                .find(|key| manifest.owner(key).is_none() && !(filter && key.as_str() == INTENSITY))
+            {
+                return Err(invalid(format!(
+                    "fixtures: probe `{}` sets `{key}`, which is not a parameter",
+                    probe.label(n)
+                )));
+            }
+        }
+
+        if manifest.lut.is_some() && table.is_none() {
+            // The table is a file beside the manifest, and only a folder
+            // has one; see `from_folder`.
+            return Err(invalid(
+                "a package with a [lut] must be loaded from its folder".to_owned(),
+            ));
+        }
+        let (folder, lut) = match table {
+            Some((folder, lut)) => (Some(folder), Some(lut)),
+            None => (None, None),
+        };
+        let package = Package {
+            manifest,
+            chain,
+            shader,
+            transition,
+            fixtures,
+            probes,
+            folder,
+            lut,
+        };
+        // Render at every bound now, so a type error in an expression is a
+        // load failure and never a silent gap in an export.
+        if package.chain.is_some() {
+            for at in [At::Default, At::Min, At::Max] {
+                package
+                    .ffmpeg_fragment(&package.params_at(at), 0)
+                    .map_err(|error| Error::Invalid {
+                        id: package.id().to_owned(),
+                        message: format!("chain at {at:?}: {error}"),
+                    })?;
+            }
+        }
+        Ok(package)
+    }
+
+    /// The namespaced id.
+    pub fn id(&self) -> &str {
+        &self.manifest.effect.id
+    }
+
+    /// The category declared in the manifest.
+    pub fn category(&self) -> &str {
+        &self.manifest.effect.category
+    }
+
+    /// Whether this package belongs to or matches a category filter.
+    pub fn matches_category(&self, category: &str) -> bool {
+        if category.is_empty() || category.eq_ignore_ascii_case("All") {
+            return true;
+        }
+        // The package's own shelf, and any it names besides.
+        let named = |shelf: &str| {
+            self.category().eq_ignore_ascii_case(shelf)
+                || self
+                    .manifest
+                    .effect
+                    .shelves
+                    .iter()
+                    .any(|own| own.eq_ignore_ascii_case(shelf))
+        };
+        if named(category) {
+            return true;
+        }
+        // The library's combined shelves, each the categories it gathers:
+        // names, never package ids, so a package of anyone's lands on one
+        // by what it says about itself (audit 2026-10-04, `matches_category`).
+        let gathers: &[&str] = match category {
+            "Featured" => {
+                if self.manifest.effect.order < 10 {
+                    return true;
+                }
+                &[]
+            }
+            "Retro & Film" => &["Retro", "Film", "Cinematic"],
+            "Optical & Lens" => &["Optical", "Lens", "Blur"],
+            "Distortion & Glitch" => &["Distort", "Glitch"],
+            "Party & Club" => &["Party", "Club"],
+            "Light & Shadow" => &["Light", "Shadow"],
+            _ => &[],
+        };
+        gathers.iter().any(|shelf| named(shelf))
+    }
+
+    /// Which catalogue the package belongs to.
+    pub fn kind(&self) -> Kind {
+        self.manifest.effect.kind
+    }
+
+    /// The pass this package's shader makes at its defaults: what a vet
+    /// runs once before the package is offered. None for a package with
+    /// no shader.
+    pub fn trial_pass(&self) -> Option<ShaderPass> {
+        self.pass(&BTreeMap::new(), None)
+    }
+
+    /// The passes an install trial runs: the shader at its defaults, then
+    /// with every knob at its least and at its most. A loop counted by a
+    /// knob costs nothing at a default of one and hangs the device at the
+    /// slider's end, so the defaults alone prove little (audit 2026-10-04,
+    /// #6). Empty for a package with no shader.
+    pub fn trial_passes(&self) -> Vec<ShaderPass> {
+        [At::Default, At::Min, At::Max]
+            .into_iter()
+            .filter_map(|at| self.pass(&self.params_at(at), None))
+            .collect()
+    }
+
+    /// The pass this package's shader makes with the parameters in `set`,
+    /// or None for a package with no shader. Keys the manifest does not
+    /// declare are dropped, but for a filter's intensity, which mixes the
+    /// look over the untouched picture; an effect is always whole.
+    pub fn pass(
+        &self,
+        set: &BTreeMap<String, f64>,
+        reveal_map: Option<Arc<RevealMap>>,
+    ) -> Option<ShaderPass> {
+        let shader = self.shader.as_ref()?;
+        let intensity = if self.kind() == Kind::Filter {
+            (set.get(INTENSITY).copied().unwrap_or(100.0) / 100.0).clamp(0.0, 1.0) as f32
+        } else {
+            1.0
+        };
+        let values = self.resolve(set);
+        Some(shader.pass(
+            &values,
+            &self.manifest.params,
+            intensity,
+            self.lut.clone(),
+            reveal_map,
+        ))
+    }
+
+    /// The pass a probe checks: the parameters at its starting point with
+    /// its own set on top. None for a package with no shader.
+    pub fn probe_pass(&self, probe: &Probe) -> Option<ShaderPass> {
+        self.pass(&self.set_at(probe.at, &probe.params), None)
+    }
+
+    /// The combine a transition's probe checks, at its progress. None for
+    /// a package that is not a transition.
+    pub fn probe_transition(&self, probe: &Probe) -> Option<TransitionPass> {
+        let shader = self.transition.as_ref()?;
+        let values = self.resolve(&self.set_at(probe.at, &probe.params));
+        Some(shader.pass(
+            &values,
+            &self.manifest.params,
+            probe.progress.unwrap_or(0.0).clamp(0.0, 1.0),
+            self.lut.clone(),
+        ))
+    }
+
+    /// The shader, when the package renders on the GPU.
+    pub fn shader(&self) -> Option<&Shader> {
+        self.shader.as_ref()
+    }
+
+    /// The two-input shader, when the package is a transition.
+    pub fn transition(&self) -> Option<&TransitionShader> {
+        self.transition.as_ref()
+    }
+
+    /// Whether `id` is this package's id or one of its aliases.
+    pub fn answers_to(&self, id: &str) -> bool {
+        self.id() == id || self.manifest.effect.aliases.iter().any(|alias| alias == id)
+    }
+
+    /// `link`, a link to a retired package this one stands in for (its
+    /// `[[replaces]]`), made a link to this one: its knobs worked out from
+    /// the old ones and held to this package's ranges. A new knob whose
+    /// expression reads one keyed old knob rides too, each of the old keys
+    /// carried through the expression; one that reads two keyed knobs
+    /// holds, since their keys need not fall at the same moments. `None`
+    /// when this package does not replace the link's.
+    pub fn replacing(&self, link: &AppliedFilter) -> Option<AppliedFilter> {
+        let replaced = self
+            .manifest
+            .replaces
+            .iter()
+            .find(|replaced| replaced.names(&link.id))?;
+        let old: BTreeMap<String, Value> = replaced
+            .defaults
+            .iter()
+            .map(|(knob, default)| {
+                let value = link.params.get(knob).copied().unwrap_or(*default);
+                (knob.clone(), Value::Float(value))
+            })
+            .collect();
+        let held = |knob: &str, value: Value| -> Option<f64> {
+            let value = match value {
+                Value::Int(value) => value as f64,
+                Value::Float(value) => value,
+                Value::Text(_) => return None,
+            };
+            Some(
+                match self.manifest.params.iter().find(|param| param.key == knob) {
+                    Some(param) => value.clamp(param.min, param.max),
+                    None => value,
+                },
+            )
+        };
+        let mut params = BTreeMap::new();
+        let mut keys = BTreeMap::new();
+        for (knob, source) in &replaced.knobs {
+            let Ok(expr) = Expr::parse(source) else {
+                continue;
+            };
+            let Some(value) = expr.eval(&old).ok().and_then(|value| held(knob, value)) else {
+                continue;
+            };
+            params.insert(knob.clone(), value);
+            let mut read = Vec::new();
+            expr.names(&mut read);
+            read.sort();
+            read.dedup();
+            let keyed: Vec<&String> = read
+                .iter()
+                .filter(|name| link.keys.get(*name).is_some_and(|run| !run.is_empty()))
+                .collect();
+            if let [name] = keyed.as_slice() {
+                let run: Vec<ParamKey> = link.keys[*name]
+                    .iter()
+                    .filter_map(|key| {
+                        let mut at = old.clone();
+                        at.insert((*name).clone(), Value::Float(key.value));
+                        let value = expr.eval(&at).ok().and_then(|value| held(knob, value))?;
+                        Some(ParamKey {
+                            at: key.at,
+                            value,
+                            ease: key.ease,
+                        })
+                    })
+                    .collect();
+                if !run.is_empty() {
+                    keys.insert(knob.clone(), run);
+                }
+            }
+        }
+        Some(AppliedFilter {
+            id: self.id().to_owned(),
+            params,
+            enabled: link.enabled,
+            keys,
+        })
+    }
+
+    /// Every declared parameter at `at`: a wheel's master there too, its
+    /// puck at the middle; a curve is the straight line at every one.
+    pub fn params_at(&self, at: At) -> BTreeMap<String, f64> {
+        let mut params = BTreeMap::new();
+        for param in &self.manifest.params {
+            let value = match at {
+                At::Default => param.default,
+                At::Min => param.min,
+                At::Max => param.max,
+            };
+            params.insert(param.key.clone(), value);
+            if param.kind == ParamType::Wheel {
+                params.insert(format!("{}.x", param.key), 0.0);
+                params.insert(format!("{}.y", param.key), 0.0);
+                params.insert(format!("{}.m", param.key), value);
+            }
+        }
+        params
+    }
+
+    /// Every declared parameter at `at`, with `set` on top.
+    fn set_at(&self, at: At, set: &BTreeMap<String, f64>) -> BTreeMap<String, f64> {
+        let mut params = self.params_at(at);
+        params.extend(set.iter().map(|(key, value)| (key.clone(), *value)));
+        params
+    }
+
+    /// Every declared parameter: the value in `set`, or the default, and a
+    /// compound knob's dotted keys as `set` has them - a wheel's puck and
+    /// master, a curve's points. Keys the manifest does not own are
+    /// dropped.
+    pub fn resolve(&self, set: &BTreeMap<String, f64>) -> BTreeMap<String, f64> {
+        let mut values = BTreeMap::new();
+        for param in &self.manifest.params {
+            let value = set.get(&param.key).copied().unwrap_or(param.default);
+            values.insert(param.key.clone(), value);
+            if param.kind.is_compound() {
+                let prefix = format!("{}.", param.key);
+                values.extend(
+                    set.range(prefix.clone()..)
+                        .take_while(|(key, _)| key.starts_with(&prefix))
+                        .filter(|(key, _)| self.manifest.owner(key).is_some())
+                        .map(|(key, value)| (key.clone(), *value)),
+                );
+            }
+        }
+        values
+    }
+
+    /// The FFmpeg fragment for these parameters, or `None` when the package
+    /// has no FFmpeg backend. `index` is the fragment's emitted position in
+    /// the clip's chain; any filtergraph labels must embed it.
+    pub fn ffmpeg_fragment(
+        &self,
+        set: &BTreeMap<String, f64>,
+        index: usize,
+    ) -> Result<Option<String>, Error> {
+        let Some(chain) = &self.chain else {
+            return Ok(None);
+        };
+        let mut env: BTreeMap<String, Value> = self
+            .resolve(set)
+            .into_iter()
+            .map(|(key, value)| (key, Value::Float(value)))
+            .collect();
+        env.insert("index".to_owned(), Value::Int(index as i64));
+        if let (Some(table), Some(folder)) = (&self.manifest.lut, &self.folder) {
+            let path = folder.join(&table.file);
+            env.insert(
+                "lut".to_owned(),
+                Value::Text(escape_option(&path.to_string_lossy())),
+            );
+        }
+        let invalid = |message: String| Error::Invalid {
+            id: self.id().to_owned(),
+            message,
+        };
+        for (name, expr) in &chain.lets {
+            let value = expr
+                .eval(&env)
+                .map_err(|error| invalid(format!("let `{name}`: {error}")))?;
+            env.insert(name.clone(), value);
+        }
+        chain
+            .template
+            .render(&env)
+            .map(Some)
+            .map_err(|error| invalid(format!("chain: {error}")))
+    }
+
+    /// Loads a package from its folder: the manifest, and beside it the
+    /// fixtures, the shader and the table, whichever the manifest names.
+    pub fn from_folder(folder: &Path) -> Result<Package, Error> {
+        let read = |name: &str| {
+            std::fs::read_to_string(folder.join(name)).map_err(|error| Error::Io {
+                path: folder.join(name),
+                message: error.to_string(),
+            })
+        };
+        let manifest_text = read("effect.toml")?;
+        let fixtures = read("fixtures.toml").ok();
+        let shader = read("effect.wgsl").ok();
+        let manifest = Manifest::parse(&manifest_text)?;
+        // The built-ins' author is theirs alone. A package of the user's
+        // own under it would shadow, or be shadowed by, one that ships
+        // with the app, and which won would turn on load order.
+        let reserved = std::iter::once(manifest.effect.id.as_str())
+            .chain(manifest.effect.aliases.iter().map(String::as_str))
+            .find(|name| {
+                name.split_once('.')
+                    .is_some_and(|(author, _)| author == BUILTIN_AUTHOR)
+            });
+        if let Some(name) = reserved {
+            return Err(Error::Invalid {
+                id: manifest.effect.id.clone(),
+                message: format!(
+                    "`{name}` is under `{BUILTIN_AUTHOR}.`, the author of the packages that \
+                     ship with the app; a package of your own is `author.name`"
+                ),
+            });
+        }
+        let table = match &manifest.lut {
+            Some(table) => {
+                let text = read(&table.file)?;
+                let lut = crate::cube::parse(&text).map_err(|message| Error::Invalid {
+                    id: manifest.effect.id.clone(),
+                    message: format!("{}: {message}", table.file),
+                })?;
+                Some(Arc::new(lut))
+            }
+            None => None,
+        };
+        let mut package = Package::from_manifest(
+            manifest,
+            fixtures.as_deref(),
+            shader.as_deref(),
+            table.map(|lut| (folder.to_path_buf(), lut)),
+        )?;
+        if package.folder.is_none() {
+            package.folder = Some(folder.to_path_buf());
+        }
+        Ok(package)
+    }
+
+    /// The table the package ships, if it does.
+    pub fn lut(&self) -> Option<&Arc<Lut>> {
+        self.lut.as_ref()
+    }
+
+    /// Renders every fixture and reports the ones whose chain came out
+    /// different: the package's own regression suite.
+    pub fn check_fixtures(&self) -> Vec<String> {
+        let mut failures = Vec::new();
+        for (n, case) in self.fixtures.iter().enumerate() {
+            let params = self.set_at(case.at, &case.params);
+            let label = case_label(&case.name, n);
+            match self.ffmpeg_fragment(&params, case.index) {
+                Ok(Some(chain)) if chain == case.chain => {}
+                Ok(Some(chain)) => failures.push(format!(
+                    "{}: {label}\n  expected {}\n  rendered {chain}",
+                    self.id(),
+                    case.chain
+                )),
+                Ok(None) => failures.push(format!("{}: {label}: no ffmpeg backend", self.id())),
+                Err(error) => failures.push(format!("{}: {label}: {error}", self.id())),
+            }
+        }
+        failures
+    }
+
+    /// Everything wrong with the package in `folder`, one line each, or
+    /// nothing: the check an author runs before sharing a package, and
+    /// what `concat-cli check` prints. The folder is loaded the way the
+    /// window loads it, so a manifest, template or shader fault comes out
+    /// here rather than in someone else's log; its id and aliases are held
+    /// against `taken`, the catalogue it would join; and its fixtures run.
+    pub fn check_folder(folder: &Path, taken: &Catalogue) -> Vec<String> {
+        let package = match Package::from_folder(folder) {
+            Ok(package) => package,
+            Err(error) => return vec![error.to_string()],
+        };
+        let mut problems = Vec::new();
+        let mut names = vec![package.id().to_owned()];
+        names.extend(package.manifest.effect.aliases.iter().cloned());
+        for name in names {
+            if let Some(other) = taken.get(&name) {
+                problems.push(format!(
+                    "{}: `{name}` is already taken by `{}`",
+                    package.id(),
+                    other.id()
+                ));
+            }
+        }
+        problems.extend(package.check_fixtures());
+        problems
+    }
+}
+
+/// The option a chain names a file through, if it does: `file=`,
+/// `psfile=` and `filename=` are how FFmpeg's filters take one, and the
+/// only value a package may give is its own table, `{lut}`.
+fn names_a_file(chain: &str) -> Option<&'static str> {
+    const OPTIONS: [&str; 3] = ["file=", "psfile=", "filename="];
+    for option in OPTIONS {
+        let mut rest = chain;
+        while let Some(at) = rest.find(option) {
+            let before = rest[..at].chars().next_back();
+            let value = &rest[at + option.len()..];
+            let named = before.is_none_or(|c| !c.is_alphanumeric() && c != '_');
+            if named && !value.starts_with("{lut}") {
+                return Some(option);
+            }
+            rest = &rest[at + option.len()..];
+        }
+    }
+    None
+}
+
+/// A number that changes when anything in the package folders under `dir`
+/// does: a folder added or taken away, a file in one written, added or
+/// removed. What a watcher polls, cheaply - a stat per file, no reading -
+/// to know when the folder is worth loading again. A missing `dir` is 0.
+pub fn package_stamp(dir: &Path) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let Ok(folders) = package_folders(dir) else {
+        return 0;
+    };
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    for folder in folders {
+        folder.hash(&mut hasher);
+        let Ok(entries) = std::fs::read_dir(&folder) else {
+            continue;
+        };
+        let mut files: Vec<(std::ffi::OsString, u64, u128)> = entries
+            .filter_map(Result::ok)
+            .filter_map(|entry| {
+                let meta = entry.metadata().ok()?;
+                let modified = meta
+                    .modified()
+                    .ok()
+                    .and_then(|at| at.duration_since(std::time::UNIX_EPOCH).ok())
+                    .map_or(0, |since| since.as_nanos());
+                Some((entry.file_name(), meta.len(), modified))
+            })
+            .collect();
+        files.sort();
+        files.hash(&mut hasher);
+    }
+    // Never the "missing" value by accident.
+    hasher.finish().max(1)
+}
+
+/// The package folders directly under `dir`, sorted: every folder with an
+/// `effect.toml` in it. Anything else there is left alone, so a stray file
+/// or a folder of notes beside the packages costs nothing.
+pub fn package_folders(dir: &Path) -> Result<Vec<PathBuf>, Error> {
+    let entries = std::fs::read_dir(dir).map_err(|error| Error::Io {
+        path: dir.to_path_buf(),
+        message: error.to_string(),
+    })?;
+    let mut folders: Vec<PathBuf> = entries
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| path.join("effect.toml").is_file())
+        .collect();
+    folders.sort();
+    Ok(folders)
+}
+
+/// A path as one FFmpeg option value: single-quoted, with the quote
+/// itself the one character that has to be spelt out.
+fn escape_option(text: &str) -> String {
+    format!("'{}'", text.replace('\'', "'\\''"))
+}
+
+fn check_names(expr: &Expr, known: &[String]) -> Result<(), String> {
+    let mut names = Vec::new();
+    expr.names(&mut names);
+    for name in names {
+        if !known.contains(&name) {
+            return Err(format!("reads `{name}`, which is not declared"));
+        }
+    }
+    Ok(())
+}
+
+/// The catalogue every caller reads; see `Catalogue::builtin`.
+static CURRENT: RwLock<Option<&'static Catalogue>> = RwLock::new(None);
+
+/// Every package the app knows.
+#[derive(Clone, Debug, Default)]
+pub struct Catalogue {
+    packages: Vec<Package>,
+    by_id: HashMap<String, usize>,
+}
+
+impl Catalogue {
+    /// An empty catalogue.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Every package the process knows: the ones compiled into the binary
+    /// and, once [`Catalogue::install`] has run, the ones in the user's
+    /// folder. Built on first use; a built-in that fails to load is a
+    /// build defect, and the tests catch it.
+    pub fn builtin() -> &'static Catalogue {
+        if let Some(current) = *CURRENT.read().expect("catalogue lock") {
+            return current;
+        }
+        let mut slot = CURRENT.write().expect("catalogue lock");
+        if let Some(current) = *slot {
+            return current;
+        }
+        let built: &'static Catalogue = Box::leak(Box::new(Catalogue::compiled_in()));
+        *slot = Some(built);
+        built
+    }
+
+    /// Makes the packages under `dir` part of the catalogue, beside the
+    /// built-ins, and reports the ones that would not load. Called at
+    /// start and again after an import; each call builds the catalogue
+    /// afresh and leaks the last one, which is a few kilobytes a time and
+    /// what keeps every caller's `&'static` honest.
+    pub fn install(dir: &Path) -> Vec<Error> {
+        Self::install_with(dir, &mut |_| Ok(()))
+    }
+
+    /// [`Catalogue::install`], with every package the folder holds put to
+    /// `vet` before it is offered: one the vet refuses is left out and
+    /// reported the way one that failed to parse is. The window's vet runs
+    /// a package's shader once on the GPU against a timeout, so a shader
+    /// that hangs the device is found at install, not on the first frame
+    /// that asks for it (audit 2026-09-23, #7).
+    pub fn install_with(
+        dir: &Path,
+        vet: &mut dyn FnMut(&Package) -> Result<(), String>,
+    ) -> Vec<Error> {
+        let mut catalogue = Catalogue::compiled_in();
+        let mut errors = if dir.is_dir() {
+            catalogue.load_dir(dir)
+        } else {
+            Vec::new()
+        };
+        let refused: Vec<(String, String)> = catalogue
+            .packages
+            .iter()
+            .filter(|package| package.folder.is_some())
+            .filter_map(|package| vet(package).err().map(|why| (package.id().to_owned(), why)))
+            .collect();
+        for (id, message) in refused {
+            catalogue.remove(&id);
+            errors.push(Error::Invalid { id, message });
+        }
+        let built: &'static Catalogue = Box::leak(Box::new(catalogue));
+        *CURRENT.write().expect("catalogue lock") = Some(built);
+        errors
+    }
+
+    /// Takes a package out, by id, and reindexes what is left.
+    fn remove(&mut self, id: &str) {
+        self.packages.retain(|package| package.id() != id);
+        self.by_id.clear();
+        for (index, package) in self.packages.iter().enumerate() {
+            self.by_id.insert(package.id().to_owned(), index);
+            for alias in &package.manifest.effect.aliases {
+                self.by_id.insert(alias.clone(), index);
+            }
+        }
+    }
+
+    /// The packages compiled into the binary, and nothing else.
+    fn compiled_in() -> Catalogue {
+        let mut catalogue = Catalogue::new();
+        for (folder, manifest, fixtures, shader) in crate::builtins::BUILTIN_SOURCES {
+            let package = Package::from_sources(manifest, *fixtures, *shader)
+                .unwrap_or_else(|error| panic!("built-in package {folder}: {error}"));
+            assert_eq!(
+                package.id(),
+                *folder,
+                "package folder must be named after its id"
+            );
+            catalogue
+                .add(package)
+                .unwrap_or_else(|error| panic!("built-in package {folder}: {error}"));
+        }
+        catalogue.sort();
+        catalogue
+    }
+
+    /// Adds a package. Its id and aliases must be new to the catalogue,
+    /// and so must every package its `[[replaces]]` names: a package
+    /// stands in only for one that is gone. Without that, a shared package
+    /// declaring it replaces a built-in would rewrite every link to the
+    /// built-in as each project opened (audit 2026-10-04, #2). Nor may a
+    /// package take a name another package has retired, or retire one
+    /// another package already stands in for.
+    pub fn add(&mut self, package: Package) -> Result<(), Error> {
+        let refuse = |message: String| Error::Invalid {
+            id: package.id().to_owned(),
+            message,
+        };
+        let mut names = vec![package.id().to_owned()];
+        names.extend(package.manifest.effect.aliases.iter().cloned());
+        for name in &names {
+            if self.by_id.contains_key(name) {
+                return Err(refuse(format!(
+                    "`{name}` is already taken by another package"
+                )));
+            }
+            if let Some(other) = self.packages.iter().find(|other| {
+                other
+                    .manifest
+                    .replaces
+                    .iter()
+                    .any(|replaced| replaced.names(name))
+            }) {
+                return Err(refuse(format!(
+                    "`{name}` is a retired package `{}` stands in for",
+                    other.id()
+                )));
+            }
+        }
+        for replaced in &package.manifest.replaces {
+            let bare = replaced.id.strip_prefix("concat.").unwrap_or(&replaced.id);
+            if let Some(&index) = self
+                .by_id
+                .get(&replaced.id)
+                .or_else(|| self.by_id.get(bare))
+            {
+                return Err(refuse(format!(
+                    "it replaces `{}`, which is installed as `{}`",
+                    replaced.id,
+                    self.packages[index].id()
+                )));
+            }
+            if let Some(other) = self.packages.iter().find(|other| {
+                other
+                    .manifest
+                    .replaces
+                    .iter()
+                    .any(|theirs| theirs.names(&replaced.id) || replaced.names(&theirs.id))
+            }) {
+                return Err(refuse(format!(
+                    "`{}` already stands in for `{}`",
+                    other.id(),
+                    replaced.id
+                )));
+            }
+        }
+        let index = self.packages.len();
+        for name in names {
+            self.by_id.insert(name, index);
+        }
+        self.packages.push(package);
+        Ok(())
+    }
+
+    /// Loads every package folder directly under `dir`. A folder that fails
+    /// is reported and skipped; the rest still load.
+    pub fn load_dir(&mut self, dir: &Path) -> Vec<Error> {
+        let folders = match package_folders(dir) {
+            Ok(folders) => folders,
+            Err(error) => return vec![error],
+        };
+        let mut errors = Vec::new();
+        for folder in folders {
+            match Package::from_folder(&folder).and_then(|p| self.add(p)) {
+                Ok(()) => {}
+                Err(error) => errors.push(error),
+            }
+        }
+        self.sort();
+        errors
+    }
+
+    fn sort(&mut self) {
+        let mut order: Vec<usize> = (0..self.packages.len()).collect();
+        order.sort_by(|&a, &b| {
+            let (a, b) = (
+                &self.packages[a].manifest.effect,
+                &self.packages[b].manifest.effect,
+            );
+            (a.order, a.name.as_str()).cmp(&(b.order, b.name.as_str()))
+        });
+        let packages: Vec<Package> = order.iter().map(|&i| self.packages[i].clone()).collect();
+        self.packages = packages;
+        self.by_id.clear();
+        for (index, package) in self.packages.iter().enumerate() {
+            self.by_id.insert(package.id().to_owned(), index);
+            for alias in &package.manifest.effect.aliases {
+                self.by_id.insert(alias.clone(), index);
+            }
+        }
+    }
+
+    /// The package with this id or alias.
+    pub fn get(&self, id: &str) -> Option<&Package> {
+        self.by_id.get(id).map(|&index| &self.packages[index])
+    }
+
+    /// `link` read as a link to the package that stands in for its retired
+    /// one, if any does (see `Package::replacing`). Returns whether it was.
+    pub fn upgrade(&self, link: &mut AppliedFilter) -> bool {
+        // A link to a package that is here is never rewritten, whatever
+        // claims to replace it.
+        if self.get(&link.id).is_some() {
+            return false;
+        }
+        match self.packages().find_map(|package| package.replacing(link)) {
+            Some(replaced) => {
+                *link = replaced;
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// Every package, in catalogue order.
+    pub fn packages(&self) -> impl Iterator<Item = &Package> {
+        self.packages.iter()
+    }
+
+    /// Every package of one kind, in catalogue order.
+    pub fn of_kind(&self, kind: Kind) -> impl Iterator<Item = &Package> {
+        self.packages
+            .iter()
+            .filter(move |package| package.kind() == kind)
+    }
+
+    /// Every package of one kind matching a category filter, in catalogue order.
+    pub fn of_category<'a>(
+        &'a self,
+        kind: Kind,
+        category: &'a str,
+    ) -> impl Iterator<Item = &'a Package> {
+        self.of_kind(kind)
+            .filter(move |package| package.matches_category(category))
+    }
+
+    /// The shader passes of a clip's chain, in applied order: one per enabled
+    /// entry whose package has a shader. A filter's intensity rides along;
+    /// an effect is always whole. `reveal_map` is a title's baked per-word
+    /// order, carried to every pass exactly as a package's own look-up
+    /// table is - None for anything that is not a title, harmless for a
+    /// package that never reads `reveal_order()`.
+    pub fn shader_passes(
+        &self,
+        effects: &[AppliedFilter],
+        reveal_map: Option<Arc<RevealMap>>,
+    ) -> Vec<ShaderPass> {
+        self.passes_with(effects, |applied| applied.params.clone(), reveal_map)
+    }
+
+    /// The same passes at one instant of the clip, `at` in `0..=1`: a
+    /// parameter with keys is worth what its ride says there. What a
+    /// renderer asks for each frame of a clip whose chain rides.
+    pub fn shader_passes_at(
+        &self,
+        effects: &[AppliedFilter],
+        at: f64,
+        reveal_map: Option<Arc<RevealMap>>,
+    ) -> Vec<ShaderPass> {
+        self.passes_with(effects, |applied| applied.params_at(at), reveal_map)
+    }
+
+    /// The two-input pass for a transition package at `progress` in `0..=1`,
+    /// or None when `id` names no transition this catalogue knows (an unknown
+    /// id, or one that resolves to an effect/filter). The renderer combines
+    /// the outgoing and incoming pictures with it.
+    pub fn transition_pass(
+        &self,
+        id: &str,
+        params: &BTreeMap<String, f64>,
+        progress: f64,
+    ) -> Option<TransitionPass> {
+        let package = self.get(id)?;
+        let shader = package.transition()?;
+        let values = package.resolve(params);
+        Some(shader.pass(
+            &values,
+            &package.manifest.params,
+            progress.clamp(0.0, 1.0) as f32,
+            package.lut.clone(),
+        ))
+    }
+
+    fn passes_with(
+        &self,
+        effects: &[AppliedFilter],
+        params_of: impl Fn(&AppliedFilter) -> BTreeMap<String, f64>,
+        reveal_map: Option<Arc<RevealMap>>,
+    ) -> Vec<ShaderPass> {
+        effects
+            .iter()
+            .filter(|applied| applied.enabled)
+            .filter_map(|applied| {
+                self.get(&applied.id)?
+                    .pass(&params_of(applied), reveal_map.clone())
+            })
+            .collect()
+    }
+
+    /// The complete FFmpeg audio filter string for a clip's filters, or the
+    /// empty string if it has none. Filters apply in the order they were
+    /// added: EQ before a limiter is a different sound from the reverse.
+    pub fn audio_chain(&self, filters: &[AppliedFilter]) -> String {
+        self.compose(&[Kind::Audio], filters)
+    }
+
+    /// Enabled entries of these `kinds` in applied order, comma-joined. Bypassed
+    /// entries, unknown ids, packages of another kind and packages without
+    /// an FFmpeg backend contribute nothing. The index each fragment is
+    /// rendered at is its *emitted* position, so labels stay stable when a
+    /// bypassed entry sits earlier in the list.
+    fn compose(&self, kinds: &[Kind], applied: &[AppliedFilter]) -> String {
+        let mut fragments: Vec<String> = Vec::new();
+        for applied in applied.iter().filter(|applied| applied.enabled) {
+            let Some(package) = self.get(&applied.id) else {
+                continue;
+            };
+            if !kinds.contains(&package.kind()) {
+                continue;
+            }
+            match package.ffmpeg_fragment(&applied.params, fragments.len()) {
+                Ok(Some(fragment)) => fragments.push(fragment),
+                Ok(None) => {}
+                // Every template was rendered at load; a failure here is a
+                // package whose expression only breaks for some value. Drop
+                // the fragment rather than export a broken graph.
+                Err(_) => {}
+            }
+        }
+        fragments.join(",")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use concat_project::model::KeyEase;
+
+    /// A link to a retired key or blur opens as its stand-in, its knobs
+    /// carried over as the `[[replaces]]` table says - the screen's colour,
+    /// FFmpeg's distances doubled and held to the new ranges, a box's
+    /// spread as a Gaussian's - under either spelling of the old id; a link
+    /// nothing replaces is left as it was.
+    #[test]
+    fn a_retired_link_opens_as_its_stand_in() {
+        let catalogue = Catalogue::builtin();
+        let link = |id: &str, params: &[(&str, f64)]| AppliedFilter {
+            id: id.to_owned(),
+            params: params.iter().map(|(k, v)| ((*k).to_owned(), *v)).collect(),
+            enabled: false,
+            keys: BTreeMap::new(),
+        };
+        let mut green = link("concat.green-screen", &[("similarity", 40.0)]);
+        assert!(catalogue.upgrade(&mut green));
+        assert_eq!(green.id, "concat.chroma-key");
+        assert!(!green.enabled, "a bypassed link stays bypassed");
+        assert_eq!(green.params["color"], f64::from(0x00ff_00ffu32));
+        assert_eq!(green.params["similarity"], 60.0, "80, held to the new most");
+        assert_eq!(green.params["softness"], 20.0, "the old default, doubled");
+        assert_eq!(green.params["spill"], 0.0);
+        let mut blue = link("blue-screen", &[]);
+        assert!(catalogue.upgrade(&mut blue), "the alias spelling");
+        assert_eq!(blue.params["color"], f64::from(0x0000_ffffu32));
+        assert_eq!(blue.params["similarity"], 50.0);
+        let mut boxed = link("concat.box-blur", &[("radius", 6.0)]);
+        assert!(catalogue.upgrade(&mut boxed));
+        assert_eq!(boxed.id, "concat.gaussian-blur");
+        assert!((boxed.params["radius"] - 14f64.sqrt()).abs() < 1e-9);
+        let mut kept = link("concat.sepia", &[("amount", 50.0)]);
+        assert!(!catalogue.upgrade(&mut kept));
+        assert_eq!(kept.id, "concat.sepia");
+    }
+
+    /// A package built from sources standing in for `replaces`: a lift
+    /// whose stops come from the old link's `level`.
+    fn stand_in(id: &str, replaces: &str) -> Result<Package, Error> {
+        let manifest = format!(
+            "format = 2\n[effect]\nid = \"{id}\"\nname = \"Lift\"\nkind = \"effect\"\n\
+             [[param]]\nkey = \"stops\"\nlabel = \"Stops\"\nmin = -2\nmax = 2\n\
+             [wgsl]\nentry = \"effect.wgsl\"\n\
+             [[replaces]]\nid = \"{replaces}\"\ndefaults = {{ level = 0 }}\nknobs = {{ stops = \"level / 50\" }}\n"
+        );
+        let probe = "[[probe]]\nname = \"up\"\nparams = { stops = 1 }\ninput = [0.25, 0.25, 0.25, 1]\nexpect = [0.5, 0.5, 0.5, 1]\n";
+        let shader = "struct Params { stops: f32 }\nfn effect(uv: vec2<f32>) -> vec4<f32> { let c = sample(uv); return vec4<f32>(exposure(c.rgb, params.stops), c.a); }";
+        Package::from_sources(&manifest, Some(probe), Some(shader))
+    }
+
+    /// A package may stand in only for one that is gone: one naming a
+    /// built-in, under either spelling, or a retired id another package
+    /// already stands in for, is refused at install; and a link to a
+    /// package that is here is never rewritten (audit 2026-10-04, #2).
+    #[test]
+    fn a_package_cannot_take_over_one_that_is_installed() {
+        let mut catalogue = Catalogue::compiled_in();
+        for (id, replaces) in [
+            ("evil.glow", "concat.glow"),
+            ("evil.glow-bare", "glow"),
+            ("evil.green", "concat.green-screen"),
+        ] {
+            let error = catalogue
+                .add(stand_in(id, replaces).expect("loads"))
+                .expect_err(replaces)
+                .to_string();
+            assert!(
+                error.contains(replaces) || error.contains("stands in"),
+                "{error}"
+            );
+        }
+        let error = catalogue
+            .add(stand_in("concat.box-blur", "nothing.at-all").expect("loads"))
+            .expect_err("a retired name")
+            .to_string();
+        assert!(error.contains("retired"), "{error}");
+        catalogue
+            .add(stand_in("a.lift", "a.old-lift").expect("loads"))
+            .expect("one that is gone may be stood in for");
+
+        let mut glow = AppliedFilter::new("concat.glow");
+        assert!(!catalogue.upgrade(&mut glow));
+        assert_eq!(glow.id, "concat.glow");
+        let mut old = AppliedFilter::new("a.old-lift");
+        assert!(catalogue.upgrade(&mut old));
+        assert_eq!(old.id, "a.lift");
+    }
+
+    /// A new knob that reads one keyed old knob rides with it, each key
+    /// carried through the expression at its own moment and ease.
+    #[test]
+    fn a_stand_in_carries_the_keys_of_the_knob_it_reads() {
+        let package = stand_in("a.lift", "a.old-lift").expect("loads");
+        let mut link = AppliedFilter::new("a.old-lift");
+        link.params.insert("level".into(), 25.0);
+        link.keys.insert(
+            "level".into(),
+            vec![
+                ParamKey {
+                    at: 0.0,
+                    value: 0.0,
+                    ease: KeyEase::LINEAR,
+                },
+                ParamKey {
+                    at: 0.5,
+                    value: 50.0,
+                    ease: KeyEase::LINEAR,
+                },
+                ParamKey {
+                    at: 1.0,
+                    value: 500.0,
+                    ease: KeyEase::LINEAR,
+                },
+            ],
+        );
+        let upgraded = package.replacing(&link).expect("replaces it");
+        assert_eq!(upgraded.params["stops"], 0.5);
+        let run: Vec<(f64, f64)> = upgraded.keys["stops"]
+            .iter()
+            .map(|k| (k.at, k.value))
+            .collect();
+        assert_eq!(
+            run,
+            vec![(0.0, 0.0), (0.5, 1.0), (1.0, 2.0)],
+            "held to the new most"
+        );
+    }
+
+    /// The library's shelves come from what each package says: its
+    /// category, the shelves it names, and the categories a combined shelf
+    /// gathers - no package is named in the code.
+    #[test]
+    fn a_package_lands_on_the_shelves_it_names() {
+        let catalogue = Catalogue::compiled_in();
+        let on = |id: &str, shelf: &str| catalogue.get(id).expect(id).matches_category(shelf);
+        for (id, shelf) in [
+            ("concat.glow", "Featured"),
+            ("concat.glow", "Light & Shadow"),
+            ("concat.bloom-pulse", "Featured"),
+            ("concat.bloom-pulse", "Light & Shadow"),
+            ("concat.vhs", "Retro & Film"),
+            ("concat.film-grain", "Retro & Film"),
+            ("concat.falling-dust", "Retro & Film"),
+            ("concat.fisheye", "Optical & Lens"),
+            ("concat.fisheye", "Distortion & Glitch"),
+            ("concat.gaussian-blur", "Optical & Lens"),
+            ("concat.motion-blur", "Optical & Lens"),
+            ("concat.swirl", "Distortion & Glitch"),
+            ("concat.neon", "Party & Club"),
+        ] {
+            assert!(on(id, shelf), "{id} on {shelf}");
+        }
+        assert!(!on("concat.neon", "Retro & Film"));
+        assert!(on("concat.neon", "All") && on("concat.neon", ""));
+        let mut catalogue = catalogue;
+        let manifest = "format = 2\n[effect]\nid = \"a.lift\"\nname = \"Lift\"\nkind = \"effect\"\n\
+            category = \"Colour\"\nshelves = [\"party & club\"]\n\
+            [[param]]\nkey = \"stops\"\nlabel = \"Stops\"\nmin = -2\nmax = 2\n\
+            [wgsl]\nentry = \"effect.wgsl\"\n";
+        let probe = "[[probe]]\nname = \"up\"\nparams = { stops = 1 }\ninput = [0.25, 0.25, 0.25, 1]\nexpect = [0.5, 0.5, 0.5, 1]\n";
+        let shader = "struct Params { stops: f32 }\nfn effect(uv: vec2<f32>) -> vec4<f32> { let c = sample(uv); return vec4<f32>(exposure(c.rgb, params.stops), c.a); }";
+        catalogue
+            .add(Package::from_sources(manifest, Some(probe), Some(shader)).expect("loads"))
+            .expect("adds");
+        assert!(
+            catalogue
+                .get("a.lift")
+                .expect("there")
+                .matches_category("Party & Club")
+        );
+    }
+
+    /// A chain reads the frame and its own table and no other file.
+    #[test]
+    fn a_chain_that_names_a_file_is_refused() {
+        assert_eq!(names_a_file("lut3d=file={lut}:interp=tetrahedral"), None);
+        assert_eq!(names_a_file("hue=h=10,eq=brightness=0.1"), None);
+        assert_eq!(names_a_file("lut3d=file=/etc/passwd"), Some("file="));
+        assert_eq!(names_a_file("curves=psfile=/tmp/x.acv"), Some("psfile="));
+        assert_eq!(names_a_file("lut1d=filename=x.cube"), Some("filename="));
+        assert_eq!(
+            names_a_file("scale=profile=1"),
+            None,
+            "an option that merely ends in the word"
+        );
+    }
+}

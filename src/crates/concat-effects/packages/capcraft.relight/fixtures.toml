@@ -1,0 +1,33 @@
+# The probed pixel lies on the line between the key's side and the fill's
+# at the default direction, so it takes half of each: a warm white and a dim
+# cool grey, a little brighter and a little warmer, worked in the display
+# encoding. At the lowest strength nothing is lit again; at the highest, two
+# white lights double it and the round of light just above adds more.
+# Pinned from a model of the shader in doubles, at the probe's pixel.
+
+[[probe]]
+name = "default, a grey"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.353475, 0.344502, 0.328399, 1]
+
+[[probe]]
+name = "default, a colour"
+input = [0.6, 0.2, 0.05, 1]
+expect = [1.178251, 0.38278, 0.091222, 1]
+
+[[probe]]
+name = "default, half transparent keeps its alpha"
+input = [0.18, 0.18, 0.18, 0.5]
+expect = [0.353475, 0.344502, 0.328399, 0.5]
+
+[[probe]]
+name = "minimum, a grey as it was"
+at = "min"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.18, 0.18, 0.18, 1]
+
+[[probe]]
+name = "maximum, a grey doubled and lit from just above"
+at = "max"
+input = [0.18, 0.18, 0.18, 1]
+expect = [1.536108, 1.536108, 1.536108, 1]

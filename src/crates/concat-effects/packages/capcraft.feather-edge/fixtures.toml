@@ -1,0 +1,31 @@
+# Away from any edge the coverage blurs to itself: an opaque picture comes
+# through untouched at the default and at either end of the slider, light past
+# white and all. A picture half see-through everywhere is all edge, half
+# covered, and fades out under any feather; at none it is left as it is.
+
+[[probe]]
+name = "default, a grey"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.18, 0.18, 0.18, 1]
+
+[[probe]]
+name = "default, a highlight past white"
+input = [4, 1, 0.05, 1]
+expect = [4, 1, 0.05, 1]
+
+[[probe]]
+name = "default, half see-through"
+input = [0.18, 0.18, 0.18, 0.5]
+expect = [0.18, 0.18, 0.18, 0]
+
+[[probe]]
+name = "minimum, half see-through is kept"
+at = "min"
+input = [0.18, 0.18, 0.18, 0.5]
+expect = [0.18, 0.18, 0.18, 0.5]
+
+[[probe]]
+name = "maximum, a highlight past white"
+at = "max"
+input = [4, 1, 0.05, 1]
+expect = [4, 1, 0.05, 1]

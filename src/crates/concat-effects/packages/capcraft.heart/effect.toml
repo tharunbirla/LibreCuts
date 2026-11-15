@@ -1,0 +1,27 @@
+format = 2
+
+# CapCraft's heart. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.heart"
+name = "Heart"
+version = 1
+kind = "transition"
+category = "Mask"
+order = 32
+description = "A heart opens from the middle to show the incoming shot."
+
+[[param]]
+key = "softness"
+label = "Softness"
+type = "int"
+min = 0
+max = 100
+default = 15
+step = 1
+unit = "%"
+
+[transition]
+entry = "effect.wgsl"
+xfade = "circleopen"
+fallback = "cross-fade"

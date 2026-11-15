@@ -1,0 +1,13 @@
+[[case]]
+name = "default"
+chain = "highpass=f=350,lowpass=f=3750,acompressor=threshold=0.2:ratio=4,alimiter=limit=0.92"
+
+[[case]]
+name = "minimum"
+at = "min"
+chain = "highpass=f=200,lowpass=f=5000,acompressor=threshold=0.2:ratio=4,alimiter=limit=0.92"
+
+[[case]]
+name = "maximum"
+at = "max"
+chain = "highpass=f=500,lowpass=f=2500,acompressor=threshold=0.2:ratio=4,alimiter=limit=0.92"

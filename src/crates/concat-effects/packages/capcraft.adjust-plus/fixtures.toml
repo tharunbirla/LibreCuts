@@ -1,0 +1,49 @@
+# Every knob at zero is the picture as it was; and black and white stay
+# black and white with every knob at its lowest or its highest - brilliance
+# keeps its ends, clarity has nothing around a flat colour to set it against,
+# the bands of colour leave greys alone and the grain is off at the lowest
+# and fades out at either end of the tones.
+
+[[probe]]
+name = "default, a grey"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.18, 0.18, 0.18, 1]
+
+[[probe]]
+name = "default, a colour"
+input = [0.6, 0.2, 0.05, 1]
+expect = [0.6, 0.2, 0.05, 1]
+
+[[probe]]
+name = "default, a highlight past white"
+input = [4, 1, 0.05, 1]
+expect = [4, 1, 0.05, 1]
+
+[[probe]]
+name = "default, half transparent"
+input = [0.5, 0.2, 0.1, 0.5]
+expect = [0.5, 0.2, 0.1, 0.5]
+
+[[probe]]
+name = "minimum, white"
+at = "min"
+input = [1, 1, 1, 1]
+expect = [1, 1, 1, 1]
+
+[[probe]]
+name = "minimum, black"
+at = "min"
+input = [0, 0, 0, 1]
+expect = [0, 0, 0, 1]
+
+[[probe]]
+name = "maximum, white"
+at = "max"
+input = [1, 1, 1, 1]
+expect = [1, 1, 1, 1]
+
+[[probe]]
+name = "maximum, black"
+at = "max"
+input = [0, 0, 0, 1]
+expect = [0, 0, 0, 1]

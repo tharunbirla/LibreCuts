@@ -1,0 +1,37 @@
+format = 2
+
+# CapCraft's disco lights: three coloured lights sweeping the frame on loops
+# of their own. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.disco-lights"
+name = "Disco Lights"
+version = 1
+kind = "effect"
+category = "Party"
+order = 70
+intensity = "amount"
+description = "Three coloured lights sweep the frame on loops of their own, as a dance floor's do, the rest a little dimmer."
+
+[[param]]
+key = "amount"
+label = "Amount"
+type = "int"
+min = 0
+max = 100
+default = 60
+step = 1
+unit = "%"
+
+[[param]]
+key = "speed"
+label = "Speed"
+type = "int"
+min = 0
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"

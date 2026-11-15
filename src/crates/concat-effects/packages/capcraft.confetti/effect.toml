@@ -1,0 +1,48 @@
+format = 2
+
+# CapCraft's confetti: bright paper pieces falling and turning over the
+# picture. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.confetti"
+name = "Confetti"
+version = 1
+kind = "effect"
+category = "Celebrate"
+order = 74
+intensity = "amount"
+description = "Bright paper pieces fall and turn over the picture, fluttering from side to side."
+
+[[param]]
+key = "amount"
+label = "Amount"
+type = "int"
+min = 0
+max = 100
+default = 60
+step = 1
+unit = "%"
+
+[[param]]
+key = "speed"
+label = "Speed"
+type = "int"
+min = 0
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[[param]]
+key = "size"
+label = "Size"
+type = "int"
+min = 0
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

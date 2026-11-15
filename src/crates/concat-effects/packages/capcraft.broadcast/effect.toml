@@ -1,0 +1,21 @@
+# CapCraft's own audio effect. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.broadcast"
+name = "Broadcast"
+kind = "audio"
+category = "Tone"
+order = 86
+intensity = "presence"
+description = "A presenter's voice: rumble cut, levels evened out and the words lifted."
+
+[[param]]
+key = "presence"
+label = "Presence"
+min = 0
+max = 10
+default = 5
+step = 0.5
+
+[ffmpeg]
+chain = "highpass=f=80,acompressor=threshold=0.125:ratio=3:attack=10:release=120,equalizer=f=3000:t=q:w=1.2:g={fixed(1 + presence * 0.4, 2)},alimiter=limit=0.92"

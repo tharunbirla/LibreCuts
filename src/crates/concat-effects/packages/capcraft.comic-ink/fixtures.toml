@@ -1,0 +1,32 @@
+# A picture of one colour has no edge to ink; what is left is its colour
+# rounded to the nearest step and made bolder, mixed in by the amount. None
+# of it at the lowest amount. Pinned from a model of the shader in doubles,
+# worked in the display encoding.
+
+[[probe]]
+name = "default, a grey"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.129603, 0.129603, 0.129603, 1]
+
+[[probe]]
+name = "default, a colour"
+input = [0.6, 0.2, 0.05, 1]
+expect = [0.65621, 0.260295, 0.009716, 1]
+
+[[probe]]
+name = "minimum, a grey as it was"
+at = "min"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.18, 0.18, 0.18, 1]
+
+[[probe]]
+name = "maximum, a grey"
+at = "max"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.189465, 0.189465, 0.189465, 1]
+
+[[probe]]
+name = "maximum, a colour"
+at = "max"
+input = [0.6, 0.2, 0.05, 1]
+expect = [0.650497, 0.176946, 0.008321, 1]

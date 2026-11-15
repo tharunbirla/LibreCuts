@@ -1,0 +1,15 @@
+# Every checkout is byte-identical to the repository: no line-ending conversion, ever.
+# Windows checkouts default to core.autocrlf=true, which would rewrite the scripts CI runs
+# (gradlew and src/scripts/*.sh) with CRLF and break them on Linux.
+* -text
+
+# Not text at all: no textual diffs or merges either.
+*.png binary
+*.jpg binary
+*.ttf binary
+*.otf binary
+*.ico binary
+*.jar binary
+*.p12 binary
+*.onnx binary
+*.ts binary

@@ -1,0 +1,98 @@
+format = 2
+
+# CapCraft's mask: a shape that keeps part of a picture and lets the rest
+# show what is under it. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "concat.mask"
+name = "Mask"
+kind = "effect"
+category = "Cutout"
+order = 61
+description = "Keeps the inside of a shape - a line, a band, a circle, a rectangle, a heart or a star - and clears the rest, or the reverse."
+
+[[param]]
+key = "shape"
+label = "Shape"
+min = 0
+max = 5
+default = 2
+step = 1
+
+[[param]]
+key = "x"
+label = "Across"
+min = 0
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[[param]]
+key = "y"
+label = "Down"
+min = 0
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[[param]]
+key = "width"
+label = "Width"
+min = 1
+max = 200
+default = 60
+step = 1
+unit = "%"
+
+[[param]]
+key = "height"
+label = "Height"
+min = 1
+max = 200
+default = 60
+step = 1
+unit = "%"
+
+[[param]]
+key = "rotation"
+label = "Rotation"
+min = -180
+max = 180
+default = 0
+step = 1
+
+[[param]]
+key = "feather"
+label = "Feather"
+min = 0
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "round"
+label = "Round corners"
+min = 0
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[[param]]
+key = "invert"
+label = "Invert"
+type = "bool"
+min = 0
+max = 1
+default = 0
+step = 1
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"
+
+[card]
+params = { shape = 4 }

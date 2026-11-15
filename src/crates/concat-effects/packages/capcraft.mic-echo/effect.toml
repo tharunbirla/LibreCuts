@@ -1,0 +1,21 @@
+# CapCraft's own audio effect. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.mic-echo"
+name = "Mic Echo"
+kind = "audio"
+category = "Space"
+order = 80
+intensity = "delay"
+description = "A singer's echo off a hall's far wall, the repeats fading quickly."
+
+[[param]]
+key = "delay"
+label = "Delay"
+min = 0
+max = 10
+default = 4
+step = 0.5
+
+[ffmpeg]
+chain = "aecho=0.8:0.7:{fixed(60 + delay * 20, 0)}:{fixed(0.2 + delay / 25, 2)},alimiter=limit=0.94"

@@ -1,0 +1,32 @@
+format = 2
+
+[effect]
+id = "concat.bronze"
+name = "Bronze"
+kind = "filter"
+category = "Retro"
+order = 42
+intensity = "tone"
+description = "Sepia that keeps its contrast and its highlights, so it reads as old film rather than a brown wash."
+
+[[param]]
+key = "tone"
+label = "Tone"
+min = 0
+max = 100
+default = 80
+step = 1
+unit = "%"
+
+[[param]]
+key = "contrast"
+label = "Contrast"
+min = 0
+max = 100
+default = 30
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

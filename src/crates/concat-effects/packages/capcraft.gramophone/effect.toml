@@ -1,0 +1,21 @@
+# CapCraft's own audio effect. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.gramophone"
+name = "Gramophone"
+kind = "audio"
+category = "Tone"
+order = 101
+intensity = "age"
+description = "An old record player's horn: the bass and treble gone, the middle pressed."
+
+[[param]]
+key = "age"
+label = "Age"
+min = 0
+max = 10
+default = 5
+step = 0.5
+
+[ffmpeg]
+chain = "highpass=f={fixed(200 + age * 30, 0)},lowpass=f={fixed(5000 - age * 250, 0)},acompressor=threshold=0.2:ratio=4,alimiter=limit=0.92"

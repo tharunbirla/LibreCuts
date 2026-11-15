@@ -1,0 +1,32 @@
+format = 2
+
+[effect]
+id = "concat.falling-dust"
+name = "Falling Dust"
+kind = "filter"
+category = "Retro"
+order = 46
+intensity = "dust"
+description = "A warm fade with dust drifting down through it and a light leak in one corner. The CPU shows the fade and a whisper of noise."
+
+[[param]]
+key = "dust"
+label = "Dust"
+min = 0
+max = 100
+default = 60
+step = 1
+unit = "%"
+
+[[param]]
+key = "leak"
+label = "Light leak"
+min = 0
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

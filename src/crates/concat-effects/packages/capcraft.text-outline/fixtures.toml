@@ -1,0 +1,25 @@
+# A flat, opaque picture: the gradient tints it by the colour at the probed
+# row; the outline lies wholly under it and cannot show. Pinned from the
+# shader as first written, so the look stays what it was.
+
+[[probe]]
+name = "default, a grey"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.18005, 0.18005, 0.18005, 1.0]
+
+[[probe]]
+name = "default, a highlight past white"
+input = [4, 1, 0.05, 1]
+expect = [4.0, 1.0, 0.04999, 1.0]
+
+[[probe]]
+name = "minimum, a grey"
+at = "min"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.18005, 0.18005, 0.18005, 1.0]
+
+[[probe]]
+name = "maximum, a highlight past white"
+at = "max"
+input = [4, 1, 0.05, 1]
+expect = [4.0, 1.0, 0.04999, 1.0]

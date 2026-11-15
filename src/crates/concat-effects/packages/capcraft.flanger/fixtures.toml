@@ -1,0 +1,13 @@
+[[case]]
+name = "default"
+chain = "flanger=delay=2:depth=5.0:speed=0.5:regen=20,alimiter=limit=0.94"
+
+[[case]]
+name = "minimum"
+at = "min"
+chain = "flanger=delay=2:depth=1.0:speed=0.5:regen=20,alimiter=limit=0.94"
+
+[[case]]
+name = "maximum"
+at = "max"
+chain = "flanger=delay=2:depth=9.0:speed=0.5:regen=20,alimiter=limit=0.94"

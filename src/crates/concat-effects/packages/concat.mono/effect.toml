@@ -1,0 +1,41 @@
+format = 2
+
+[effect]
+id = "concat.mono"
+name = "Mono"
+kind = "filter"
+category = "Retro"
+order = 43
+intensity = "contrast"
+description = "Black and white through a coloured filter: red darkens skies and lightens skin, green does the reverse. A little grain if you want it."
+
+[[param]]
+key = "colour"
+label = "Colour filter"
+min = -100
+max = 100
+default = 40
+step = 1
+unit = "%"
+
+[[param]]
+key = "contrast"
+label = "Contrast"
+min = 0
+max = 100
+default = 40
+step = 1
+unit = "%"
+
+[[param]]
+key = "grain"
+label = "Grain"
+min = 0
+max = 100
+default = 0
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

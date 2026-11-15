@@ -1,0 +1,19 @@
+# Colours in the working space: linear light, 1.0 the white of an SDR
+# picture. Pinned from the format 1 shader, so the look is what it was.
+
+[[probe]]
+name = "default"
+input = [0.3, 0.2, 0.12, 1]
+expect = [0.42261, 0.20032, 0.09229, 1]
+
+[[probe]]
+name = "minimum"
+at = "min"
+input = [0.45, 0.4, 0.35, 1]
+expect = [0.77979, 0.35596, 0.15295, 1]
+
+[[probe]]
+name = "maximum"
+at = "max"
+input = [0.08, 0.07, 0.06, 1]
+expect = [0.10773, 0.08441, 0.08234, 1]

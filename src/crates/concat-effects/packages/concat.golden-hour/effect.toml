@@ -1,0 +1,32 @@
+format = 2
+
+[effect]
+id = "concat.golden-hour"
+name = "Golden Hour"
+kind = "filter"
+category = "Everyday"
+order = 14
+intensity = "glow"
+description = "Late light: a warm balance that keeps its brightness, orange in the highlights, a whisper of magenta in the shadows, blacks lifted a touch."
+
+[[param]]
+key = "glow"
+label = "Glow"
+min = 0
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[[param]]
+key = "warmth"
+label = "Warmth"
+min = 3500
+max = 6500
+default = 4600
+step = 50
+unit = "K"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

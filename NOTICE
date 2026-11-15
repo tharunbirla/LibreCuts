@@ -1,0 +1,38 @@
+CapCraft for Android
+Copyright (c) 2026 ArtCraft Team and the CapCraft contributors.
+
+This repository holds the Android app and the parts of Concat (https://github.com/jub0t/concat) it
+builds: the engine crates under src/crates/ and the phone build scripts under src/scripts/.
+Concat is copyright Jareer Abdullah and the Concat contributors. CapCraft and Concat are licensed
+under the GNU Affero General Public License, version 3 or (at your option) any later version
+(LICENSE). CapCraft is a modified build of Concat's engine, shipped under its own name and icon as
+Concat's trademark policy asks.
+
+Third-party material
+
+The engine's third-party notices (FFmpeg, whisper.cpp, ONNX Runtime, sherpa-onnx, fonts, models
+and more) are in THIRD_PARTY_NOTICES.md. The Android app's own are in
+src/crates/capcraft-android/NOTICE.md, and the app shows both.
+
+Android app (src/crates/capcraft-android):
+- Lucide icons (src/crates/capcraft-android/assets/icons) — ISC License. See
+  assets/icons/LICENSE-lucide.txt. The app turns them into Compose path data at build time.
+- Material Symbols (src/crates/capcraft-android/assets/icons-material) — Apache-2.0. See
+  assets/icons-material/LICENSE-material-symbols.txt.
+- The app icon's camera (src/crates/capcraft-android/android/app/src/main/res/drawable/ic_launcher_*,
+  docs/images/capcraft-512.png) — after Google's Material icons, Apache-2.0, redrawn with its body hollow.
+- UniFFI (https://github.com/mozilla/uniffi-rs) — MPL-2.0: the uniffi crate in the library, and the
+  generator of the Kotlin bindings (generated at build time, not committed).
+- JNA (https://github.com/java-native-access/jna) — Apache-2.0 (dual-licensed with LGPL-2.1; used
+  under Apache-2.0).
+- AndroidX, Jetpack Compose, Material 3 and kotlinx.coroutines — Apache-2.0.
+
+Built during the build, never in this repository:
+
+- FFmpeg (LGPL-2.1-or-later), compiled from source by src/scripts/ffmpeg-mobile.sh.
+- sherpa-onnx runtime libraries (Apache-2.0, Xiaomi Corporation / k2-fsa), fetched by
+  src/scripts/sherpa-mobile.sh.
+
+Downloaded at runtime, only when the user asks, never in this repository or the app: speech
+recognition, voice, background removal and picture enhancement models, each under the licence
+listed in THIRD_PARTY_NOTICES.md.

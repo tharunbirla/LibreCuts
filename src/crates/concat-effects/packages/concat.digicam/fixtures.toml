@@ -1,0 +1,20 @@
+# Colours in the working space: linear light, 1.0 the white of an SDR
+# picture. Pinned from the format 1 shader, so the look is what it was.
+# The grain at the middle pixel is format 2's: the same on every GPU.
+
+[[probe]]
+name = "default"
+input = [0.3, 0.2, 0.12, 1]
+expect = [0.35645, 0.22302, 0.11841, 1]
+
+[[probe]]
+name = "minimum"
+at = "min"
+input = [0.45, 0.4, 0.35, 1]
+expect = [0.44995, 0.3999, 0.3501, 1]
+
+[[probe]]
+name = "maximum"
+at = "max"
+input = [0.08, 0.07, 0.06, 1]
+expect = [0.06622, 0.05313, 0.04077, 1]

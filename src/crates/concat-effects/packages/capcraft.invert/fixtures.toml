@@ -1,0 +1,53 @@
+# Worked out from the display encoding: each channel taken from one, mixed
+# by the amount.
+
+[[probe]]
+name = "default, a grey"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.199213, 0.199213, 0.199213, 1]
+
+[[probe]]
+name = "default, a highlight past white"
+input = [4, 1, 0.05, 1]
+expect = [-0.553893, 0, 0.444011, 1]
+
+[[probe]]
+name = "default, half transparent"
+input = [0.5, 0.2, 0.1, 0.5]
+expect = [0.0361892, 0.17926, 0.313678, 0.5]
+
+[[probe]]
+name = "min, a grey"
+at = "min"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.18, 0.18, 0.18, 1]
+
+[[probe]]
+name = "min, a highlight past white"
+at = "min"
+input = [4, 1, 0.05, 1]
+expect = [4, 1, 0.05, 1]
+
+[[probe]]
+name = "min, half transparent"
+at = "min"
+input = [0.5, 0.2, 0.1, 0.5]
+expect = [0.5, 0.2, 0.1, 0.5]
+
+[[probe]]
+name = "max, a grey"
+at = "max"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.199213, 0.199213, 0.199213, 1]
+
+[[probe]]
+name = "max, a highlight past white"
+at = "max"
+input = [4, 1, 0.05, 1]
+expect = [-0.553893, 0, 0.444011, 1]
+
+[[probe]]
+name = "max, half transparent"
+at = "max"
+input = [0.5, 0.2, 0.1, 0.5]
+expect = [0.0361892, 0.17926, 0.313678, 0.5]

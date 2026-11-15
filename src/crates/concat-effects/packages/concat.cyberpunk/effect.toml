@@ -1,0 +1,13 @@
+format = 2
+
+[effect]
+id = "concat.cyberpunk"
+name = "Cyberpunk"
+kind = "filter"
+category = "Cinematic"
+order = 52
+description = "Magenta into the shadows, cyan into the light, pushed hard and neon-bright."
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

@@ -1,0 +1,30 @@
+# Probed at the timeline's start on a flat frame, so the pieces that move
+# stand where they first are. Pinned from the shader as first written, so
+# the look stays what it was.
+
+[[probe]]
+name = "default, a grey"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.25781, 0.22437, 0.26123, 1.0]
+
+[[probe]]
+name = "default, a highlight past white"
+input = [4, 1, 0.05, 1]
+expect = [3.86719, 0.87256, 0.08618, 1.0]
+
+[[probe]]
+name = "default, half transparent"
+input = [0.5, 0.2, 0.1, 0.5]
+expect = [0.59229, 0.24512, 0.15784, 0.5]
+
+[[probe]]
+name = "minimum, a grey"
+at = "min"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.18005, 0.18005, 0.18005, 1.0]
+
+[[probe]]
+name = "maximum, a highlight past white"
+at = "max"
+input = [4, 1, 0.05, 1]
+expect = [3.74023, 0.75586, 0.1344, 1.0]

@@ -1,0 +1,23 @@
+format = 2
+
+[effect]
+id = "concat.spooky"
+name = "Spooky"
+kind = "filter"
+category = "Stylised"
+order = 54
+intensity = "dread"
+description = "Drained colour, a green-cyan cast, a hard toe, and a heavy vignette. For the season."
+
+[[param]]
+key = "dread"
+label = "Dread"
+min = 0
+max = 100
+default = 60
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

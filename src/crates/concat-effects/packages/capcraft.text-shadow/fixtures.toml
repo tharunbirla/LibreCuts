@@ -1,0 +1,26 @@
+# Under an opaque picture the shadow cannot show: what these pin is that
+# colour, light past white and alpha come through untouched at the default
+# and at either end of every slider. The shadow beside letters is the text
+# panel's to show.
+
+[[probe]]
+name = "default, a grey"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.18, 0.18, 0.18, 1]
+
+[[probe]]
+name = "default, a highlight past white"
+input = [4, 1, 0.05, 1]
+expect = [4, 1, 0.05, 1]
+
+[[probe]]
+name = "minimum, a grey"
+at = "min"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.18, 0.18, 0.18, 1]
+
+[[probe]]
+name = "maximum, a highlight past white"
+at = "max"
+input = [4, 1, 0.05, 1]
+expect = [4, 1, 0.05, 1]

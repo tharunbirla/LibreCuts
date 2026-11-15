@@ -1,0 +1,22 @@
+format = 2
+
+[effect]
+id = "capcraft.split-screen"
+name = "Split Screen"
+version = 1
+kind = "effect"
+category = "Split"
+order = 8
+description = "The picture repeated in bands, stacked down a tall frame or side by side across a wide one."
+
+[[param]]
+key = "panels"
+label = "Panels"
+type = "int"
+min = 2
+max = 6
+default = 3
+step = 1
+
+[wgsl]
+entry = "effect.wgsl"

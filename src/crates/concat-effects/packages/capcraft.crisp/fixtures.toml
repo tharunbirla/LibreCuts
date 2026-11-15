@@ -1,0 +1,13 @@
+[[case]]
+name = "default"
+chain = "crystalizer=i=2.50,alimiter=limit=0.94"
+
+[[case]]
+name = "minimum"
+at = "min"
+chain = "crystalizer=i=0.00,alimiter=limit=0.94"
+
+[[case]]
+name = "maximum"
+at = "max"
+chain = "crystalizer=i=5.00,alimiter=limit=0.94"

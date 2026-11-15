@@ -1,0 +1,21 @@
+# CapCraft's own audio effect. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.tremolo"
+name = "Tremolo"
+kind = "audio"
+category = "Tone"
+order = 83
+intensity = "rate"
+description = "The sound pulsing louder and softer, as through a spinning speaker."
+
+[[param]]
+key = "rate"
+label = "Rate"
+min = 0
+max = 10
+default = 4
+step = 0.5
+
+[ffmpeg]
+chain = "tremolo=f={fixed(2 + rate, 1)}:d=0.6"

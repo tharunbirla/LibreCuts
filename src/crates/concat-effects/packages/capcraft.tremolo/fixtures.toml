@@ -1,0 +1,13 @@
+[[case]]
+name = "default"
+chain = "tremolo=f=6.0:d=0.6"
+
+[[case]]
+name = "minimum"
+at = "min"
+chain = "tremolo=f=2.0:d=0.6"
+
+[[case]]
+name = "maximum"
+at = "max"
+chain = "tremolo=f=12.0:d=0.6"

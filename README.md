@@ -1,159 +1,189 @@
-# LibreCuts
+<p align="center">
+  <img src="docs/images/capcraft-512.png" alt="CapCraft's app icon" width="128">
+</p>
 
-<div align="center">
-  <img src="src/images/featureGraphic.png" alt="LibreCuts Banner" width="100%"/>
-  <br/>
-  <br/>
+<h1 align="center">CapCraft for Android</h1>
 
-  <a href="https://github.com/sponsors/tharunbirla">
-    <img src="https://img.shields.io/badge/Sponsor_LibreCuts-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white" height="35" alt="Sponsor tharunbirla" />
-  </a>
-  <a href="LICENSE">
-    <img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" height="35" alt="License" />
-  </a>
-  <br/>
-  <br/>
-  <a href="https://github.com/tharunbirla/LibreCuts/releases/latest">
-    <img src="src/images/badges/badge_github.png" alt="Get it on GitHub" height="96" />
-  </a>
-  <a href="https://f-droid.org/packages/com.tharunbirla.librecuts/">
-    <img src="src/images/badges/badge_fdroid.png" alt="Get it on F-Droid" height="96" />
-  </a>
-  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/tharunbirla/LibreCuts">
-    <img src="src/images/badges/badge_obtainium.png" height="96" alt="Get it on Obtainium" />
-  </a>
-  <a href="https://discord.gg/gwr3nE7YW">
-    <img src="src/images/badges/badge_discord.png" height="96" alt="Join Discord" />
-  </a>
-  <a href="https://hosted.weblate.org/engage/librecuts/">
-    <img src="https://hosted.weblate.org/widget/librecuts/librecuts/287x66-grey.png" height="96" alt="Translation status" />
-  </a>
-</div>
+<p align="center">
+  <b>CapCraft-android is an open-source reimplementation of the CapCut android app.</b><br>
+  Many credits to the original maintainers, <a href="https://github.com/jub0t">jub0t</a> and the Concat contributors.
+</p>
 
-<br/>
+<p align="center">
+  <a href="https://github.com/artcraft-android/capcraft-android/releases"><img src="https://raw.githubusercontent.com/Kunzisoft/Github-badge/main/get-it-on-github.png" alt="Get it on GitHub" height="60"></a>
+  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/artcraft-android/capcraft-android"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="60"></a>
+</p>
 
-**LibreCuts** is a free, open-source video editor for Android that prioritizes simplicity, efficiency, and privacy. Built for seamless performance, it empowers creators to easily select, edit, and export watermark-free videos locally on their device.
+<p align="center">
+  <img alt="Rust engine" src="https://img.shields.io/badge/engine-Rust-lightblue?style=flat&logo=rust&logoColor=white">
+  <img alt="Kotlin and Jetpack Compose" src="https://img.shields.io/badge/UI-Kotlin%20%C2%B7%20Jetpack%20Compose-blue?style=flat">
+  <img alt="Minimum: Android 10 (API 29)" src="https://img.shields.io/badge/min-Android%2010%20%28API%2029%29-blue?style=flat">
+  <img alt="Target: Android 16 (API 36)" src="https://img.shields.io/badge/target-Android%2016%20%28API%2036%29-blue?style=flat">
+  <img alt="License: AGPL-3.0-or-later" src="https://img.shields.io/badge/license-AGPL--3.0--or--later-blue?style=flat">
+  <img alt="Status: beta" src="https://img.shields.io/badge/status-beta-lightblue?style=flat">
+</p>
 
----
+<p align="center">
+  <a href="#editing">Editing</a> ·
+  <a href="#filters-effects-and-transitions">Filters, effects &amp; transitions</a> ·
+  <a href="#text-and-stickers">Text &amp; stickers</a> ·
+  <a href="#captions-and-sound">Captions &amp; sound</a> ·
+  <a href="#export-and-home">Export &amp; Home</a> ·
+  <a href="#planned-features">Planned features</a> ·
+  <a href="#building-instructions">Building</a>
+</p>
 
-## ✊ Keep Android Open
+<br>
 
-[![Keep Android Open](https://img.shields.io/badge/Keep-Android_Open-brightgreen?style=for-the-badge&logo=android)](https://keepandroidopen.org/)
+<p align="center">
+  <img src="docs/images/editor.png" alt="The editor: a moving gradient test clip with the title Made with CapCraft on a pink plate and a yellow WOW sticker, the transport row, and the timeline with the main track, a sticker row, a Rainbow effect row and Add audio, over the tools Edit, Audio, Text, Effects, Overlay, Captions, Filters, Adjust and Stickers" width="250">
+  <br>
+  <sub>The editor: the preview, the transport row, a timeline with rows for text, stickers, effects and sound, and the tools.</sub>
+</p>
 
-Google's mandatory developer verification policy goes into effect in **September 2026** (in just a few months). This mandate requires all independent developers to submit government ID and centrally register with Google, threatening user privacy, sideloading freedom, and the distribution of free and open-source software (FOSS) on Android. 
+<br>
 
-Help resist this gatekeeping and support the movement at [keepandroidopen.org](https://keepandroidopen.org/).
+## Editing
 
----
+<table align="center">
+<tr>
+<td align="center"><img src="docs/images/clip-tools.png" alt="A clip selected on the main track with its trim handles and length, and the clip tools: Split, Volume, Animations, Effects, Delete, Speed, Beats and Crop" width="250"></td>
+<td align="center"><img src="docs/images/sounds.png" alt="The Sound FX panel: a search field, the kinds Swooshes, Pops, Bells, Booms, Game, Cartoon and Transition, and the sounds Whoosh, Swoosh down, Whip, Riser, Fall and Pop, each with its length and an add button" width="250"></td>
+</tr>
+<tr>
+<td align="center"><sub>A clip selected: split, volume, animations, speed, crop and more</sub></td>
+<td align="center"><sub>Sound effects, made by the app</sub></td>
+</tr>
+</table>
 
-## 🚀 Features
+<br>
 
-- **Trim** - Remove unwanted parts from the beginning or end of a video clip with a real-time timeline control.
-- **Overlays** - Place text, stickers, images, GIFs, and video overlays on top of video clips to create engaging content. Includes support for continuous media looping.
-- **Masking** - Apply various mask shapes to your overlays for creative effects.
-- **Chroma Key** - Remove backgrounds from any overlay using the green screen effect.
-- **Keyframes** - Animate overlays across the screen with keyframe support.
-- **Subtitles (Captions)** - Import custom `.srt` subtitle files with a dedicated toolbar slider for resizing and fully interactive touch-based positioning directly on the video preview.
-- **Layer Management** - Easily reorder overlay layers to control what renders on top.
-- **Audio** - Manage soundtracks effortlessly by importing custom music or audio tracks, recording voice overs, applying audio ducking and fades, amplifying volume up to 200%, and muting original audio.
-- **Audio Export** - Export your project's entire audio mix as a standalone MP3 file.
-- **Snapshots** - Capture and save high-quality frame grabs (snapshots) directly from the video editor.
-- **Crop** - Adjust the aspect ratio of a video with custom cropping support.
-- **Merge** - Combine multiple video segments into a continuous sequence with drag-to-rearrange functionality.
-- **Transition** - Apply transitions with animated visual previews in the toolbar.
-- **Speed** - Change the speed of a video clip using a custom speed slider for granular control.
-- **Adjust & Filters** - Modify video brightness, contrast, saturation, and apply color filters.
-- **Canvas Background** - Add a blurred background or a solid color for a cohesive look when your video aspect ratio does not match the project frame.
-- **Reverse** - Reverse video playback.
-- **Timeline Organization** - Enhanced editing with snapping functionality, overlay duplication, freeze frame actions, and improved UI visual styling.
-- **Project Save & Import** - Save non-destructive project state as a `.lcprj` file to save and reopen editable project files anytime.
-- **Freehand Drawing** - Draw directly on top of video clips with custom brush color and stroke controls.
-- **Custom Fonts** - Import `.ttf` or `.otf` font files to customize text overlay typography.
-- **Fullscreen Preview** - Switch to true fullscreen preview mode with expanded timeline view and overlay controls.
-- **Android 13+ Themed Icon** - Supports native monochrome adaptive icons for Android 13+ system themes.
-- **Hardware Acceleration** - Super-fast and reliable video exports using device hardware-accelerated `h264_mediacodec` encoding (with seamless automatic fallback to software encoding for maximum device compatibility) and accurate FFmpeg progress calculation.
+## Filters, effects and transitions
 
-## 📱 Screenshots
+<table align="center">
+<tr>
+<td align="center"><img src="docs/images/filters.png" alt="The Filters panel on the Cinematic shelf: None, Teal &amp; Orange, Moody (chosen) and Cool Blue, each a preview of the clip itself, and an intensity slider with Apply to all" width="250"></td>
+<td align="center"><img src="docs/images/effects.png" alt="The Video effects panel: the shelves Motion, Light, Distort, Retro, Stylize, Split and Blur, and the effects Shake, Flash, Pulse, Glitch, VHS, Old Film and Rainbow, each previewed on the frame" width="250"></td>
+</tr>
+<tr>
+<td align="center"><sub>80+ filters, previewed on the clip</sub></td>
+<td align="center"><sub>Video effects, on a clip or on a row of their own</sub></td>
+</tr>
+</table>
 
-<div align="center">
-  <table>
-    <tr>
-      <td align="center"><img src="src/images/sc_1.png" width="100%" alt="Home Screen"/></td>
-      <td align="center"><img src="src/images/sc_2.png" width="100%" alt="Editor Screen"/></td>
-      <td align="center"><img src="src/images/sc_3.png" width="100%" alt="Audio Import"/></td>
-      <td align="center"><img src="src/images/sc_4.png" width="100%" alt="Timeline"/></td>
-    </tr>
-    <tr>
-      <td align="center"><b>Home Screen</b></td>
-      <td align="center"><b>Editor Screen</b></td>
-      <td align="center"><b>Audio Import</b></td>
-      <td align="center"><b>Timeline</b></td>
-    </tr>
-  </table>
-</div>
+<p align="center">
+  <img src="docs/images/transitions.png" alt="The Transitions panel at a cut: None, Dissolve, Blur Dissolve, Film Burn, Zoom, Slide, Push, Spin, Swirl, Glitch, RGB Split, Linear Wipe, Iris, Shape Wipe, Light Leak and Cube, every tile animating with the two clips" width="250">
+  <br>
+  <sub>Transitions, every tile animated with your own clips.</sub>
+</p>
 
-## 💖 Support LibreCuts
+<br>
 
-LibreCuts is built with passion and provided to the community for free. If this app has helped you create amazing videos, consider supporting its continued development! Your sponsorship helps keep the project alive and growing.
+## Text and stickers
 
-<div align="center">
-  <br/>
-  <a href="https://github.com/sponsors/tharunbirla"><img src="https://img.shields.io/badge/sponsor-30363D?style=for-the-badge&logo=GitHub-Sponsors&logoColor=%23EA4AAA" alt="GitHub Sponsors" /></a>
-  &nbsp;&nbsp;
-  <a href="https://www.patreon.com/tharunbirla"><img src="https://img.shields.io/badge/Patreon-F96854?style=for-the-badge&logo=patreon&logoColor=white" alt="Patreon" /></a>
-  &nbsp;&nbsp;
-  <a href="https://ko-fi.com/tharunbirla"><img src="https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Ko-Fi" /></a>
-  <br/>
-  <br/>
-</div>
+<table align="center">
+<tr>
+<td align="center"><img src="docs/images/text.png" alt="The text sheet for Made with CapCraft: the Templates, Fonts, Styles, Effects, Animations and Bubbles tabs, and templates such as BIG NEWS, Weekend, SALE, Day One, WOW!, ROAD TRIP, Cheers, LIVE, TOP 5, Sunday, Oh no!, Ready?, vibes, Chapter 1 and THE END" width="250"></td>
+<td align="center"><img src="docs/images/stickers.png" alt="The Stickers panel on its Labels shelf: NEW, SALE, LIVE, WOW, OMG, LOL, HOT and TOP 10, with the WOW label placed on the preview" width="250"></td>
+</tr>
+<tr>
+<td align="center"><sub>Text: templates, fonts, styles, word art, animations and bubbles</sub></td>
+<td align="center"><sub>Stickers, labels and doodles, drawn by the app</sub></td>
+</tr>
+</table>
 
-## 🛠️ Getting Started
+<br>
 
-### Prerequisites
+## Captions and sound
 
-- Android Studio
-- Android SDK
+<p align="center">
+  <img src="docs/images/captions.png" alt="Captions made on the phone from a speech test clip: The quick brown fox jumps over on a black plate, a row of caption clips on the timeline, and the tools Enter captions, Auto Captions, Caption templates, Auto lyrics and Import captions" width="250">
+  <br>
+  <sub>Captions, made on the phone from what is said.</sub>
+</p>
 
-### Installation
+<br>
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/tharunbirla/LibreCuts.git
-   ```
-2. **Open the project in Android Studio**:
-   - Launch Android Studio and select "Open an existing Android Studio project."
-   - Navigate to the cloned directory and select it.
-3. **Build the project**:
-   - Click on "Build" in the menu, then select "Make Project."
-4. **Run the app**:
-   - Connect an Android device or start an emulator.
-   - Click on the "Run" button in Android Studio.
+## Export and Home
 
-## 🔒 Permissions
+<table align="center">
+<tr>
+<td align="center"><img src="docs/images/export.png" alt="The export settings: Video, GIF and Photo tabs, and sliders for resolution (480p to 4k, set at 1080p), frame rate (24 to 60, set at 30) and bitrate, with the estimated file size" width="250"></td>
+<td align="center"><img src="docs/images/home.png" alt="Home: New video and Edit photo, a row of recent projects, and the tools AutoCut, Retouch, Photo tools, Shoot and record, Auto enhance, Cover maker, Auto captions, Remove background, Adjust speed and Audio tools" width="250"></td>
+</tr>
+<tr>
+<td align="center"><sub>Export at 480p to 4K, 24 to 60 fps, or as a GIF or photo</sub></td>
+<td align="center"><sub>Home: start a video or a photo, then your projects</sub></td>
+</tr>
+</table>
 
-LibreCuts requires the following permissions to function properly:
+<br>
 
-- **READ_EXTERNAL_STORAGE**: To read videos from the device.
-- **WRITE_EXTERNAL_STORAGE**: (For older Android versions) To save edited videos.
-- **POST_NOTIFICATIONS**: To show notifications related to video editing.
-- **READ_MEDIA_AUDIO/VIDEO/IMAGES**: For accessing media files on devices running Android 13 (API level 33) and above.
+## Planned features
 
-## 🔧 Troubleshooting & Support
+CapCraft for Android is in beta.
 
-If you encounter any export failures, codec errors, or unexpected crashes during your editing workflow:
-- Refer to our comprehensive [Error Codes & Troubleshooting Guide](https://github.com/tharunbirla/LibreCuts/wiki/Error-Codes-&-Troubleshooting) on the Wiki.
-- Join our [Discord Community](https://discord.gg/gwr3nE7YW) for real-time support, suggestions, and app updates.
+| Area | Status |
+|---|---|
+| Projects from the phone's videos and photos, or shared to the app; autosave; rename, duplicate, delete | ✅ |
+| The timeline: trim, move, split, delete, duplicate, replace, multi-select, undo and redo; pinch to zoom | ✅ |
+| Speed and curves, freeze frame, reverse, volume and fades, crop, mask, chroma key, keyframes | ✅ |
+| Overlays and layers with blend modes, opacity, transform and animations | ✅ |
+| Filters, adjustments (HSL, curves, colour wheels), video effects, body effects and transitions | ✅ |
+| Text: templates, fonts, styles, word art, bubbles, animations and text to speech | ✅ |
+| Stickers, labels, shapes and drawing | ✅ |
+| Captions made on the phone, typed captions, caption templates and imported subtitles | ✅ |
+| Sound effects, voiceover, extract audio, voice effects, noise reduction and isolate voice | ✅ |
+| Remove background (a model downloaded once, run on the phone) | ✅ |
+| Aspect ratios, backgrounds, cover, AutoCut, collage | ✅ |
+| Export at 480p to 4K, 24 to 60 fps, GIF and photo, saved to the gallery and shared | ✅ |
+| A music library, downloadable effects and templates | ⬜ |
+| Generative AI, cloud storage, accounts | 🚫 CapCraft is a local app |
 
-## 🤝 Contributing
+<sub>✅ works today · 🚧 in progress · ⬜ not started · 🚫 not planned</sub>
 
-Contributions are welcome! If you have suggestions or improvements, feel free to create a pull request or open an issue.
+<br>
 
-1. Fork the repository.
-2. Create a new branch for your feature or bug fix.
-3. Commit your changes.
-4. Push to the branch.
-5. Submit a pull request.
+## Building Instructions
+*One Gradle command builds the app: it compiles the Rust engine with [cargo-ndk](https://github.com/bbqsrc/cargo-ndk) and generates the Kotlin bindings. FFmpeg and sherpa-onnx are fetched and built first, once.*
 
-## 📝 License
+* Clone this repository
+* Make sure you have at least 10 GB of free disk space
+* In `src`, with `ANDROID_HOME` pointing at your Android SDK:
+  ```
+  scripts/ffmpeg-mobile.sh aarch64-linux-android
+  scripts/sherpa-mobile.sh aarch64-linux-android
+  eval "$(scripts/mobile-env.sh aarch64-linux-android)"
+  ```
+* then enter `src/crates/capcraft-android/android` and run `./gradlew assembleRelease`.
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+Build time dependencies:
+
+<details>
+  <summary>required tools</summary>
+
+  ```
+      Linux or macOS (on Windows, WSL)
+      rustup (it installs the Rust release rust-toolchain.toml names)
+      rustup target add aarch64-linux-android
+      cargo install cargo-ndk --version 4.1.2 --locked
+      Android SDK (API 37) and NDK 29.0.14206865
+      JDK 17 or newer
+      cmake, make, clang (libclang-dev), curl
+  ```
+</details>
+
+*Builds are only tested in WSL Ubuntu on Windows 11.*
+
+<br>
+
+## License
+
+[AGPL-3.0-or-later](LICENSE), CapCraft for Android is not affiliated with, endorsed by or connected to ByteDance or CapCut.
+
+<br>
+
+## Misc info for myself
+
+Try to use [semantic commit](https://kapeli.com/cheat_sheets/Semantic_Commits.docset/Contents/Resources/Documents/index)
+messages. Use `feat:` / `fix:` / `chore:` / `docs:` / etc.

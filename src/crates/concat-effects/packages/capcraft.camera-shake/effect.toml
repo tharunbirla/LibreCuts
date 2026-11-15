@@ -1,0 +1,27 @@
+format = 2
+
+# CapCraft's camera shake. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.camera-shake"
+name = "Camera Shake"
+version = 1
+kind = "transition"
+category = "Camera"
+order = 36
+description = "Both shots jolt and smear like a shaken camera while one dissolves into the other."
+
+[[param]]
+key = "strength"
+label = "Strength"
+type = "int"
+min = 0
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[transition]
+entry = "effect.wgsl"
+xfade = "fade"
+fallback = "cross-fade"

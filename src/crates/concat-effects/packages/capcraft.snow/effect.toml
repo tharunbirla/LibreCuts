@@ -1,0 +1,37 @@
+format = 2
+
+# CapCraft's snow. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.snow"
+name = "Snow"
+version = 1
+kind = "effect"
+category = "Nature"
+order = 82
+intensity = "amount"
+description = "Snow falls across the picture in three layers, the near flakes bigger and faster."
+
+[[param]]
+key = "amount"
+label = "Amount"
+type = "int"
+min = 0
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[[param]]
+key = "speed"
+label = "Speed"
+type = "int"
+min = 0
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

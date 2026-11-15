@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <cache-path name="exports" path="exports/" />
+    <!-- what the phone's camera records for Shoot and record, before the project takes a copy -->
+    <cache-path name="captures" path="captures/" />
+</paths>

@@ -1,0 +1,32 @@
+format = 2
+
+[effect]
+id = "concat.night"
+name = "Night"
+kind = "filter"
+category = "Cinematic"
+order = 33
+intensity = "lift"
+description = "Low light opened up: shadows lifted with the noise softened before it rises, whites held, the blue of the night kept."
+
+[[param]]
+key = "lift"
+label = "Lift"
+min = 0
+max = 100
+default = 60
+step = 1
+unit = "%"
+
+[[param]]
+key = "clarity"
+label = "Clarity"
+min = 0
+max = 100
+default = 40
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

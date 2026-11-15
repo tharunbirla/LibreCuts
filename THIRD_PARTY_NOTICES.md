@@ -1,0 +1,264 @@
+# Third-party notices
+
+## FFmpeg
+
+Concat links FFmpeg's libraries - libavformat, libavcodec, libavfilter,
+libavdevice, libavutil, libswscale and libswresample - through the
+`ffmpeg-the-third` crate. The Slint app spawns no `ffmpeg` or `ffprobe`
+process.
+
+FFmpeg is licensed under the LGPL-2.1-or-later; builds that include x264
+(which the H.264 export uses) are GPL-2.0-or-later. Concat's own sources are
+AGPL-3.0-or-later, and section 13 of the GPL-3.0 and AGPL-3.0 expressly
+permits linking the two, so a distributed build may be conveyed on those
+terms. Which FFmpeg a binary carries depends on the machine that built it:
+Homebrew's on macOS, a BtbN `gpl-shared` build
+(https://github.com/BtbN/FFmpeg-Builds) on Windows and Linux and in CI, and
+on Android and iOS an LGPL build without x264, compiled from FFmpeg's source
+by `src/scripts/ffmpeg-mobile.sh` and linked statically.
+FFmpeg source code: https://ffmpeg.org/download.html
+
+## whisper.cpp
+
+Transcription compiles whisper.cpp (https://github.com/ggml-org/whisper.cpp,
+MIT) and ggml into the app through the `whisper-rs` crate. Whisper models
+originate at https://huggingface.co/ggerganov/whisper.cpp (MIT); Concat
+mirrors them and downloads them on demand from that mirror, and never
+bundles them. See "The model mirror" below.
+
+The one model Concat does bundle is Silero VAD v6.2.0 in whisper.cpp's
+format (`ggml-silero-v6.2.0.bin`, from https://huggingface.co/ggml-org/whisper-vad,
+MIT; Silero VAD itself is MIT, https://github.com/snakers4/silero-vad,
+Copyright (c) 2020-present Silero Team). It finds where the speech is, so
+captions are timed from it.
+
+## Slint (used under GPL-3.0-only)
+
+The `concat` crate (`src/crates/concat`) builds against
+[Slint](https://github.com/slint-ui/slint), which its authors offer under
+**any one** of three licences, at the user's choice: a Royalty-free licence, a
+paid commercial licence, or **GNU GPL-3.0-only**.
+
+**Concat uses Slint under the GPL-3.0-only option.** That choice is deliberate
+and it is recorded here because nothing in the source tree would otherwise say
+which of the three applies. The Royalty-free and commercial options are not
+used: both are aimed at shipping proprietary applications, and neither can
+grant downstream recipients the freedoms Concat's own licence promises them.
+
+Section 13 of the GPL-3.0 exists for exactly this combination:
+
+> Notwithstanding any other provision of this License, you have permission to
+> link or combine any covered work with a work licensed under version 3 of the
+> GNU Affero General Public License into a single combined work, and to convey
+> the resulting work.
+
+So the combined binary is conveyable. Slint's portion remains GPL-3.0-only,
+Concat's portion remains AGPL-3.0-or-later, and the AGPL's section 13 network
+requirement applies to the combination as a whole. Anyone forking Concat who
+would rather not be bound by the GPL must take Slint under one of its other
+two licences and remove or replace Concat's AGPL-licensed code accordingly;
+the two cannot be mixed.
+
+Slint pulls in its Skia renderer (see `src/crates/concat/Cargo.toml`) along
+with winit and their transitive crates, which are
+predominantly MIT/Apache-2.0/BSD licensed. The Skia renderer crate,
+`i-slint-renderer-skia`, is built from a patched copy in
+`src/patches/i-slint-renderer-skia`; its changes are listed in
+`src/patches/README.md` and marked `Concat:` in the source.
+`cargo tree -p concat` gives the resolved set of any given build.
+
+## Fonts
+
+The window and the title painter embed the interface's font into the binary
+(`src/crates/concat/build.rs`, `EmbedResourcesKind::EmbedFiles`, and
+`include_bytes!` in `concat-text`), so a distributed binary carries it and its
+licence travels with it. The files and the full licence text are in
+`src/crates/concat-text/fonts/`.
+
+- **Hanken Grotesk**: Copyright 2021 The Hanken Grotesk Project Authors
+  (https://github.com/marcologous/hanken-grotesk), SIL Open Font License
+  1.1. The Regular, Medium, SemiBold, Bold and Italic static instances are
+  embedded. See `fonts/LICENSE-HankenGrotesk.txt`.
+
+These are the base fonts every title can use, embedded by `concat-text`
+(`BASE_FONTS`) and registered with the window for the text presets. Each
+file's licence is beside it in `src/crates/concat-text/fonts/`, as
+`LICENSE-<Family>.txt`; OFL is the SIL Open Font License 1.1.
+
+- **Inter**: Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter). OFL. See `fonts/LICENSE-Inter.txt`.
+- **Montserrat**: Copyright 2024 The Montserrat Project Authors (https://github.com/JulietaUla/Montserrat). OFL. See `fonts/LICENSE-Montserrat.txt`.
+- **Space Grotesk**: Copyright Florian Karsten. OFL. See `fonts/LICENSE-SpaceGrotesk.txt`.
+- **Archivo Black**: Copyright 2017 The Archivo Black Project Authors (https://github.com/Omnibus-Type/ArchivoBlack). OFL. See `fonts/LICENSE-ArchivoBlack.txt`.
+- **Bebas Neue**: Copyright 2010 Dharma Type. OFL. See `fonts/LICENSE-BebasNeue.txt`.
+- **Anton**: Copyright 2020 The Anton Project Authors (https://github.com/googlefonts/AntonFont). OFL. See `fonts/LICENSE-Anton.txt`.
+- **DM Serif Display**: Copyright 2014-2018 Adobe, with Reserved Font Name 'Source'; Copyright 2019 Colophon Foundry. OFL. See `fonts/LICENSE-DMSerifDisplay.txt`.
+- **Abril Fatface**: Copyright 2011 TypeTogether. OFL. See `fonts/LICENSE-AbrilFatface.txt`.
+- **Bangers**: Copyright 2010 The Bangers Project Authors. OFL. See `fonts/LICENSE-Bangers.txt`.
+- **Permanent Marker**: Copyright Font Diner. Apache License 2.0. See `fonts/LICENSE-PermanentMarker.txt`.
+- **Pacifico**: Copyright 2018 The Pacifico Project Authors. OFL. See `fonts/LICENSE-Pacifico.txt`.
+- **Lobster**: Copyright 2010 The Lobster Project Authors, with Reserved Font Name "Lobster". OFL. See `fonts/LICENSE-Lobster.txt`.
+- **Caveat Brush**: Copyright 2015 Google Inc. OFL. See `fonts/LICENSE-CaveatBrush.txt`.
+- **Staatliches**: The Staatliches Project Authors. OFL. See `fonts/LICENSE-Staatliches.txt`.
+- **Black Ops One**: The Black Ops One Project Authors. OFL. See `fonts/LICENSE-BlackOpsOne.txt`.
+- **Germania One**: The Germania One Project Authors. OFL. See `fonts/LICENSE-GermaniaOne.txt`.
+- **Atomic Age**: The Atomic Age Project Authors. OFL. See `fonts/LICENSE-AtomicAge.txt`.
+- **Hammersmith One**: The Hammersmith One Project Authors. OFL. See `fonts/LICENSE-HammersmithOne.txt`.
+- **Secular One**: The Secular One Project Authors. OFL. See `fonts/LICENSE-SecularOne.txt`.
+- **Londrina Solid**: The Londrina Solid Project Authors. OFL. See `fonts/LICENSE-LondrinaSolid.txt`.
+- **Bungee Hairline**: The Bungee Project Authors. OFL. See `fonts/LICENSE-BungeeHairline.txt`.
+- **Rubik Scribble**: The Rubik Scribble Project Authors. OFL. See `fonts/LICENSE-RubikScribble.txt`.
+- **Shadows Into Light Two**: The Shadows Into Light Two Project Authors. OFL. See `fonts/LICENSE-ShadowsIntoLightTwo.txt`.
+- **Pixelify Sans**: The Pixelify Sans Project Authors. OFL. See `fonts/LICENSE-PixelifySans.txt`.
+- **Google Sans Code**: The Google Sans Code Project Authors. OFL. See `fonts/LICENSE-GoogleSansCode.txt`.
+- **Kosugi Maru**: Copyright MOTOYA Co., Ltd. Apache License 2.0. See `fonts/LICENSE-KosugiMaru.txt`.
+- **Frijole**: The Frijole Project Authors. OFL. See `fonts/LICENSE-Frijole.txt`.
+- **Emilys Candy**: The Emilys Candy Project Authors. OFL. See `fonts/LICENSE-EmilysCandy.txt`.
+- **Mystery Quest**: The Mystery Quest Project Authors. OFL. See `fonts/LICENSE-MysteryQuest.txt`.
+- **Zen Tokyo Zoo**: The Zen Tokyo Zoo Project Authors. OFL. See `fonts/LICENSE-ZenTokyoZoo.txt`.
+
+The Noto faces in `src/crates/concat-text/fonts/` are the fallback for the
+scripts the other faces do not draw, in the interface and in titles and
+captions alike, compiled into the binary once
+(`src/crates/concat-text/src/lib.rs`, `SCRIPT_FALLBACKS`). Each is the
+Regular face from the notofonts project's own release, cut down with
+fonttools' `pyftsubset`; the release, the SHA-256 of the archive it came
+in and the command that cut it are recorded beside each face there. A subset is a Modified
+Version under the OFL, and keeps the family name the release gave it, as
+the OFL allows for Noto, which reserves no font name.
+
+- **Noto Sans CJK SC** (a subset: GB 2312, Big5 level 1, JIS X 0208, the Hangul of KS X 1001 and the kana): Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'. OFL. See `src/crates/concat-text/fonts/LICENSE-NotoSansCJK.txt`.
+- **Noto Sans Arabic UI** 2.011 (a subset: the Arabic block and the characters the Arabic, Persian and Urdu interface uses): Copyright 2022 The Noto Project Authors (https://github.com/notofonts/arabic). OFL. See `src/crates/concat-text/fonts/LICENSE-NotoSansArabicUI.txt`.
+- **Noto Sans Hebrew** 3.001 (a subset: the Hebrew block): Copyright 2022 The Noto Project Authors (https://github.com/notofonts/hebrew). OFL. See `src/crates/concat-text/fonts/LICENSE-NotoSansHebrew.txt`.
+- **Noto Sans Devanagari** 2.007 (a subset: the Devanagari block): Copyright 2022 The Noto Project Authors (https://github.com/notofonts/devanagari). OFL. See `src/crates/concat-text/fonts/LICENSE-NotoSansDevanagari.txt`.
+- **Noto Sans Bengali** 3.011 (a subset: the Bengali block): Copyright 2022 The Noto Project Authors (https://github.com/notofonts/bengali). OFL. See `src/crates/concat-text/fonts/LICENSE-NotoSansBengali.txt`.
+- **Noto Sans Thai** 2.002 (a subset: the Thai block): Copyright 2022 The Noto Project Authors (https://github.com/notofonts/thai). OFL. See `src/crates/concat-text/fonts/LICENSE-NotoSansThai.txt`.
+
+The licence does not permit selling the font on its own; shipping the
+`fonts/` directory as it stands satisfies it.
+
+## sherpa-onnx and Kokoro voices
+
+Text to speech uses the sherpa-onnx runtime
+(https://github.com/k2-fsa/sherpa-onnx, Apache-2.0), linked statically on
+macOS and Linux, and on Windows, Android and iOS shipped with the app as
+the prebuilt shared libraries k2-fsa publishes. It carries onnxruntime
+(MIT), piper-phonemize (MIT) and espeak-ng
+(**GPL-3.0-or-later**, https://github.com/espeak-ng/espeak-ng) for
+grapheme-to-phoneme conversion. Because espeak-ng is compiled into the app
+binary or into the sherpa-onnx libraries shipped with it, distributed builds
+must comply with the GPL-3.0 for that combined work. Concat's own sources are AGPL-3.0-or-later; section 13 of both GPL-3.0
+and AGPL-3.0 expressly permits that combination, so the combined binary may be
+conveyed on those terms.
+
+Kokoro voice model bundles (Apache-2.0,
+https://huggingface.co/hexgrad/Kokoro-82M) originate in the sherpa-onnx
+releases - including espeak-ng's data files. Concat mirrors those bundles
+and downloads them on demand from that mirror, and never bundles them with
+the app. See "The model mirror" below.
+
+The Pocket TTS bundle is Kyutai's Pocket TTS (CC-BY-4.0,
+https://huggingface.co/kyutai/pocket-tts, https://kyutai.org) as exported
+to ONNX by KevinAHM (https://huggingface.co/KevinAHM/pocket-tts-onnx,
+CC-BY-4.0) and packaged in the sherpa-onnx releases, with two sample
+recordings from Kyutai's delayed-streams-modeling repository as its named
+voices. It is downloaded on demand like the Kokoro bundles. Reading in the
+voice of a recording is a use the person doing it is answerable for:
+Concat offers it for the narrator's own voice, and Kyutai asks that no
+one's voice be cloned without their consent.
+
+Chatterbox Turbo (MIT, https://huggingface.co/ResembleAI/chatterbox-turbo-ONNX,
+Resemble AI) is driven through ONNX Runtime directly, from Resemble's own
+ONNX export, downloaded on demand like the other voices. Its GPT-2
+tokenizer is read by the tokenizers crate (Apache-2.0). Resemble's Python
+package stamps a Perth watermark on what it speaks; the ONNX pipeline
+carries no such step and Concat adds none, which MIT permits and which
+anyone passing the sound off as a person's should know is not there.
+
+## ONNX Runtime
+
+The cutout models run on Microsoft's ONNX Runtime
+(https://github.com/microsoft/onnxruntime, MIT), through the `ort` crate
+(https://github.com/pykeio/ort, MIT OR Apache-2.0). On Apple silicon and
+the phones it is linked into the app from pyke's builds of it; an Intel
+Mac's bundle carries Microsoft's last shared build for that machine in
+`Contents/Frameworks`. The Linux and Windows bundles ship Microsoft's own
+shared build of ONNX Runtime 1.28.0 beside the binary - `lib/libonnxruntime.so.1.28.0` on Linux,
+`onnxruntime.dll` beside `concat.exe` on Windows, one runtime that the
+`ort` crate and sherpa-onnx share - unmodified, as Microsoft publishes it
+at https://github.com/microsoft/onnxruntime/releases/tag/v1.28.0. Its
+licence (MIT, Copyright (c) Microsoft Corporation) and third-party
+notices are in that release's archive.
+
+## Microsoft Visual C++ runtime (Windows)
+
+The Windows bundles and installers carry the Microsoft Visual C++ runtime
+DLLs the program and its DLLs import - `vcruntime140.dll`,
+`vcruntime140_1.dll`, `msvcp140.dll` and their kin, whichever the build
+finds imported - copied unmodified from the redistributable folder of the
+Visual Studio that built the release (`VC\Redist\MSVC\<version>\<arch>\
+Microsoft.VC14x.CRT`). They are Microsoft's, not Concat's, and are not
+covered by Concat's licence: they are redistributed under the terms
+Microsoft sets for them, the Microsoft Software License Terms for Visual
+Studio and its list of distributable code (for Visual Studio 2022,
+https://learn.microsoft.com/visualstudio/releases/2022/redistribution),
+which permit shipping them alongside an application that uses them.
+
+## The cutout models
+
+Remove background runs four models, none of which ship inside the app
+except the first:
+
+- Google's MediaPipe Selfie Segmentation (Apache-2.0), in the ONNX
+  conversion published by the ONNX Community
+  (https://huggingface.co/onnx-community/mediapipe_selfie_segmentation,
+  Apache-2.0), compiled into the `concat-vision` crate; see
+  `src/crates/concat-vision/models/NOTICE.md`. The answer when nothing
+  has been downloaded.
+- Robust Video Matting, the MobileNetV3 variant, by Peter Lin and others
+  (https://github.com/PeterL1n/RobustVideoMatting, GPL-3.0), from that
+  repository's releases, downloaded on first use. The person model.
+- IS-Net from "Highly Accurate Dichotomous Image Segmentation" by Qin and
+  others (https://github.com/xuebinqin/DIS, Apache-2.0), in the ONNX
+  export the rembg project publishes
+  (https://github.com/danielgatis/rembg, MIT), downloaded on first use.
+  The object model.
+- SlimSAM (https://github.com/czg1225/SlimSAM, Apache-2.0), in the ONNX
+  export published at https://huggingface.co/Xenova/slimsam-77-uniform
+  (Apache-2.0), downloaded on first use. The brushes' model.
+
+Downloaded models live in the app's data directory under `cutout-models`
+and are never bundled; the three that are downloaded come from Concat's own
+mirror of the sources named above, described below. They are all run by
+ONNX Runtime
+(https://github.com/microsoft/onnxruntime, MIT) through the `ort` crate
+(https://github.com/pykeio/ort, MIT OR Apache-2.0), with the platform's
+own accelerator behind it where the runtime has one: CoreML on macOS and
+iOS, NNAPI on Android. How each platform carries the runtime is under
+"ONNX Runtime" above.
+
+## The model mirror
+
+Every downloaded model named above is mirrored onto a release of Concat's own
+repository, and the app fetches it from there; the upstream each was
+obtained from is the fallback and is named above in every case. The table of
+what is mirrored, and the digest each download is checked against, is
+`models/manifest.toml`; `.github/workflows/models.yml` is what fills the
+mirror.
+
+Mirroring is redistribution, and each model keeps the licence it arrived
+under - Apache-2.0 for the Kokoro bundles, SlimSAM and IS-Net, CC-BY-4.0
+for Pocket TTS, BSD-3-Clause for Real-ESRGAN, MIT for Chatterbox Turbo and
+the whisper conversions, GPL-3.0 for Robust Video Matting. Those terms are met
+by the attributions above and by the licence files each mirrored archive
+carries; a mirrored file is a verbatim copy, never a modification. Nothing
+in the mirror is bundled with the app, and Concat claims no rights over any
+of it.
+
+## Effect preview photograph
+
+The effect catalogue cards are drawn from a photograph by Sou Jest on
+Unsplash (https://unsplash.com/@soujest,
+https://unsplash.com/photos/2v921tlqdXE), used under the Unsplash License. The still lives at `src/crates/concat-host/assets/card-still.jpg`
+and is embedded in the app; each card is the effect's own shader run over
+it on the GPU when the app first needs the card (`concat-host`'s
+`cards.rs`).

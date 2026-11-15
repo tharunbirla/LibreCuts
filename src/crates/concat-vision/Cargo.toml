@@ -1,0 +1,63 @@
+[package]
+name = "concat-vision"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "What the engine sees in a picture: the person mask behind a cutout, the brush strokes that correct it, and the frame with its background taken away."
+
+# The renderer needs only the masks: reading them from the project's cache,
+# painting strokes over them and cutting a frame with the result. Finding
+# them is inference, and inference is a dependency tree the export path
+# should not carry, so it sits behind `infer` and the host turns it on.
+[features]
+infer = ["dep:ort"]
+
+[dependencies]
+concat-core.workspace = true
+concat-project.workspace = true
+# Masks on disk are eight-bit grey PNGs: a tenth the size of raw bytes, and
+# a file anyone can open to see what the model saw.
+png = "0.17"
+# ONNX Runtime. The platform's accelerator is a feature per target below;
+# the CPU provider is always there behind it.
+ort = { workspace = true, optional = true }
+
+[target.'cfg(target_vendor = "apple")'.dependencies]
+ort = { workspace = true, optional = true, features = ["coreml"] }
+
+# DirectML on Windows asks for the provider; whether it is there is the
+# runtime's to say. The bundles and CI link Microsoft's CPU build of ONNX
+# Runtime dynamically instead of the static DirectML one ort-sys would
+# download - that one is compiled for Haswell and kept the app from
+# starting on older CPUs (#313), and it imports a DirectML.dll many
+# machines only have an old copy of (#303). See build-app.yml's ONNX
+# Runtime (Windows) step. With the CPU build the provider fails to
+# register and ort carries on with the CPU one. The feature stays because
+# a build with no ORT_LIB_LOCATION (a developer's) downloads by feature,
+# and pyke publishes no Windows build without one.
+[target.'cfg(target_os = "windows")'.dependencies]
+ort = { workspace = true, optional = true, features = ["directml"] }
+
+[target.'cfg(target_os = "android")'.dependencies]
+ort = { workspace = true, optional = true, features = ["nnapi"] }
+
+# The ONNX Runtime API ort asks for: 27, served by the 1.28 every other
+# target links, everywhere but an Intel Mac.
+[target.'cfg(not(all(target_os = "macos", target_arch = "x86_64")))'.dependencies]
+ort = { workspace = true, optional = true, features = ["api-27"] }
+
+# An Intel Mac runs Microsoft's 1.23.2, the last ONNX Runtime built for it,
+# which serves API 23 at most: asked for 27 it hands back nothing and ort
+# panics on the first session. And that build needs macOS 13.4 - it calls
+# libc++'s floating-point to_chars, which macOS has from 13.3 - while the
+# app runs on 12. Linked at load time, it kept the whole app from starting
+# on 12 (#333). So there it is loaded at first use instead (`load-dynamic`),
+# from Contents/Frameworks, and only on a macOS it says it runs on; on an
+# older one the AI features say what they need and the rest of the app
+# works. See runtime::ready.
+[target.'cfg(all(target_os = "macos", target_arch = "x86_64"))'.dependencies]
+ort = { workspace = true, optional = true, features = ["api-23", "load-dynamic"] }
+
+[lints]
+workspace = true

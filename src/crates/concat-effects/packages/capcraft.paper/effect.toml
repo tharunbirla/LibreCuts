@@ -1,0 +1,28 @@
+format = 2
+
+# CapCraft's paper: the picture as if printed on paper. Written for CapCraft
+# for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.paper"
+name = "Paper"
+version = 1
+kind = "effect"
+category = "Texture"
+order = 76
+intensity = "amount"
+description = "The picture as if printed on paper: paler and warmer, its colour softened, the fibres and blotches showing through."
+
+[[param]]
+key = "amount"
+label = "Amount"
+type = "int"
+min = 0
+max = 100
+default = 60
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

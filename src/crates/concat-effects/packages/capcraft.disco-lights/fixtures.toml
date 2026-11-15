@@ -1,0 +1,27 @@
+# At the start the three lights sit where their loops begin - pink low in
+# the middle, blue and green off to the sides - so the probed pixel, just
+# below and right of the middle, takes a little of each and is otherwise
+# dimmed. Nothing lit at the lowest amount. Pinned from a model of the
+# shader in doubles, at the probe's pixel and time.
+
+[[probe]]
+name = "default, a grey"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.190754, 0.16607, 0.221829, 1]
+
+[[probe]]
+name = "default, a colour"
+input = [0.6, 0.2, 0.05, 1]
+expect = [0.614262, 0.183886, 0.071506, 1]
+
+[[probe]]
+name = "minimum, a grey as it was"
+at = "min"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.18, 0.18, 0.18, 1]
+
+[[probe]]
+name = "maximum, a grey"
+at = "max"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.197923, 0.156784, 0.249714, 1]

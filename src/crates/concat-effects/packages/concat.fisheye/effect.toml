@@ -1,0 +1,25 @@
+format = 2
+
+[effect]
+id = "concat.fisheye"
+name = "Fisheye"
+version = 2
+kind = "effect"
+category = "Distort"
+shelves = ["Optical & Lens"]
+order = 52
+intensity = "strength"
+aliases = ["fisheye"]
+description = "The bulge of a very wide lens."
+
+[[param]]
+key = "strength"
+label = "Strength"
+min = 5
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"

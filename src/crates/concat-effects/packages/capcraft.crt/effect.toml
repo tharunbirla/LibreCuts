@@ -1,0 +1,28 @@
+format = 2
+
+# CapCraft's CRT: the picture on an old television. Written for CapCraft for
+# Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.crt"
+name = "CRT"
+version = 1
+kind = "effect"
+category = "Screen"
+order = 71
+intensity = "amount"
+description = "An old television: the picture bowed out, dark lines between its rows, columns of red, green and blue, and shadowed corners."
+
+[[param]]
+key = "amount"
+label = "Amount"
+type = "int"
+min = 0
+max = 100
+default = 60
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

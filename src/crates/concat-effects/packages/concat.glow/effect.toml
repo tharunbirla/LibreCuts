@@ -1,0 +1,35 @@
+format = 2
+
+[effect]
+id = "concat.glow"
+name = "Glow"
+kind = "effect"
+category = "Stylize"
+shelves = ["Featured", "Light & Shadow"]
+order = 42
+version = 2
+intensity = "amount"
+aliases = ["glow"]
+description = "A soft bloom around the bright parts of the picture."
+
+[[param]]
+key = "amount"
+label = "Amount"
+min = 10
+max = 100
+default = 45
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+
+# The glow is a wide Gaussian, drawn across and then down at a quarter of
+# the layer's pixels, four of which it is wide.
+[[wgsl.pass]]
+target = "across"
+shrink = ["4", "1"]
+
+[[wgsl.pass]]
+target = "down"
+shrink = ["4", "4"]

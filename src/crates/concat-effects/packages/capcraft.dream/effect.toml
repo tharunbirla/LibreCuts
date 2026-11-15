@@ -1,0 +1,21 @@
+# CapCraft's own audio effect. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.dream"
+name = "Dream"
+kind = "audio"
+category = "Space"
+order = 99
+intensity = "depth"
+description = "Soft and far away: the sound blurred into long, gentle echoes."
+
+[[param]]
+key = "depth"
+label = "Depth"
+min = 0
+max = 10
+default = 5
+step = 0.5
+
+[ffmpeg]
+chain = "lowpass=f=6000,chorus=0.6:0.8:40|55:0.3|0.25:0.2|0.3:1.5|1.1,aecho=0.8:0.6:{fixed(300 + depth * 40, 0)}:{fixed(0.2 + depth * 0.04, 2)},alimiter=limit=0.94"

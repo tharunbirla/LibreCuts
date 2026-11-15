@@ -1,0 +1,13 @@
+[[case]]
+name = "default"
+chain = "vibrato=f=5.8:d=0.5,alimiter=limit=0.95"
+
+[[case]]
+name = "minimum"
+at = "min"
+chain = "vibrato=f=3.0:d=0.5,alimiter=limit=0.95"
+
+[[case]]
+name = "maximum"
+at = "max"
+chain = "vibrato=f=10.0:d=0.5,alimiter=limit=0.95"

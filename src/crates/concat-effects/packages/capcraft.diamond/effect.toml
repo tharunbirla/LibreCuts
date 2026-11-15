@@ -1,0 +1,27 @@
+format = 2
+
+# CapCraft's diamond. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.diamond"
+name = "Diamond"
+version = 1
+kind = "transition"
+category = "Mask"
+order = 42
+description = "A diamond opens from the middle onto the incoming shot."
+
+[[param]]
+key = "softness"
+label = "Softness"
+type = "int"
+min = 0
+max = 100
+default = 10
+step = 1
+unit = "%"
+
+[transition]
+entry = "effect.wgsl"
+xfade = "diagtl"
+fallback = "cross-fade"

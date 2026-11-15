@@ -1,0 +1,13 @@
+[[case]]
+name = "default"
+chain = "lowpass=f=6000,acrusher=bits=8:mode=lin:mix=0.9,alimiter=limit=0.9"
+
+[[case]]
+name = "minimum"
+at = "min"
+chain = "lowpass=f=6000,acrusher=bits=12:mode=lin:mix=0.9,alimiter=limit=0.9"
+
+[[case]]
+name = "maximum"
+at = "max"
+chain = "lowpass=f=6000,acrusher=bits=4:mode=lin:mix=0.9,alimiter=limit=0.9"

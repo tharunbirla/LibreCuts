@@ -1,0 +1,24 @@
+format = 2
+
+[effect]
+id = "concat.vignette"
+name = "Vignette"
+version = 2
+kind = "effect"
+category = "Stylize"
+order = 40
+intensity = "strength"
+aliases = ["vignette"]
+description = "Darkened corners that draw the eye to the middle."
+
+[[param]]
+key = "strength"
+label = "Strength"
+min = 10
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"

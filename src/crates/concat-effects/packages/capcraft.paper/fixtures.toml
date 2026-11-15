@@ -1,0 +1,32 @@
+# The probed pixel takes the paper's warm white and its texture where it
+# lies: a little paler and warmer, the colour softer. Nothing changes at the
+# lowest amount. Pinned from a model of the shader in doubles, at the
+# probe's pixel, worked in the display encoding.
+
+[[probe]]
+name = "default, a grey"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.185912, 0.177887, 0.159958, 1]
+
+[[probe]]
+name = "default, a colour"
+input = [0.6, 0.2, 0.05, 1]
+expect = [0.518932, 0.202287, 0.066384, 1]
+
+[[probe]]
+name = "minimum, a grey as it was"
+at = "min"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.18, 0.18, 0.18, 1]
+
+[[probe]]
+name = "maximum, a grey"
+at = "max"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.189726, 0.176085, 0.146536, 1]
+
+[[probe]]
+name = "maximum, a colour"
+at = "max"
+input = [0.6, 0.2, 0.05, 1]
+expect = [0.472437, 0.202875, 0.075166, 1]

@@ -1,0 +1,26 @@
+# A picture of one colour bent is the same picture where the bend still
+# reads inside it, as the middle does at every bend: what these pin is that
+# colour, light past white and alpha come through it untouched. The arc a
+# title takes is the text panel's to show.
+
+[[probe]]
+name = "default, a grey"
+input = [0.18, 0.18, 0.18, 1]
+expect = [0.18, 0.18, 0.18, 1]
+
+[[probe]]
+name = "default, half transparent"
+input = [0.5, 0.2, 0.1, 0.5]
+expect = [0.5, 0.2, 0.1, 0.5]
+
+[[probe]]
+name = "bent down, a highlight past white"
+at = "min"
+input = [4, 1, 0.05, 1]
+expect = [4, 1, 0.05, 1]
+
+[[probe]]
+name = "bent up, a highlight past white"
+at = "max"
+input = [4, 1, 0.05, 1]
+expect = [4, 1, 0.05, 1]

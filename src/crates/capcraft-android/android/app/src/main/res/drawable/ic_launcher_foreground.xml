@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- CapCraft's icon: a camera (after Google's Material icons, Apache-2.0), its body hollow. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M37,37.25 H63 A4,4 0 0,1 67,41.25 V66.75 A4,4 0 0,1 63,70.75 H37 A4,4 0 0,1 33,66.75 V41.25 A4,4 0 0,1 37,37.25 Z M38.5,41.75 H61.5 A1,1 0 0,1 62.5,42.75 V65.25 A1,1 0 0,1 61.5,66.25 H38.5 A1,1 0 0,1 37.5,65.25 V42.75 A1,1 0 0,1 38.5,41.75 Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M66.5,50.25 L75,42.25 L75,65.75 L66.5,57.75 Z" />
+</vector>

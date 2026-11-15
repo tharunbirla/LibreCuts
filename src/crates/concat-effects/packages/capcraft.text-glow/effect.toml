@@ -1,0 +1,59 @@
+format = 2
+
+# CapCraft's text glow: a soft light in a chosen colour around a title's
+# letters, set from the text panel's Glow tab rather than the effects list.
+# Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.text-glow"
+name = "Text Glow"
+version = 1
+kind = "effect"
+category = "Text"
+order = 66
+intensity = "strength"
+description = "A soft light in a chosen colour around a title's letters."
+
+# White, fully opaque.
+[[param]]
+key = "color"
+label = "Colour"
+type = "color"
+min = 0
+max = 4294967295
+default = 4294967295
+
+[[param]]
+key = "strength"
+label = "Intensity"
+type = "int"
+min = 0
+max = 100
+default = 60
+step = 1
+unit = "%"
+
+[[param]]
+key = "range"
+label = "Range"
+type = "int"
+min = 0
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"
+
+# The letters' coverage blurred across the rows, then down the columns, at
+# fewer pixels the wider the glow: a wide Gaussian has nothing fine in it to
+# lose, and `effect` reads the last picture back bilinearly.
+[[wgsl.pass]]
+target = "across"
+shrink = ["1 + range / 12", "1"]
+
+[[wgsl.pass]]
+target = "down"
+shrink = ["1 + range / 12", "1 + range / 12"]

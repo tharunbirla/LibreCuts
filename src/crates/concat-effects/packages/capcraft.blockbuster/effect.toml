@@ -1,0 +1,26 @@
+format = 2
+
+# CapCraft's own filter. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.blockbuster"
+name = "Blockbuster"
+version = 1
+kind = "filter"
+category = "Movies"
+order = 104
+intensity = "amount"
+description = "The big-screen look: teal shadows, warm skin and highlights, contrast pushed."
+
+[[param]]
+key = "amount"
+label = "Amount"
+min = 0
+max = 100
+default = 70
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

@@ -1,0 +1,29 @@
+format = 2
+
+# CapCraft's picture noise reduction, from the Video quality tab: grain and
+# speckle smoothed while edges stay sharp. Written for CapCraft for Android
+# (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.clean-picture"
+name = "Reduce Image Noise"
+version = 1
+kind = "effect"
+category = "Cutout"
+order = 63
+intensity = "strength"
+description = "Smooths grain and speckle out of the picture while keeping its edges."
+
+[[param]]
+key = "strength"
+label = "Strength"
+type = "int"
+min = 0
+max = 100
+default = 50
+step = 1
+unit = "%"
+
+[wgsl]
+entry = "effect.wgsl"
+space = "display"

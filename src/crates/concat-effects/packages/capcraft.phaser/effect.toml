@@ -1,0 +1,21 @@
+# CapCraft's own audio effect. Written for CapCraft for Android (AGPL-3.0-or-later).
+
+[effect]
+id = "capcraft.phaser"
+name = "Phaser"
+kind = "audio"
+category = "Tone"
+order = 94
+intensity = "speed"
+description = "A sweeping, swirling tone, as the sound runs through a turning phase."
+
+[[param]]
+key = "speed"
+label = "Speed"
+min = 0
+max = 10
+default = 4
+step = 0.5
+
+[ffmpeg]
+chain = "aphaser=in_gain=0.6:out_gain=0.8:delay=3:decay=0.5:speed={fixed(0.2 + speed * 0.15, 2)},alimiter=limit=0.94"
