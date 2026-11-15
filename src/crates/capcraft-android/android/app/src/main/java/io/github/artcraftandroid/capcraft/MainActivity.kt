@@ -109,6 +109,6 @@ private fun Loading() {
 @Composable
 private fun Failed(message: String) {
     Box(Modifier.fillMaxSize().background(Palette.Black), contentAlignment = Alignment.Center) {
-        Text("The editor could not start: $message", style = Type.Body)
+        Text("Não foi possível iniciar o editor: $message", style = Type.Body)
     }
 }
