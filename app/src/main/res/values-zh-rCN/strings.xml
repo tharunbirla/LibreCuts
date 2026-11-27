@@ -40,7 +40,7 @@
     <string name="str_freeze">定格</string>
     <string name="str_reverse">反向播放</string>
     <string name="str_saving_video">正在保存视频…</string>
-    <string name="str_please_don_t_close_the_app">请不要关闭应用程序!\n请不要关闭应用程序!\n重要的事情说三遍!\n请不要关闭应用程序!</string>
+    <string name="str_please_don_t_close_the_app">请不要关闭应用程序</string>
     <string name="str_0">0%</string>
     <string name="str_color_filters">颜色滤镜</string>
     <string name="str_00_00_00_00_00_00">00:00 - 00:00 (00:00)</string>
